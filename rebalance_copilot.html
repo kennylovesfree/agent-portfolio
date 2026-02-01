@@ -309,6 +309,73 @@
       color: var(--ink);
     }
 
+    .expert-card {
+      border: 1px solid rgba(240, 200, 106, 0.55);
+      background:
+        linear-gradient(160deg, rgba(240, 200, 106, 0.12), rgba(135, 169, 255, 0.06)),
+        var(--card);
+      box-shadow: 0 20px 60px rgba(240, 200, 106, 0.18), var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .expert-card::after {
+      content: "";
+      position: absolute;
+      inset: -80px auto auto -40px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(240, 200, 106, 0.25), transparent 70%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .expert-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(240, 200, 106, 0.18);
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .expert-summary {
+      font-size: 15px;
+      line-height: 1.7;
+      margin: 0 0 12px;
+      color: var(--ink);
+    }
+
+    .expert-list {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .expert-list li {
+      list-style: none;
+      position: relative;
+      padding-left: 10px;
+    }
+
+    .expert-list li::before {
+      content: "◆";
+      position: absolute;
+      left: -12px;
+      color: var(--accent);
+      font-size: 10px;
+      top: 4px;
+    }
+
     footer {
       padding: 18px clamp(18px, 4vw, 60px) 36px;
       color: var(--muted);
@@ -429,9 +496,11 @@
         <div class="note" id="assumptionNote"></div>
       </section>
 
-      <section class="card">
+      <section class="card expert-card">
         <h2>專家建議（個性化）</h2>
-        <div class="note" id="expertAdvice"></div>
+        <div class="expert-badge">Expert Insight</div>
+        <p class="expert-summary" id="expertSummary">--</p>
+        <ul class="expert-list" id="expertList"></ul>
       </section>
     </main>
 
@@ -469,7 +538,8 @@
     const outputTotalEl = document.getElementById('outputTotal');
     const outputGainEl = document.getElementById('outputGain');
     const assumptionNoteEl = document.getElementById('assumptionNote');
-    const expertAdviceEl = document.getElementById('expertAdvice');
+    const expertSummaryEl = document.getElementById('expertSummary');
+    const expertListEl = document.getElementById('expertList');
 
     const canvas = document.getElementById('trend');
     const ctx = canvas.getContext('2d');
@@ -669,7 +739,8 @@
         outputGainEl.textContent = '--';
         drawChart([0, 1]);
         assumptionNoteEl.textContent = '請至少輸入一檔代碼與金額。';
-        expertAdviceEl.textContent = '';
+        expertSummaryEl.textContent = '--';
+        expertListEl.innerHTML = '';
         return;
       }
 
@@ -694,7 +765,8 @@
         outputGainEl.textContent = '--';
         drawChart([0, 1]);
         assumptionNoteEl.textContent = '投資金額需大於 0。';
-        expertAdviceEl.textContent = '';
+        expertSummaryEl.textContent = '--';
+        expertListEl.innerHTML = '';
         return;
       }
 
@@ -741,7 +813,9 @@
       const missingNote = missing.length ? `未在 demo 清單：${missing.join(', ')}` : '全部代碼已匹配 demo 清單。';
       assumptionNoteEl.textContent = `估算依據：示範年化報酬/波動率 + 靜態匯率，${missingNote}`;
 
-      expertAdviceEl.textContent = generateAdvice(details, weights, years, portfolioReturn, portfolioVol, dd);
+      const advice = generateAdvice(details, weights, years, portfolioReturn, portfolioVol, dd);
+      expertSummaryEl.textContent = advice.summary;
+      expertListEl.innerHTML = advice.bullets.map(item => `<li>${item}</li>`).join('');
     }
 
     function generateAdvice(details, weights, years, portfolioReturn, portfolioVol, dd) {
@@ -784,7 +858,16 @@
           ? '預期報酬偏保守，若目標為增長，可提高成長型資產比重。'
           : '預期報酬落在中性區間，配置風格相對平衡。';
 
-      return `專家建議（個性化）：以 ${horizonTag} 投資期限與 ${volTag} 風險結構評估，當前組合呈現「${ddTag}」特徵。${concentrationNote} ${countNote} ${horizonNote} ${riskNote} ${returnNote}`;
+      return {
+        summary: `以 ${horizonTag} 投資期限與 ${volTag} 風險結構評估，當前組合呈現「${ddTag}」特徵。`,
+        bullets: [
+          concentrationNote,
+          countNote,
+          horizonNote,
+          riskNote,
+          returnNote
+        ]
+      };
     }
 
     yearsEl.addEventListener('input', () => {
