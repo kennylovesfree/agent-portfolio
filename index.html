@@ -3,344 +3,403 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>貪吃蛇</title>
+  <title>Rebalance Labs | 跨境金融配置平台</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Manrope:wght@300;400;600;700&display=swap');
+
     :root {
-      --bg1: #0f1324;
-      --bg2: #1b244a;
-      --panel: rgba(255, 255, 255, 0.08);
-      --accent: #ffb703;
-      --snake: #8ef7a0;
-      --food: #ff5d73;
-      --grid: rgba(255, 255, 255, 0.08);
-      --text: #e8ecff;
+      --bg-0: #0c0f14;
+      --bg-1: #101a25;
+      --bg-2: #0e2a2b;
+      --card: rgba(255, 255, 255, 0.06);
+      --card-strong: rgba(255, 255, 255, 0.12);
+      --line: rgba(255, 255, 255, 0.12);
+      --ink: #e8edf5;
+      --muted: rgba(232, 237, 245, 0.68);
+      --accent: #f0c86a;
+      --accent-2: #6ae7d0;
+      --accent-3: #7c9cff;
+      --shadow: 0 22px 70px rgba(6, 12, 20, 0.55);
     }
 
     * { box-sizing: border-box; }
 
-    html, body {
-      height: 100%;
+    body {
       margin: 0;
-      font-family: "Alegreya Sans", "Avenir Next", system-ui, sans-serif;
-      color: var(--text);
-      background: radial-gradient(1200px 800px at 10% 10%, #202b57, transparent),
-                  radial-gradient(900px 700px at 90% 20%, #2c1c4d, transparent),
-                  linear-gradient(160deg, var(--bg1), var(--bg2));
+      font-family: "Manrope", "Avenir Next", system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 800px at 5% 5%, rgba(124, 156, 255, 0.18), transparent 60%),
+        radial-gradient(900px 700px at 90% 10%, rgba(106, 231, 208, 0.15), transparent 62%),
+        linear-gradient(160deg, var(--bg-0), var(--bg-1) 55%, var(--bg-2));
+      min-height: 100vh;
     }
 
-    main {
-      min-height: 100%;
+    a { color: inherit; text-decoration: none; }
+
+    .page {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(0px);
+      opacity: 0.6;
+      mix-blend-mode: screen;
+      animation: float 12s ease-in-out infinite;
+    }
+
+    .orb.one {
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle at 30% 30%, rgba(124, 156, 255, 0.7), transparent 70%);
+      top: -80px;
+      right: -40px;
+      animation-delay: -2s;
+    }
+
+    .orb.two {
+      width: 340px;
+      height: 340px;
+      background: radial-gradient(circle at 50% 40%, rgba(240, 200, 106, 0.5), transparent 70%);
+      bottom: -140px;
+      left: -80px;
+      animation-delay: -6s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) translateX(0); }
+      50% { transform: translateY(18px) translateX(-12px); }
+    }
+
+    header {
+      padding: 28px clamp(18px, 4vw, 60px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+    }
+
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(140deg, var(--accent), var(--accent-3));
       display: grid;
-      grid-template-columns: minmax(280px, 420px) 1fr;
-      gap: 24px;
-      padding: 28px;
+      place-items: center;
+      color: #0d1218;
+      font-weight: 800;
+      box-shadow: 0 12px 30px rgba(124, 156, 255, 0.35);
+    }
+
+    nav {
+      display: flex;
+      gap: 18px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    nav a {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    nav a:hover {
+      border-color: var(--line);
+      color: var(--ink);
+    }
+
+    .hero {
+      flex: 1;
+      padding: 30px clamp(18px, 4vw, 60px) 60px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
+      gap: 32px;
       align-items: center;
     }
 
-    .panel {
-      background: var(--panel);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      backdrop-filter: blur(12px);
-      border-radius: 20px;
-      padding: 22px;
-      box-shadow: 0 20px 50px rgba(9, 12, 34, 0.45);
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(240, 200, 106, 0.35);
+      color: var(--accent);
+      font-size: 13px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
     }
 
     h1 {
-      font-size: clamp(28px, 4vw, 40px);
-      margin: 0 0 12px;
-      letter-spacing: 1px;
+      font-family: "Fraunces", serif;
+      font-size: clamp(34px, 4vw, 58px);
+      line-height: 1.08;
+      margin: 18px 0 16px;
     }
 
-    .meta {
-      display: grid;
-      gap: 12px;
-      margin: 18px 0;
+    .lead {
+      font-size: clamp(15px, 2.2vw, 18px);
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 28px;
+      max-width: 560px;
     }
 
-    .score {
+    .cta-row {
       display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      font-size: 18px;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
     }
 
-    .score strong {
-      font-size: 28px;
-      color: var(--accent);
-      letter-spacing: 1px;
-    }
-
-    .controls {
-      display: grid;
-      gap: 10px;
-      font-size: 14px;
-      line-height: 1.5;
-      opacity: 0.9;
-    }
-
-    button {
-      border: none;
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 22px;
       border-radius: 999px;
-      padding: 10px 18px;
-      font-size: 15px;
-      cursor: pointer;
-      background: var(--accent);
-      color: #1c1300;
+      border: 1px solid transparent;
       font-weight: 700;
+      letter-spacing: 0.3px;
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 183, 3, 0.3); }
-    button:active { transform: translateY(0); }
-
-    canvas {
-      width: min(88vw, 720px);
-      aspect-ratio: 1;
-      border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(9, 12, 34, 0.65);
-      box-shadow: 0 24px 60px rgba(9, 12, 34, 0.5);
+    .btn.primary {
+      background: linear-gradient(140deg, var(--accent), #f6dda1);
+      color: #1a1a1a;
+      box-shadow: 0 18px 36px rgba(240, 200, 106, 0.35);
     }
 
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
+    .btn.secondary {
+      border-color: var(--line);
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .btn:hover { transform: translateY(-2px); }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .card {
+      padding: 18px 20px;
+      border-radius: 18px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .metric {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 26px;
+    }
+
+    .metric .value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .metric .label {
       font-size: 13px;
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.12);
-      width: fit-content;
+      color: var(--muted);
+      margin-top: 6px;
     }
 
-    @media (max-width: 860px) {
-      main { grid-template-columns: 1fr; }
-      canvas { width: 92vw; }
+    .panel {
+      padding: 22px 24px;
+      border-radius: 24px;
+      background: linear-gradient(160deg, rgba(124, 156, 255, 0.14), rgba(106, 231, 208, 0.06));
+      border: 1px solid var(--card-strong);
+      box-shadow: var(--shadow);
+    }
+
+    .panel h3 {
+      font-size: 18px;
+      margin: 0 0 10px;
+    }
+
+    .panel p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .feature-list {
+      display: grid;
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .feature {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .feature span {
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      background: rgba(106, 231, 208, 0.18);
+      display: grid;
+      place-items: center;
+      color: var(--accent-2);
+      font-weight: 700;
+    }
+
+    .hero-visual {
+      display: grid;
+      gap: 18px;
+      align-content: center;
+      animation: rise 0.9s ease forwards;
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    @keyframes rise {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .chart {
+      height: 220px;
+      border-radius: 20px;
+      background:
+        linear-gradient(120deg, rgba(124, 156, 255, 0.25), rgba(240, 200, 106, 0.1)),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 44px),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 44px);
+      border: 1px solid var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chart::after {
+      content: "";
+      position: absolute;
+      inset: 22px;
+      border-radius: 16px;
+      background: linear-gradient(90deg, rgba(106, 231, 208, 0.5), rgba(124, 156, 255, 0.55));
+      clip-path: polygon(0 80%, 20% 55%, 45% 62%, 65% 35%, 85% 45%, 100% 20%, 100% 100%, 0 100%);
+    }
+
+    footer {
+      padding: 24px clamp(18px, 4vw, 60px) 36px;
+      color: var(--muted);
+      font-size: 13px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    @media (max-width: 960px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+      nav { display: none; }
+      .metric { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <main>
-    <section class="panel">
-      <div class="tag">Snake · Arcade</div>
-      <h1>貪吃蛇小遊戲</h1>
-      <p>吃到越多點心，速度越快。撞到牆或自己就會結束。</p>
+  <div class="page">
+    <div class="orb one"></div>
+    <div class="orb two"></div>
 
-      <div class="meta">
-        <div class="score">
-          <span>目前分數</span>
-          <strong id="score">0</strong>
-        </div>
-        <div class="score">
-          <span>最高分</span>
-          <strong id="best">0</strong>
-        </div>
+    <header>
+      <div class="brand">
+        <div class="brand-mark">R</div>
+        <div>Rebalance Labs</div>
       </div>
+      <nav>
+        <a href="#solutions">解決方案</a>
+        <a href="#platform">AI 平台</a>
+        <a href="#contact">聯絡我們</a>
+      </nav>
+      <a class="btn secondary" href="rebalance_copilot.html">進入金融配置平台</a>
+    </header>
 
-      <button id="startBtn">開始 / 重新開始</button>
+    <main class="hero">
+      <section>
+        <div class="eyebrow">Global Wealth Architecture</div>
+        <h1>跨境金融佈局，讓資產配置更有秩序、更有速度、更有視野。</h1>
+        <p class="lead">Rebalance Labs 專注於跨境金融佈局、個性化優化資產配置與 AI 智能投顧分析。以專業策略框架整合多國市場動態，為高淨值與成長型資產提供具前瞻性的配置方案。</p>
+        <div class="cta-row">
+          <a class="btn primary" href="rebalance_copilot.html">立即啟動 AI 配置</a>
+          <a class="btn secondary" href="#solutions">了解我們的服務</a>
+        </div>
+        <div class="metric">
+          <div class="card">
+            <div class="value">多市場</div>
+            <div class="label">跨境資產與貨幣風險一體化視角</div>
+          </div>
+          <div class="card">
+            <div class="value">個性化</div>
+            <div class="label">以目標風險與現金流打造配置</div>
+          </div>
+          <div class="card">
+            <div class="value">AI 解析</div>
+            <div class="label">量化信號 + 智能投顧支援決策</div>
+          </div>
+        </div>
+      </section>
 
-      <div class="controls">
-        <div>方向鍵或 WASD 移動</div>
-        <div>空白鍵暫停 / 繼續</div>
-      </div>
-    </section>
+      <section class="hero-visual" aria-label="平台示意">
+        <div class="panel" id="solutions">
+          <h3>核心能力</h3>
+          <div class="feature-list">
+            <div class="feature">
+              <span>01</span>
+              <div>
+                <strong>跨境金融佈局</strong>
+                <div>整合多區域資產、稅務與貨幣結構，降低集中風險。</div>
+              </div>
+            </div>
+            <div class="feature">
+              <span>02</span>
+              <div>
+                <strong>個性化優化資產配置</strong>
+                <div>以流動性、目標報酬與風險偏好建立配置模型。</div>
+              </div>
+            </div>
+            <div class="feature">
+              <span>03</span>
+              <div>
+                <strong>AI 智能投顧分析</strong>
+                <div>即時策略回測、風險情境模擬與再平衡建議。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card" id="platform">
+          <div class="chart" aria-hidden="true"></div>
+          <p style="margin: 14px 0 0; color: var(--muted);">AI 配置儀表板即時呈現風險、收益與跨境曝險。</p>
+        </div>
+      </section>
+    </main>
 
-    <canvas id="board" width="520" height="520"></canvas>
-  </main>
-
-  <script>
-    const canvas = document.getElementById('board');
-    const ctx = canvas.getContext('2d');
-    const scoreEl = document.getElementById('score');
-    const bestEl = document.getElementById('best');
-    const startBtn = document.getElementById('startBtn');
-
-    const size = 20;
-    const gridCount = canvas.width / size;
-
-    let snake;
-    let direction;
-    let nextDirection;
-    let food;
-    let score;
-    let best;
-    let speed;
-    let loopId = null;
-    let paused = false;
-
-    const bestKey = 'snake-best-score-v1';
-
-    const dirs = {
-      ArrowUp: { x: 0, y: -1 },
-      ArrowDown: { x: 0, y: 1 },
-      ArrowLeft: { x: -1, y: 0 },
-      ArrowRight: { x: 1, y: 0 },
-      w: { x: 0, y: -1 },
-      s: { x: 0, y: 1 },
-      a: { x: -1, y: 0 },
-      d: { x: 1, y: 0 },
-    };
-
-    function init() {
-      snake = [
-        { x: 10, y: 12 },
-        { x: 9, y: 12 },
-        { x: 8, y: 12 },
-      ];
-      direction = { x: 1, y: 0 };
-      nextDirection = { ...direction };
-      food = spawnFood();
-      score = 0;
-      speed = 140;
-      paused = false;
-      scoreEl.textContent = score;
-      if (!best) {
-        best = Number(localStorage.getItem(bestKey) || 0);
-        bestEl.textContent = best;
-      }
-      draw();
-      tick();
-    }
-
-    function spawnFood() {
-      while (true) {
-        const pos = {
-          x: Math.floor(Math.random() * gridCount),
-          y: Math.floor(Math.random() * gridCount),
-        };
-        if (!snake || !snake.some(seg => seg.x === pos.x && seg.y === pos.y)) {
-          return pos;
-        }
-      }
-    }
-
-    function tick() {
-      clearTimeout(loopId);
-      loopId = setTimeout(() => {
-        if (!paused) update();
-        draw();
-        tick();
-      }, speed);
-    }
-
-    function update() {
-      direction = nextDirection;
-      const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
-
-      if (head.x < 0 || head.y < 0 || head.x >= gridCount || head.y >= gridCount) {
-        return gameOver();
-      }
-
-      if (snake.some(seg => seg.x === head.x && seg.y === head.y)) {
-        return gameOver();
-      }
-
-      snake.unshift(head);
-
-      if (head.x === food.x && head.y === food.y) {
-        score += 10;
-        scoreEl.textContent = score;
-        if (score > best) {
-          best = score;
-          bestEl.textContent = best;
-          localStorage.setItem(bestKey, String(best));
-        }
-        speed = Math.max(70, speed - 4);
-        food = spawnFood();
-      } else {
-        snake.pop();
-      }
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      ctx.save();
-      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid');
-      ctx.lineWidth = 1;
-      for (let i = 0; i <= gridCount; i++) {
-        const pos = i * size;
-        ctx.beginPath();
-        ctx.moveTo(pos, 0);
-        ctx.lineTo(pos, canvas.height);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(0, pos);
-        ctx.lineTo(canvas.width, pos);
-        ctx.stroke();
-      }
-      ctx.restore();
-
-      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--food');
-      drawRoundedCell(food.x, food.y, 6);
-
-      snake.forEach((seg, index) => {
-        ctx.fillStyle = index === 0 ? '#b8ffcb' : getComputedStyle(document.documentElement).getPropertyValue('--snake');
-        drawRoundedCell(seg.x, seg.y, index === 0 ? 8 : 6);
-      });
-
-      if (paused) {
-        ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 32px "Alegreya Sans", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('暫停', canvas.width / 2, canvas.height / 2);
-      }
-    }
-
-    function drawRoundedCell(x, y, radius) {
-      const px = x * size + 2;
-      const py = y * size + 2;
-      const cell = size - 4;
-
-      ctx.beginPath();
-      ctx.moveTo(px + radius, py);
-      ctx.arcTo(px + cell, py, px + cell, py + cell, radius);
-      ctx.arcTo(px + cell, py + cell, px, py + cell, radius);
-      ctx.arcTo(px, py + cell, px, py, radius);
-      ctx.arcTo(px, py, px + cell, py, radius);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    function gameOver() {
-      clearTimeout(loopId);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 34px "Alegreya Sans", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('遊戲結束', canvas.width / 2, canvas.height / 2 - 8);
-      ctx.font = '20px "Alegreya Sans", sans-serif';
-      ctx.fillText('按開始重新玩', canvas.width / 2, canvas.height / 2 + 28);
-    }
-
-    function canChangeTo(dir) {
-      return !(dir.x + direction.x === 0 && dir.y + direction.y === 0);
-    }
-
-    document.addEventListener('keydown', (event) => {
-      if (event.code === 'Space') {
-        paused = !paused;
-        return;
-      }
-      const dir = dirs[event.key] || dirs[event.key?.toLowerCase?.()];
-      if (!dir) return;
-      if (canChangeTo(dir)) {
-        nextDirection = dir;
-      }
-    });
-
-    startBtn.addEventListener('click', () => {
-      init();
-    });
-
-    best = Number(localStorage.getItem(bestKey) || 0);
-    bestEl.textContent = best;
-    draw();
-  </script>
+    <footer id="contact">
+      <div>聯絡我們：info@rebalancelabs.example</div>
+      <div>© 2026 Rebalance Labs. All rights reserved.</div>
+    </footer>
+  </div>
 </body>
 </html>
