@@ -1,0 +1,18 @@
+{
+  "as_of": "2026-02-08",
+  "positions": [
+    { "asset": "TW_2330", "data_id": "2330", "shares": 20, "dataset": "TaiwanStockPrice" },
+    { "asset": "TW_2317", "data_id": "2317", "shares": 25, "dataset": "TaiwanStockPrice" },
+    { "asset": "TW_0050", "data_id": "0050", "shares": 40, "dataset": "TaiwanStockPrice" }
+  ],
+  "target_allocation": [
+    { "asset": "TW_2330", "weight": 0.35 },
+    { "asset": "TW_2317", "weight": 0.30 },
+    { "asset": "TW_0050", "weight": 0.35 }
+  ],
+  "constraints": {
+    "max_single_asset_pct": 0.60,
+    "max_equity_pct": 0.95,
+    "no_leverage": true
+  }
+}

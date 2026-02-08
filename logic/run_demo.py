@@ -5,16 +5,19 @@ Reads mock data, runs deterministic checks, prints proposals and audit log.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
+from data_ingestion import DataIngestionError, load_portfolio_data
 from drift_calculation import calculate_drift
 from policy_checks import check_policies
 from proposal_generator import generate_proposals
 
 
 def main() -> None:
-    data_path = Path(__file__).resolve().parents[1] / "data" / "sample_portfolio.json"
-    raw = json.loads(data_path.read_text(encoding="utf-8"))
+    try:
+        raw = load_portfolio_data()
+    except DataIngestionError as exc:
+        print(f"Data ingestion error: {exc}")
+        return
 
     holdings = raw.get("holdings", [])
     target = raw.get("target_allocation", [])

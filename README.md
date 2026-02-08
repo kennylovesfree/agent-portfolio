@@ -12,6 +12,8 @@
 - 連接真實交易、資金或生產環境
 - 自動化下單或自動執行
 
+> 註：本專案仍不做交易/下單；但 CLI Demo 現在支援「可選擇」讀取 FinMind 市場資料做持倉估值（預設仍是本地 mock）。
+
 ## 核心模組（最小可行）
 1. **Data Ingestion**
    - 來源：使用者輸入/匯入資料（持倉、目標配置、限制條件）
@@ -70,3 +72,11 @@ graph TD
 - 讀取外部資料來源
 - 加入風險/成本/稅務的分析模組
 - 產出具體再平衡建議（需明確合規與治理）
+
+## 使用 FinMind API（可選）
+1. 設定環境變數：
+   - `USE_FINMIND_API=1`
+   - `FINMIND_API_TOKEN=<你的 Bearer token>`
+   - `FINMIND_PORTFOLIO_PATH=<portfolio config 路徑>`
+2. portfolio config 可參考 `data/finmind_portfolio.example.json`。
+3. 執行：`python logic/run_demo.py`
