@@ -36,11 +36,16 @@ class TwStockReturnServiceTests(unittest.TestCase):
         self.assertEqual(resolved.stock_id, "2330")
         self.assertEqual(resolved.stock_name, "台積電")
 
-    def test_resolve_stock_invalid_numeric_length(self) -> None:
+    def test_resolve_stock_numeric_not_found(self) -> None:
         client = FakeClient(stock_info=[{"stock_id": "2330", "stock_name": "台積電"}], history=[])
         with self.assertRaises(StockQueryError) as ctx:
             resolve_stock("123", client)
-        self.assertEqual(ctx.exception.error_code, "INVALID_QUERY")
+        self.assertEqual(ctx.exception.error_code, "STOCK_NOT_FOUND")
+
+    def test_resolve_stock_5_digit_etf_success(self) -> None:
+        client = FakeClient(stock_info=[{"stock_id": "00662", "stock_name": "富邦NASDAQ"}], history=[])
+        resolved = resolve_stock("00662", client)
+        self.assertEqual(resolved.stock_id, "00662")
 
     def test_resolve_stock_name_not_found(self) -> None:
         client = FakeClient(stock_info=[{"stock_id": "2330", "stock_name": "台積電"}], history=[])

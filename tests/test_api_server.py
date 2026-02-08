@@ -62,13 +62,13 @@ class ApiServerTests(unittest.TestCase):
         self.assertEqual(payload["resolved_stock_name"], "台積電")
         self.assertAlmostEqual(payload["annual_return"], 0.2, places=6)
 
-    def test_api_invalid_query_returns_422_shape(self) -> None:
+    def test_api_stock_not_found_returns_422_shape(self) -> None:
         fake = FakeClient(stock_info=[{"stock_id": "2330", "stock_name": "台積電"}], history=[])
         with patch("logic.api_server.FinMindClient.from_env", return_value=fake):
             response = self.client.post("/api/v1/tw-stock/annual-return", json={"query": "123"})
         self.assertEqual(response.status_code, 422)
         payload = response.json()
-        self.assertEqual(payload["error_code"], "INVALID_QUERY")
+        self.assertEqual(payload["error_code"], "STOCK_NOT_FOUND")
         self.assertIn("message", payload)
         self.assertIn("details", payload)
 

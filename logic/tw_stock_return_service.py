@@ -78,8 +78,6 @@ def resolve_stock(query: str, client: FinMindClient) -> ResolvedStock:
         raise UpstreamServiceError(str(exc)) from exc
 
     if cleaned.isdigit():
-        if len(cleaned) != 4:
-            raise StockQueryError("INVALID_QUERY", "台股代碼需為 4 位數字。", {"query": cleaned})
         for row in universe:
             if row["stock_id"] == cleaned:
                 return ResolvedStock(stock_id=row["stock_id"], stock_name=row["stock_name"])
