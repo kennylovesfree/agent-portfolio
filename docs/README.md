@@ -57,3 +57,23 @@
 - 本專案僅為面試展示用 Demo
 - 不提供投資建議，不應用於真實資金操作
 - 不連接任何外部 API 或市場資料
+
+
+## FinMind API（可選，預設仍為 mock）
+
+現在 CLI 支援以 FinMind v4 `data` endpoint 讀取行情，將 `positions` 估值後換算成 `holdings.weight`。
+
+### 環境變數
+- `USE_FINMIND_API=1`：啟用 API ingestion
+- `FINMIND_API_TOKEN`：FinMind Bearer token
+- `FINMIND_PORTFOLIO_PATH`：portfolio 設定 JSON 路徑
+
+### portfolio 設定檔範例
+請參考 `data/finmind_portfolio.example.json`。
+
+### 執行
+```bash
+python logic/run_demo.py
+```
+
+若未設定 `USE_FINMIND_API=1`，系統會回退到 `data/sample_portfolio.json`。
