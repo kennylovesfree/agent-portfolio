@@ -290,9 +290,22 @@
 
     .table-head, .table-row {
       display: grid;
-      grid-template-columns: 1.2fr 1fr 1fr 70px;
+      grid-template-columns: 0.9fr 1.2fr 1fr 1fr 70px;
       gap: 10px;
       align-items: center;
+    }
+
+    .allocation-table .table-head,
+    .allocation-table .table-row {
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+    }
+
+    .allocation-table .table-row {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(8, 14, 24, 0.55);
+      font-size: 13px;
     }
 
     .table-head {
@@ -416,7 +429,8 @@
         <div class="grid">
           <div class="table">
             <div class="table-head">
-              <div>美股代碼</div>
+              <div>市場</div>
+              <div>代碼</div>
               <div>金額</div>
               <div>幣種</div>
               <div></div>
@@ -439,6 +453,29 @@
           </div>
           <div class="row">
             <div>
+              <label for="age">年齡</label>
+              <input id="age" type="number" min="18" max="90" value="35" />
+            </div>
+            <div>
+              <label for="riskLevel">風險承受等級</label>
+              <select id="riskLevel">
+                <option value="conservative">保守</option>
+                <option value="balanced" selected>中性</option>
+                <option value="aggressive">積極</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="taxRegion">主要稅務地區</label>
+              <select id="taxRegion">
+                <option value="TW" selected>台灣 (TW)</option>
+                <option value="US">美國 (US)</option>
+                <option value="HK">香港 (HK)</option>
+                <option value="SG">新加坡 (SG)</option>
+              </select>
+            </div>
+            <div>
               <label for="displayCurrency">報表幣種</label>
               <select id="displayCurrency">
                 <option value="USD" selected>USD 美元</option>
@@ -449,6 +486,8 @@
                 <option value="EUR">EUR 歐元</option>
               </select>
             </div>
+          </div>
+          <div class="row">
             <div>
               <label for="override">手動調整年化報酬（%）</label>
               <input id="override" type="number" min="1" max="20" step="0.1" value="8.0" disabled />
@@ -456,10 +495,12 @@
           </div>
           <div class="actions">
             <button id="calcBtn">更新預估結果</button>
+            <button id="shareBtn" type="button">複製分享連結</button>
             <label class="chip" style="cursor:pointer;">
               <input id="overrideToggle" type="checkbox" style="margin:0;" />
               使用手動年化報酬
             </label>
+            <span class="chip" id="scenarioId">Scenario: --</span>
           </div>
         </div>
       </section>
@@ -496,6 +537,19 @@
         <div class="note" id="assumptionNote"></div>
       </section>
 
+      <section class="card allocation-table">
+        <h2>配置優化建議</h2>
+        <div class="table">
+          <div class="table-head">
+            <div>資產類別</div>
+            <div>目前占比</div>
+            <div>建議占比</div>
+            <div>調整方向</div>
+          </div>
+          <div id="allocationRows"></div>
+        </div>
+      </section>
+
       <section class="card expert-card">
         <h2>專家建議（個性化）</h2>
         <div class="expert-badge">Expert Insight</div>
@@ -510,19 +564,16 @@
   </div>
 
   <script>
-    const KNOWN_TICKERS = [
-      'AAPL','MSFT','NVDA','AMZN','META','GOOGL','GOOG','TSLA','BRK.B','AVGO','LLY','V','JPM','UNH','XOM',
-      'MA','COST','PG','HD','MRK','ORCL','BAC','ABBV','NFLX','ADBE','CRM','PEP','KO','TMO','NKE','WMT',
-      'DIS','INTC','AMD','CSCO','QCOM','TXN','IBM','AMAT','VZ','T','SPY','VOO','QQQ','VTI','IWM','DIA'
+    const KNOWN_TICKERS_US = [
+      'AAPL','MSFT','NVDA','AMZN','META','GOOGL','GOOG','TSLA','BRK.B','AVGO','LLY','V','JPM','UNH','XOM','SPY','VOO','QQQ','VTI'
     ];
+    const KNOWN_TICKERS_TW = ['2330.TW','2317.TW','2303.TW','2454.TW','2881.TW','2882.TW','0050.TW','0056.TW'];
 
-    const FX_RATES = {
-      USD: 1,
-      TWD: 0.032,
-      HKD: 0.128,
-      JPY: 0.0068,
-      CNY: 0.14,
-      EUR: 1.08
+    const FX_RATES = { USD: 1, TWD: 0.032, HKD: 0.128, JPY: 0.0068, CNY: 0.14, EUR: 1.08 };
+    const RISK_MODELS = {
+      conservative: { returnBias: -0.01, volScale: 0.78, stockTarget: 0.45, bondTarget: 0.4, cashTarget: 0.15 },
+      balanced: { returnBias: 0, volScale: 0.9, stockTarget: 0.65, bondTarget: 0.25, cashTarget: 0.1 },
+      aggressive: { returnBias: 0.015, volScale: 1.05, stockTarget: 0.8, bondTarget: 0.15, cashTarget: 0.05 }
     };
 
     const rowsEl = document.getElementById('rows');
@@ -531,6 +582,11 @@
     const displayCurrencyEl = document.getElementById('displayCurrency');
     const overrideEl = document.getElementById('override');
     const overrideToggleEl = document.getElementById('overrideToggle');
+    const ageEl = document.getElementById('age');
+    const riskLevelEl = document.getElementById('riskLevel');
+    const taxRegionEl = document.getElementById('taxRegion');
+    const scenarioIdEl = document.getElementById('scenarioId');
+    const allocationRowsEl = document.getElementById('allocationRows');
 
     const outputRateEl = document.getElementById('outputRate');
     const outputVolEl = document.getElementById('outputVol');
@@ -545,361 +601,258 @@
     const ctx = canvas.getContext('2d');
 
     function formatCurrency(value, currency) {
-      try {
-        return new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency,
-          maximumFractionDigits: 0
-        }).format(value);
-      } catch (_) {
-        return `${value.toFixed(0)} ${currency}`;
-      }
+      try { return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value); }
+      catch (_) { return `${value.toFixed(0)} ${currency}`; }
     }
 
-    function hashCode(str) {
-      let hash = 0;
-      for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) - hash) + str.charCodeAt(i);
-        hash |= 0;
-      }
-      return Math.abs(hash);
+    function hashCode(str) { let hash = 0; for (let i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash |= 0; } return Math.abs(hash); }
+    function seededRandom(seed) { const x = Math.sin(seed) * 10000; return x - Math.floor(x); }
+    function mulberry32(a) { return function() { let t = a += 0x6D2B79F5; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+    function normalizeTicker(ticker, market) {
+      const clean = (ticker || '').toUpperCase().trim();
+      if (!clean) return '';
+      if (market === 'TW') return clean.endsWith('.TW') ? clean : `${clean}.TW`;
+      return clean.replace('.TW', '');
     }
 
-    function seededRandom(seed) {
-      const x = Math.sin(seed) * 10000;
-      return x - Math.floor(x);
-    }
-
-    function estimateReturnVol(ticker) {
-      const key = ticker.toUpperCase().trim();
+    function estimateReturnVol(normalizedTicker, market) {
+      const key = `${market}:${normalizedTicker || 'SPY'}`;
       const seed = hashCode(key);
-      const base = 0.04 + seededRandom(seed + 1) * 0.10; // 4% - 14%
-      const vol = 0.12 + seededRandom(seed + 2) * 0.23;  // 12% - 35%
+      const base = market === 'TW' ? 0.05 + seededRandom(seed + 1) * 0.09 : 0.04 + seededRandom(seed + 1) * 0.1;
+      const vol = market === 'TW' ? 0.16 + seededRandom(seed + 2) * 0.2 : 0.12 + seededRandom(seed + 2) * 0.23;
       return { expectedReturn: base, volatility: vol };
     }
 
-    function generateUniverse() {
-      const set = new Set(KNOWN_TICKERS.map(t => t.toUpperCase()));
-      const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      let i = 0;
-      while (set.size < 5000) {
-        const a = alphabet[Math.floor(i / (26 * 26)) % 26];
-        const b = alphabet[Math.floor(i / 26) % 26];
-        const c = alphabet[i % 26];
-        const ticker = `${a}${b}${c}`;
-        if (!set.has(ticker)) set.add(ticker);
-        i += 1;
-      }
-      return set;
-    }
-
-    const UNIVERSE = generateUniverse();
-
-    function createRow(ticker = '', amount = 0, currency = 'USD') {
+    function createRow(ticker = '', amount = 0, currency = 'USD', market = 'US') {
       const row = document.createElement('div');
       row.className = 'table-row';
       row.innerHTML = `
-        <input class="ticker" type="text" placeholder="例：AAPL" value="${ticker}" />
+        <select class="market"><option value="US" ${market === 'US' ? 'selected' : ''}>美股 US</option><option value="TW" ${market === 'TW' ? 'selected' : ''}>台股 TW</option></select>
+        <input class="ticker" type="text" placeholder="例：AAPL 或 2330" value="${ticker}" />
         <input class="amount" type="number" min="0" step="100" value="${amount}" />
-        <select class="currency">
-          <option value="USD" ${currency === 'USD' ? 'selected' : ''}>USD</option>
-          <option value="TWD" ${currency === 'TWD' ? 'selected' : ''}>TWD</option>
-          <option value="HKD" ${currency === 'HKD' ? 'selected' : ''}>HKD</option>
-          <option value="JPY" ${currency === 'JPY' ? 'selected' : ''}>JPY</option>
-          <option value="CNY" ${currency === 'CNY' ? 'selected' : ''}>CNY</option>
-          <option value="EUR" ${currency === 'EUR' ? 'selected' : ''}>EUR</option>
-        </select>
-        <button type="button" class="remove">移除</button>
-      `;
-      row.querySelector('.remove').addEventListener('click', () => {
-        row.remove();
-        calculate();
-      });
-      row.querySelectorAll('input, select').forEach(el => {
-        el.addEventListener('input', calculate);
-      });
+        <select class="currency"><option value="USD" ${currency === 'USD' ? 'selected' : ''}>USD</option><option value="TWD" ${currency === 'TWD' ? 'selected' : ''}>TWD</option><option value="HKD" ${currency === 'HKD' ? 'selected' : ''}>HKD</option><option value="JPY" ${currency === 'JPY' ? 'selected' : ''}>JPY</option><option value="CNY" ${currency === 'CNY' ? 'selected' : ''}>CNY</option><option value="EUR" ${currency === 'EUR' ? 'selected' : ''}>EUR</option></select>
+        <button type="button" class="remove">移除</button>`;
+      row.querySelector('.remove').addEventListener('click', () => { row.remove(); calculate(); });
+      row.querySelectorAll('input, select').forEach(el => el.addEventListener('input', calculate));
       return row;
     }
 
-    function addRow(ticker, amount, currency) {
-      if (rowsEl.children.length >= 10) return;
-      rowsEl.appendChild(createRow(ticker, amount, currency));
-    }
+    function addRow(ticker, amount, currency, market = 'US') { if (rowsEl.children.length >= 10) return; rowsEl.appendChild(createRow(ticker, amount, currency, market)); }
 
     function getRows() {
-      const rows = Array.from(rowsEl.querySelectorAll('.table-row'));
-      return rows.map(row => {
+      return Array.from(rowsEl.querySelectorAll('.table-row')).map(row => {
+        const market = row.querySelector('.market').value;
         const ticker = row.querySelector('.ticker').value.toUpperCase().trim();
         const amount = Math.max(0, Number(row.querySelector('.amount').value || 0));
         const currency = row.querySelector('.currency').value;
-        return { ticker, amount, currency };
+        const normalizedTicker = normalizeTicker(ticker, market);
+        return { market, ticker, normalizedTicker, amount, currency };
       }).filter(r => r.ticker || r.amount > 0);
     }
 
-    function syncYearsFromRange() {
-      yearsNumberEl.value = yearsEl.value;
+    function buildUserProfile() {
+      const age = Math.max(18, Math.min(90, Number(ageEl.value || 35)));
+      ageEl.value = age;
+      return { age, taxRegion: taxRegionEl.value, riskLevel: riskLevelEl.value, horizonYears: Number(yearsEl.value || 10) };
     }
 
-    function syncYearsFromNumber() {
-      let val = Number(yearsNumberEl.value || 1);
-      if (val < 1) val = 1;
-      if (val > 30) val = 30;
-      yearsNumberEl.value = val;
-      yearsEl.value = val;
-    }
+    function syncYearsFromRange() { yearsNumberEl.value = yearsEl.value; }
+    function syncYearsFromNumber() { let val = Number(yearsNumberEl.value || 1); if (val < 1) val = 1; if (val > 30) val = 30; yearsNumberEl.value = val; yearsEl.value = val; }
 
     function drawChart(values) {
-      const width = canvas.clientWidth;
-      const height = canvas.clientHeight;
-      canvas.width = width;
-      canvas.height = height;
-      ctx.clearRect(0, 0, width, height);
-
-      const padding = 36;
-      const maxVal = Math.max(...values);
-      const minVal = Math.min(...values);
-      const range = maxVal - minVal || 1;
-
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(padding, padding);
-      ctx.lineTo(padding, height - padding);
-      ctx.lineTo(width - padding, height - padding);
-      ctx.stroke();
-
-      const points = values.map((val, index) => {
-        const x = padding + (index / (values.length - 1)) * (width - padding * 2);
-        const y = height - padding - ((val - minVal) / range) * (height - padding * 2);
-        return { x, y, val };
-      });
-
-      ctx.beginPath();
-      ctx.moveTo(points[0].x, points[0].y);
-      points.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
-      ctx.strokeStyle = '#f0c86a';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-
-      ctx.lineTo(points[points.length - 1].x, height - padding);
-      ctx.lineTo(points[0].x, height - padding);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(240, 200, 106, 0.12)';
-      ctx.fill();
-
-      const last = points[points.length - 1];
-      ctx.beginPath();
-      ctx.arc(last.x, last.y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = '#f0c86a';
-      ctx.fill();
+      const width = canvas.clientWidth; const height = canvas.clientHeight; canvas.width = width; canvas.height = height; ctx.clearRect(0, 0, width, height);
+      const padding = 36; const maxVal = Math.max(...values); const minVal = Math.min(...values); const range = maxVal - minVal || 1;
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(padding,padding); ctx.lineTo(padding,height-padding); ctx.lineTo(width-padding,height-padding); ctx.stroke();
+      const points = values.map((val, index) => ({ x: padding + (index / (values.length - 1 || 1)) * (width - padding * 2), y: height - padding - ((val - minVal) / range) * (height - padding * 2), val }));
+      ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y); points.slice(1).forEach(p => ctx.lineTo(p.x, p.y)); ctx.strokeStyle = '#f0c86a'; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.lineTo(points[points.length - 1].x, height - padding); ctx.lineTo(points[0].x, height - padding); ctx.closePath(); ctx.fillStyle = 'rgba(240,200,106,0.12)'; ctx.fill();
     }
 
-    function randn() {
-      let u = 0, v = 0;
-      while (u === 0) u = Math.random();
-      while (v === 0) v = Math.random();
-      return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-    }
-
-    function simulatePath(initial, years, mu, sigma) {
-      const steps = Math.max(12, years * 12);
-      const dt = 1 / 12;
-      const values = [initial];
-      let current = initial;
-      for (let i = 0; i < steps; i++) {
-        const shock = randn();
-        const growth = (mu - 0.5 * sigma * sigma) * dt + sigma * Math.sqrt(dt) * shock;
-        current = Math.max(0, current * Math.exp(growth));
-        values.push(current);
-      }
+    function randnWithRng(rng) { let u = 0, v = 0; while (u === 0) u = rng(); while (v === 0) v = rng(); return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v); }
+    function simulatePath(initial, years, mu, sigma, seed) {
+      const steps = Math.max(12, years * 12); const dt = 1 / 12; const values = [initial]; let current = initial; const rng = mulberry32(seed);
+      for (let i = 0; i < steps; i++) { const shock = randnWithRng(rng); const growth = (mu - 0.5 * sigma * sigma) * dt + sigma * Math.sqrt(dt) * shock; current = Math.max(0, current * Math.exp(growth)); values.push(current); }
       return values;
     }
+    function maxDrawdown(series) { let peak = series[0]; let maxDD = 0; series.forEach(val => { if (val > peak) peak = val; const dd = peak ? (peak - val) / peak : 0; if (dd > maxDD) maxDD = dd; }); return maxDD; }
 
-    function maxDrawdown(series) {
-      let peak = series[0];
-      let maxDD = 0;
-      series.forEach(val => {
-        if (val > peak) peak = val;
-        const dd = (peak - val) / peak;
-        if (dd > maxDD) maxDD = dd;
+    function computeSuggestedTargets(profile) {
+      const base = RISK_MODELS[profile.riskLevel] || RISK_MODELS.balanced;
+      const ageAdj = profile.age >= 55 ? -0.08 : profile.age <= 30 ? 0.05 : 0;
+      const horizonAdj = profile.horizonYears >= 15 ? 0.04 : profile.horizonYears <= 3 ? -0.06 : 0;
+      const stockTarget = Math.max(0.25, Math.min(0.9, base.stockTarget + ageAdj + horizonAdj));
+      const cashTarget = Math.max(0.05, Math.min(0.25, base.cashTarget + (profile.taxRegion === 'TW' ? 0.01 : 0)));
+      const bondTarget = Math.max(0.05, 1 - stockTarget - cashTarget);
+      return { stock: stockTarget, bond: bondTarget, cash: cashTarget };
+    }
+
+    function suggestAllocation(details, profile) {
+      const current = { stock: 0, bond: 0, cash: 0 };
+      details.forEach(item => {
+        const t = item.normalizedTicker;
+        if (!t) { current.cash += item.weight; return; }
+        if (['BND','AGG','TLT','IEF','00679B.TW'].includes(t)) current.bond += item.weight;
+        else if (['CASH','USD'].includes(t)) current.cash += item.weight;
+        else current.stock += item.weight;
       });
-      return maxDD;
+      const target = computeSuggestedTargets(profile);
+      const rows = [
+        { bucket: '股票', currentWeight: current.stock, targetWeight: target.stock },
+        { bucket: '債券', currentWeight: current.bond, targetWeight: target.bond },
+        { bucket: '現金', currentWeight: current.cash, targetWeight: target.cash },
+      ].map(r => ({ ...r, delta: r.targetWeight - r.currentWeight, rationale: r.delta > 0 ? '建議提高配置' : (r.delta < 0 ? '建議降低配置' : '維持現況') }));
+      return rows;
+    }
+
+    function renderAllocation(rows) {
+      allocationRowsEl.innerHTML = rows.map(r => `<div class="table-row"><div>${r.bucket}</div><div>${(r.currentWeight*100).toFixed(1)}%</div><div>${(r.targetWeight*100).toFixed(1)}%</div><div>${r.delta >= 0 ? '+' : ''}${(r.delta*100).toFixed(1)}% (${r.rationale})</div></div>`).join('');
+    }
+
+    function generateAdvice(details, years, portfolioReturn, portfolioVol, dd, profile, suggestions) {
+      const top = details.slice().sort((a,b)=>b.weight-a.weight)[0];
+      const topLabel = top ? `${top.normalizedTicker || '現金'} (${(top.weight*100).toFixed(0)}%)` : '無';
+      const riskWord = profile.riskLevel === 'conservative' ? '保守' : profile.riskLevel === 'aggressive' ? '積極' : '中性';
+      return {
+        summary: `依 ${profile.age} 歲、${profile.taxRegion} 稅務地區與 ${riskWord}風險等級，組合目前最大持倉為 ${topLabel}，模擬回撤 ${(dd*100).toFixed(1)}%。`,
+        bullets: [
+          `建議配置：股票 ${(suggestions[0].targetWeight*100).toFixed(0)}% / 債券 ${(suggestions[1].targetWeight*100).toFixed(0)}% / 現金 ${(suggestions[2].targetWeight*100).toFixed(0)}%。`,
+          years <= 3 ? '期限偏短，建議提高防禦資產比例。' : (years >= 15 ? '期限偏長，可維持成長配置並定期再平衡。' : '期限中等，維持股債平衡配置。'),
+          portfolioVol >= 0.24 ? '波動偏高，請確認心理承受度與現金備援。' : '波動尚可，重點是紀律執行再平衡。',
+          portfolioReturn >= 0.1 ? '預期報酬偏積極，需搭配風險管理。' : '預期報酬中性至保守，可依目標調整。'
+        ]
+      };
+    }
+
+    function seedFromScenario(profile, rows, years, displayCurrency, overrideState) {
+      const payload = JSON.stringify({ profile, rows: rows.map(r => ({...r, amount: Number(r.amount.toFixed(2))})), years, displayCurrency, overrideState });
+      return hashCode(payload) || 1;
+    }
+
+    function base64EncodeUnicode(str) { return btoa(unescape(encodeURIComponent(str))); }
+    function base64DecodeUnicode(str) { return decodeURIComponent(escape(atob(str))); }
+
+    function serializeScenarioToQuery(profile, rows, years, displayCurrency, override) {
+      const data = { profile, rows, years, displayCurrency, override };
+      return new URLSearchParams({ s: base64EncodeUnicode(JSON.stringify(data)) }).toString();
+    }
+
+    function hydrateScenarioFromQuery() {
+      const params = new URLSearchParams(window.location.search);
+      const raw = params.get('s');
+      if (!raw) return null;
+      try { return JSON.parse(base64DecodeUnicode(raw)); } catch (_) { return null; }
     }
 
     function calculate() {
       const years = Number(yearsEl.value || 1);
       const displayCurrency = displayCurrencyEl.value;
       const rows = getRows();
+      const profile = buildUserProfile();
+      const risk = RISK_MODELS[profile.riskLevel] || RISK_MODELS.balanced;
 
       if (!rows.length) {
-        outputRateEl.textContent = '--';
-        outputVolEl.textContent = '--';
-        outputDDEl.textContent = '--';
-        outputTotalEl.textContent = '--';
-        outputGainEl.textContent = '--';
-        drawChart([0, 1]);
-        assumptionNoteEl.textContent = '請至少輸入一檔代碼與金額。';
-        expertSummaryEl.textContent = '--';
-        expertListEl.innerHTML = '';
+        outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
+        drawChart([0, 1]); assumptionNoteEl.textContent = '請至少輸入一檔代碼與金額。'; expertSummaryEl.textContent = '--'; expertListEl.innerHTML = ''; allocationRowsEl.innerHTML = '';
         return;
       }
 
       let totalUsd = 0;
-      const weights = [];
-      const details = [];
-
-      rows.forEach(row => {
+      const details = rows.map(row => {
         const fx = FX_RATES[row.currency] || 1;
         const amountUsd = row.amount * fx;
         totalUsd += amountUsd;
-        const inUniverse = UNIVERSE.has(row.ticker);
-        const stats = estimateReturnVol(row.ticker || 'SPY');
-        details.push({ ...row, amountUsd, inUniverse, ...stats });
+        const stats = estimateReturnVol(row.normalizedTicker || (row.market === 'TW' ? '0050.TW' : 'SPY'), row.market);
+        const inUniverse = row.market === 'TW' ? KNOWN_TICKERS_TW.includes(row.normalizedTicker) : KNOWN_TICKERS_US.includes(row.normalizedTicker);
+        return { ...row, amountUsd, inUniverse, ...stats };
       });
 
       if (totalUsd === 0) {
-        outputRateEl.textContent = '--';
-        outputVolEl.textContent = '--';
-        outputDDEl.textContent = '--';
-        outputTotalEl.textContent = '--';
-        outputGainEl.textContent = '--';
-        drawChart([0, 1]);
-        assumptionNoteEl.textContent = '投資金額需大於 0。';
-        expertSummaryEl.textContent = '--';
-        expertListEl.innerHTML = '';
+        outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
+        drawChart([0, 1]); assumptionNoteEl.textContent = '投資金額需大於 0。'; expertSummaryEl.textContent = '--'; expertListEl.innerHTML = ''; allocationRowsEl.innerHTML = '';
         return;
       }
 
-      details.forEach(item => {
-        const weight = item.amountUsd / totalUsd;
-        weights.push(weight);
-      });
+      details.forEach(item => { item.weight = item.amountUsd / totalUsd; });
+      let weightedReturn = 0, weightedVar = 0;
+      details.forEach(item => { weightedReturn += item.weight * item.expectedReturn; weightedVar += Math.pow(item.weight * item.volatility, 2); });
 
-      let weightedReturn = 0;
-      let weightedVar = 0;
-      details.forEach((item, i) => {
-        weightedReturn += weights[i] * item.expectedReturn;
-        weightedVar += Math.pow(weights[i] * item.volatility, 2);
-      });
-
-      let portfolioReturn = weightedReturn;
-      if (overrideToggleEl.checked) {
-        portfolioReturn = Math.max(0.01, Math.min(0.2, Number(overrideEl.value) / 100));
-      }
-
-      const portfolioVol = Math.sqrt(weightedVar) * 0.85;
+      let portfolioReturn = weightedReturn + risk.returnBias;
+      if (overrideToggleEl.checked) portfolioReturn = Math.max(0.01, Math.min(0.2, Number(overrideEl.value) / 100));
+      portfolioReturn = Math.max(0.01, Math.min(0.2, portfolioReturn));
+      const portfolioVol = Math.sqrt(weightedVar) * risk.volScale;
 
       const finalUsd = totalUsd * Math.pow(1 + portfolioReturn, years);
       const gainUsd = finalUsd - totalUsd;
-
       const fxOut = FX_RATES[displayCurrency] || 1;
-      const finalDisplay = finalUsd / fxOut;
-      const gainDisplay = gainUsd / fxOut;
-
       outputRateEl.textContent = `${(portfolioReturn * 100).toFixed(2)}%`;
       outputVolEl.textContent = `${(portfolioVol * 100).toFixed(2)}%`;
 
-      const path = simulatePath(totalUsd, years, portfolioReturn, portfolioVol);
+      const overrideState = { enabled: overrideToggleEl.checked, value: Number(overrideEl.value) };
+      const seed = seedFromScenario(profile, rows, years, displayCurrency, overrideState);
+      const path = simulatePath(totalUsd, years, portfolioReturn, portfolioVol, seed);
       const dd = maxDrawdown(path);
       outputDDEl.textContent = `${(dd * 100).toFixed(2)}%`;
+      outputTotalEl.textContent = formatCurrency(finalUsd / fxOut, displayCurrency);
+      outputGainEl.textContent = formatCurrency(gainUsd / fxOut, displayCurrency);
+      drawChart(path.map(v => v / fxOut));
 
-      outputTotalEl.textContent = formatCurrency(finalDisplay, displayCurrency);
-      outputGainEl.textContent = formatCurrency(gainDisplay, displayCurrency);
-
-      const pathDisplay = path.map(v => v / fxOut);
-      drawChart(pathDisplay);
-
-      const missing = details.filter(d => d.ticker && !d.inUniverse).map(d => d.ticker);
-      const missingNote = missing.length ? `未在 demo 清單：${missing.join(', ')}` : '全部代碼已匹配 demo 清單。';
-      assumptionNoteEl.textContent = `估算依據：示範年化報酬/波動率 + 靜態匯率，${missingNote}`;
-
-      const advice = generateAdvice(details, weights, years, portfolioReturn, portfolioVol, dd);
+      const suggestions = suggestAllocation(details, profile);
+      renderAllocation(suggestions);
+      const advice = generateAdvice(details, years, portfolioReturn, portfolioVol, dd, profile, suggestions);
       expertSummaryEl.textContent = advice.summary;
       expertListEl.innerHTML = advice.bullets.map(item => `<li>${item}</li>`).join('');
+
+      const missing = details.filter(d => d.normalizedTicker && !d.inUniverse).map(d => d.normalizedTicker);
+      const missingNote = missing.length ? `未在 demo 清單：${missing.join(', ')}` : '代碼已匹配 demo 清單。';
+      scenarioIdEl.textContent = `Scenario: ${seed}`;
+      assumptionNoteEl.textContent = `估算依據：${profile.riskLevel}風險模型 + ${profile.taxRegion}稅務地區假設 + 靜態匯率；${missingNote}`;
+
+      const query = serializeScenarioToQuery(profile, rows, years, displayCurrency, overrideState);
+      history.replaceState(null, '', `${location.pathname}?${query}`);
     }
 
-    function generateAdvice(details, weights, years, portfolioReturn, portfolioVol, dd) {
-      const count = details.length;
-      const topWeight = Math.max(...weights);
-      const topIndex = weights.indexOf(topWeight);
-      const topTicker = details[topIndex]?.ticker || '主要標的';
-
-      const horizonTag = years <= 3 ? '短期' : years <= 10 ? '中期' : '長期';
-      const volTag = portfolioVol >= 0.25 ? '高波動' : portfolioVol >= 0.18 ? '中高波動' : '中低波動';
-      const ddTag = dd >= 0.35 ? '回撤壓力偏高' : dd >= 0.2 ? '回撤中等' : '回撤可控';
-
-      const concentrationNote = topWeight >= 0.55
-        ? `目前配置集中於 ${topTicker}（占比約 ${(topWeight * 100).toFixed(0)}%），建議分散到 3–6 檔以降低單一事件風險。`
-        : topWeight >= 0.35
-          ? `單一標的 ${topTicker} 占比約 ${(topWeight * 100).toFixed(0)}%，可考慮加入不同風格/產業以平衡週期風險。`
-          : '配置集中度良好，單一標的占比控制在合理範圍內。';
-
-      const countNote = count <= 2
-        ? '標的數偏少，建議至少 4 檔以上，以降低非系統性風險。'
-        : count >= 8
-          ? '標的數充足，建議關注彼此相關性，避免過度重疊。'
-          : '標的數量適中，利於控制風險與管理成本。';
-
-      const horizonNote = years <= 3
-        ? '投資期限較短，建議提高現金或低波動資產比例以降低回撤影響。'
-        : years >= 15
-          ? '期限較長，可承受波動，重點在於維持紀律與定期再平衡。'
-          : '期限中等，建議保持成長/防禦資產的均衡配置。';
-
-      const riskNote = portfolioVol >= 0.25
-        ? '整體波動偏高，建議加入低波動或防禦型資產以平滑曲線。'
-        : portfolioVol <= 0.14
-          ? '整體波動偏低，若目標為成長，可提高成長型資產比重。'
-          : '風險區間合理，重點在於保持配置一致性。';
-
-      const returnNote = portfolioReturn >= 0.1
-        ? '預期報酬偏積極，請確認風險承受度與波動心理準備。'
-        : portfolioReturn <= 0.06
-          ? '預期報酬偏保守，若目標為增長，可提高成長型資產比重。'
-          : '預期報酬落在中性區間，配置風格相對平衡。';
-
-      return {
-        summary: `以 ${horizonTag} 投資期限與 ${volTag} 風險結構評估，當前組合呈現「${ddTag}」特徵。`,
-        bullets: [
-          concentrationNote,
-          countNote,
-          horizonNote,
-          riskNote,
-          returnNote
-        ]
-      };
+    function copyShareUrl() {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        scenarioIdEl.textContent = `${scenarioIdEl.textContent} · 已複製`;
+      }).catch(() => {
+        scenarioIdEl.textContent = `${scenarioIdEl.textContent} · 請手動複製網址`;
+      });
     }
 
-    yearsEl.addEventListener('input', () => {
-      syncYearsFromRange();
-      calculate();
-    });
-
-    yearsNumberEl.addEventListener('input', () => {
-      syncYearsFromNumber();
-      calculate();
-    });
-
-    overrideToggleEl.addEventListener('change', () => {
-      overrideEl.disabled = !overrideToggleEl.checked;
-      calculate();
-    });
-
+    yearsEl.addEventListener('input', () => { syncYearsFromRange(); calculate(); });
+    yearsNumberEl.addEventListener('input', () => { syncYearsFromNumber(); calculate(); });
+    overrideToggleEl.addEventListener('change', () => { overrideEl.disabled = !overrideToggleEl.checked; calculate(); });
     document.getElementById('calcBtn').addEventListener('click', calculate);
-    document.getElementById('addRow').addEventListener('click', () => {
-      addRow('', 0, 'USD');
+    document.getElementById('shareBtn').addEventListener('click', copyShareUrl);
+    document.getElementById('addRow').addEventListener('click', () => { addRow('', 0, 'USD', 'US'); calculate(); });
+    [displayCurrencyEl, overrideEl, ageEl, riskLevelEl, taxRegionEl].forEach(el => el.addEventListener('input', calculate));
+
+    function init() {
+      const scenario = hydrateScenarioFromQuery();
+      if (scenario) {
+        rowsEl.innerHTML = '';
+        const profile = scenario.profile || {};
+        ageEl.value = profile.age || 35;
+        riskLevelEl.value = profile.riskLevel || 'balanced';
+        taxRegionEl.value = profile.taxRegion || 'TW';
+        yearsEl.value = scenario.years || 10;
+        yearsNumberEl.value = scenario.years || 10;
+        displayCurrencyEl.value = scenario.displayCurrency || 'USD';
+        overrideToggleEl.checked = Boolean(scenario.override?.enabled);
+        overrideEl.disabled = !overrideToggleEl.checked;
+        overrideEl.value = scenario.override?.value ?? 8.0;
+        (scenario.rows || []).forEach(r => addRow(r.ticker || '', r.amount || 0, r.currency || 'USD', r.market || 'US'));
+      } else {
+        addRow('SPY', 8000, 'USD', 'US');
+        addRow('AAPL', 5000, 'USD', 'US');
+        addRow('2330', 100000, 'TWD', 'TW');
+        syncYearsFromRange();
+      }
       calculate();
-    });
+    }
 
-    [displayCurrencyEl, overrideEl].forEach(el => {
-      el.addEventListener('input', calculate);
-    });
-
-    addRow('SPY', 8000, 'USD');
-    addRow('AAPL', 5000, 'USD');
-    addRow('TSLA', 3000, 'USD');
-    syncYearsFromRange();
-    calculate();
+    init();
   </script>
 </body>
 </html>
