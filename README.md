@@ -80,3 +80,9 @@ graph TD
    - `FINMIND_PORTFOLIO_PATH=<portfolio config 路徑>`
 2. portfolio config 可參考 `data/finmind_portfolio.example.json`。
 3. 執行：`python logic/run_demo.py`
+
+## 台股年化報酬率 API（新增）
+- 端點：`POST /api/v1/tw-stock/annual-return`
+- 功能：輸入台股代碼或名稱，回傳近 1 年價格報酬率（年化）
+- 驗證：亂輸入、不存在代碼/名稱、非 4 位數字代碼，全部回傳 `422`
+- 啟動：`uvicorn logic.api_server:app --reload`

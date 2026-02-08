@@ -58,7 +58,6 @@
 - 不提供投資建議，不應用於真實資金操作
 - 不連接任何外部 API 或市場資料
 
-
 ## FinMind API（可選，預設仍為 mock）
 
 現在 CLI 支援以 FinMind v4 `data` endpoint 讀取行情，將 `positions` 估值後換算成 `holdings.weight`。
@@ -77,3 +76,40 @@ python logic/run_demo.py
 ```
 
 若未設定 `USE_FINMIND_API=1`，系統會回退到 `data/sample_portfolio.json`。
+
+## 台股年化報酬率 API（新增）
+- 端點：`POST /api/v1/tw-stock/annual-return`
+- 請先設定：`FINMIND_API_TOKEN`
+- 啟動：`uvicorn logic.api_server:app --reload`
+
+### Request
+```json
+{
+  "query": "2330"
+}
+```
+
+### Success 200
+```json
+{
+  "query": "2330",
+  "resolved_stock_id": "2330",
+  "resolved_stock_name": "台積電",
+  "price_date_latest": "2026-02-07",
+  "price_latest": 600.0,
+  "price_date_base": "2025-02-07",
+  "price_base": 500.0,
+  "annual_return": 0.2
+}
+```
+
+### Error 422（不通過）
+```json
+{
+  "error_code": "INVALID_QUERY",
+  "message": "台股代碼需為 4 位數字。",
+  "details": {
+    "query": "123"
+  }
+}
+```

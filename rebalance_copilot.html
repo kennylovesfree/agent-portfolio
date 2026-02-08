@@ -414,13 +414,13 @@
         <div class="brand-mark">R</div>
         <div>Rebalance Copilot</div>
       </div>
-      <span class="chip" id="universeLabel">Universe: 5000 tickers (demo)</span>
+      <span class="chip" id="universeLabel">Universe: Taiwan stocks (FinMind API)</span>
     </header>
 
     <section class="hero">
       <span class="eyebrow">Portfolio Forecast Studio</span>
-      <h1>輸入多檔美股代碼，快速預估年化收益、波動率與資產成長曲線。</h1>
-      <p class="subtitle">此頁面為示範模型，提供預期年化報酬與資產累積趨勢。回測與未來績效皆非保證，請勿視為投資建議。</p>
+      <h1>輸入台股代碼或名稱，快速預估年化收益、波動率與資產成長曲線。</h1>
+      <p class="subtitle">此頁面會即時呼叫台股 API 取得近一年報酬。回測與未來績效皆非保證，請勿視為投資建議。</p>
     </section>
 
     <main>
@@ -559,16 +559,19 @@
     </main>
 
     <footer>
-      示範模型：5000 檔代碼為合成清單 + 部分常見標的，報酬/波動/匯率皆為示範用途，未連接即時行情。
+      台股模式：年化報酬率由 API 提供（FinMind），美股目前暫不開放。
     </footer>
   </div>
 
   <script>
-    const KNOWN_TICKERS_US = [
-      'AAPL','MSFT','NVDA','AMZN','META','GOOGL','GOOG','TSLA','BRK.B','AVGO','LLY','V','JPM','UNH','XOM','SPY','VOO','QQQ','VTI'
-    ];
-    const KNOWN_TICKERS_TW = ['2330.TW','2317.TW','2303.TW','2454.TW','2881.TW','2882.TW','0050.TW','0056.TW'];
-
+    const API_BASE_URL = (() => {
+      const host = (window.location.hostname || '').toLowerCase();
+      if (host === 'localhost' || host === '127.0.0.1') {
+        return `http://${host}:8000`;
+      }
+      // Production/staging should call same-origin API routes.
+      return '';
+    })();
     const FX_RATES = { USD: 1, TWD: 0.032, HKD: 0.128, JPY: 0.0068, CNY: 0.14, EUR: 1.08 };
     const RISK_MODELS = {
       conservative: { returnBias: -0.01, volScale: 0.78, stockTarget: 0.45, bondTarget: 0.4, cashTarget: 0.15 },
@@ -609,27 +612,22 @@
     function seededRandom(seed) { const x = Math.sin(seed) * 10000; return x - Math.floor(x); }
     function mulberry32(a) { return function() { let t = a += 0x6D2B79F5; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
-    function normalizeTicker(ticker, market) {
-      const clean = (ticker || '').toUpperCase().trim();
-      if (!clean) return '';
-      if (market === 'TW') return clean.endsWith('.TW') ? clean : `${clean}.TW`;
-      return clean.replace('.TW', '');
+    function normalizeTicker(ticker) {
+      return (ticker || '').trim().toUpperCase();
     }
 
-    function estimateReturnVol(normalizedTicker, market) {
-      const key = `${market}:${normalizedTicker || 'SPY'}`;
-      const seed = hashCode(key);
-      const base = market === 'TW' ? 0.05 + seededRandom(seed + 1) * 0.09 : 0.04 + seededRandom(seed + 1) * 0.1;
-      const vol = market === 'TW' ? 0.16 + seededRandom(seed + 2) * 0.2 : 0.12 + seededRandom(seed + 2) * 0.23;
-      return { expectedReturn: base, volatility: vol };
+    function estimateVolFromReturn(expectedReturn) {
+      const baseline = 0.14;
+      const scaled = Math.abs(expectedReturn) * 1.8;
+      return Math.max(0.1, Math.min(0.45, baseline + scaled));
     }
 
-    function createRow(ticker = '', amount = 0, currency = 'USD', market = 'US') {
+    function createRow(ticker = '', amount = 0, currency = 'TWD', market = 'TW') {
       const row = document.createElement('div');
       row.className = 'table-row';
       row.innerHTML = `
-        <select class="market"><option value="US" ${market === 'US' ? 'selected' : ''}>美股 US</option><option value="TW" ${market === 'TW' ? 'selected' : ''}>台股 TW</option></select>
-        <input class="ticker" type="text" placeholder="例：AAPL 或 2330" value="${ticker}" />
+        <select class="market" disabled><option value="TW" selected>台股 TW</option></select>
+        <input class="ticker" type="text" placeholder="例：2330 或 台積電" value="${ticker}" />
         <input class="amount" type="number" min="0" step="100" value="${amount}" />
         <select class="currency"><option value="USD" ${currency === 'USD' ? 'selected' : ''}>USD</option><option value="TWD" ${currency === 'TWD' ? 'selected' : ''}>TWD</option><option value="HKD" ${currency === 'HKD' ? 'selected' : ''}>HKD</option><option value="JPY" ${currency === 'JPY' ? 'selected' : ''}>JPY</option><option value="CNY" ${currency === 'CNY' ? 'selected' : ''}>CNY</option><option value="EUR" ${currency === 'EUR' ? 'selected' : ''}>EUR</option></select>
         <button type="button" class="remove">移除</button>`;
@@ -638,17 +636,34 @@
       return row;
     }
 
-    function addRow(ticker, amount, currency, market = 'US') { if (rowsEl.children.length >= 10) return; rowsEl.appendChild(createRow(ticker, amount, currency, market)); }
+    function addRow(ticker, amount, currency, market = 'TW') { if (rowsEl.children.length >= 10) return; rowsEl.appendChild(createRow(ticker, amount, currency, market)); }
 
     function getRows() {
       return Array.from(rowsEl.querySelectorAll('.table-row')).map(row => {
-        const market = row.querySelector('.market').value;
-        const ticker = row.querySelector('.ticker').value.toUpperCase().trim();
+        const market = 'TW';
+        const ticker = row.querySelector('.ticker').value.trim();
         const amount = Math.max(0, Number(row.querySelector('.amount').value || 0));
         const currency = row.querySelector('.currency').value;
-        const normalizedTicker = normalizeTicker(ticker, market);
-        return { market, ticker, normalizedTicker, amount, currency };
+        const normalizedTicker = normalizeTicker(ticker);
+        return { rowEl: row, market, ticker, normalizedTicker, amount, currency };
       }).filter(r => r.ticker || r.amount > 0);
+    }
+
+    async function fetchAnnualReturn(query) {
+      const response = await fetch(`${API_BASE_URL}/api/v1/tw-stock/annual-return`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+      let payload = null;
+      try { payload = await response.json(); } catch (_) { payload = null; }
+      if (!response.ok) {
+        const err = new Error(payload?.message || 'API request failed.');
+        err.status = response.status;
+        err.payload = payload;
+        throw err;
+      }
+      return payload;
     }
 
     function buildUserProfile() {
@@ -744,7 +759,9 @@
       try { return JSON.parse(base64DecodeUnicode(raw)); } catch (_) { return null; }
     }
 
-    function calculate() {
+    let latestCalcRun = 0;
+    async function calculate() {
+      const runId = ++latestCalcRun;
       const years = Number(yearsEl.value || 1);
       const displayCurrency = displayCurrencyEl.value;
       const rows = getRows();
@@ -758,14 +775,49 @@
       }
 
       let totalUsd = 0;
-      const details = rows.map(row => {
+      const details = [];
+      const invalidRows = [];
+      for (const row of rows) {
         const fx = FX_RATES[row.currency] || 1;
         const amountUsd = row.amount * fx;
         totalUsd += amountUsd;
-        const stats = estimateReturnVol(row.normalizedTicker || (row.market === 'TW' ? '0050.TW' : 'SPY'), row.market);
-        const inUniverse = row.market === 'TW' ? KNOWN_TICKERS_TW.includes(row.normalizedTicker) : KNOWN_TICKERS_US.includes(row.normalizedTicker);
-        return { ...row, amountUsd, inUniverse, ...stats };
-      });
+        row.rowEl.querySelector('.ticker').style.borderColor = '';
+        if (!row.normalizedTicker) {
+          details.push({ ...row, amountUsd, expectedReturn: 0.01, volatility: 0.02, isCash: true });
+          continue;
+        }
+        try {
+          const apiData = await fetchAnnualReturn(row.normalizedTicker);
+          const expectedReturn = Number(apiData.annual_return);
+          details.push({
+            ...row,
+            amountUsd,
+            normalizedTicker: apiData.resolved_stock_id,
+            resolvedStockName: apiData.resolved_stock_name,
+            expectedReturn,
+            volatility: estimateVolFromReturn(expectedReturn),
+            isCash: false
+          });
+        } catch (err) {
+          invalidRows.push({
+            query: row.normalizedTicker,
+            message: err?.payload?.message || err?.message || '查詢失敗'
+          });
+          row.rowEl.querySelector('.ticker').style.borderColor = 'rgba(255, 90, 90, 0.9)';
+        }
+      }
+
+      if (runId !== latestCalcRun) return;
+
+      if (invalidRows.length) {
+        outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
+        drawChart([0, 1]);
+        expertSummaryEl.textContent = '--';
+        expertListEl.innerHTML = '';
+        allocationRowsEl.innerHTML = '';
+        assumptionNoteEl.textContent = `輸入不通過：${invalidRows.map(x => `${x.query}（${x.message}）`).join('；')}`;
+        return;
+      }
 
       if (totalUsd === 0) {
         outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
@@ -803,10 +855,10 @@
       expertSummaryEl.textContent = advice.summary;
       expertListEl.innerHTML = advice.bullets.map(item => `<li>${item}</li>`).join('');
 
-      const missing = details.filter(d => d.normalizedTicker && !d.inUniverse).map(d => d.normalizedTicker);
-      const missingNote = missing.length ? `未在 demo 清單：${missing.join(', ')}` : '代碼已匹配 demo 清單。';
       scenarioIdEl.textContent = `Scenario: ${seed}`;
-      assumptionNoteEl.textContent = `估算依據：${profile.riskLevel}風險模型 + ${profile.taxRegion}稅務地區假設 + 靜態匯率；${missingNote}`;
+      const resolved = details.filter(d => d.resolvedStockName).map(d => `${d.normalizedTicker} ${d.resolvedStockName}`);
+      const resolvedNote = resolved.length ? `已解析：${resolved.join('、')}` : '無股票代碼輸入。';
+      assumptionNoteEl.textContent = `估算依據：台股 API 近一年報酬 + ${profile.riskLevel}風險模型 + ${profile.taxRegion}稅務地區假設 + 靜態匯率；${resolvedNote}`;
 
       const query = serializeScenarioToQuery(profile, rows, years, displayCurrency, overrideState);
       history.replaceState(null, '', `${location.pathname}?${query}`);
@@ -825,7 +877,7 @@
     overrideToggleEl.addEventListener('change', () => { overrideEl.disabled = !overrideToggleEl.checked; calculate(); });
     document.getElementById('calcBtn').addEventListener('click', calculate);
     document.getElementById('shareBtn').addEventListener('click', copyShareUrl);
-    document.getElementById('addRow').addEventListener('click', () => { addRow('', 0, 'USD', 'US'); calculate(); });
+    document.getElementById('addRow').addEventListener('click', () => { addRow('', 0, 'TWD', 'TW'); calculate(); });
     [displayCurrencyEl, overrideEl, ageEl, riskLevelEl, taxRegionEl].forEach(el => el.addEventListener('input', calculate));
 
     function init() {
@@ -842,11 +894,11 @@
         overrideToggleEl.checked = Boolean(scenario.override?.enabled);
         overrideEl.disabled = !overrideToggleEl.checked;
         overrideEl.value = scenario.override?.value ?? 8.0;
-        (scenario.rows || []).forEach(r => addRow(r.ticker || '', r.amount || 0, r.currency || 'USD', r.market || 'US'));
+        (scenario.rows || []).forEach(r => addRow(r.ticker || '', r.amount || 0, r.currency || 'TWD', 'TW'));
       } else {
-        addRow('SPY', 8000, 'USD', 'US');
-        addRow('AAPL', 5000, 'USD', 'US');
         addRow('2330', 100000, 'TWD', 'TW');
+        addRow('0050', 60000, 'TWD', 'TW');
+        addRow('2454', 40000, 'TWD', 'TW');
         syncYearsFromRange();
       }
       calculate();
