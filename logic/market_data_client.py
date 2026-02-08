@@ -26,6 +26,14 @@ class PricePoint:
     close: float
 
 
+@dataclass(frozen=True)
+class SplitEvent:
+    data_id: str
+    date: str
+    before_price: float
+    after_price: float
+
+
 class FinMindClient:
     """Minimal HTTP client for FinMind v4 dataset endpoint."""
 
@@ -97,6 +105,37 @@ class FinMindClient:
                     data_id=data_id,
                     date=str(row.get("date", "")),
                     close=float(close),
+                )
+            )
+        return sorted(parsed, key=lambda r: r.date)
+
+    def get_split_events(
+        self,
+        *,
+        data_id: str,
+        start_date: str,
+        end_date: str,
+        dataset: str = "TaiwanStockSplitPrice",
+    ) -> list[SplitEvent]:
+        payload = self._get(
+            dataset=dataset,
+            data_id=data_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        records = payload.get("data", [])
+        parsed: list[SplitEvent] = []
+        for row in records:
+            before_price = row.get("before_price")
+            after_price = row.get("after_price")
+            if before_price is None or after_price is None:
+                continue
+            parsed.append(
+                SplitEvent(
+                    data_id=data_id,
+                    date=str(row.get("date", "")),
+                    before_price=float(before_price),
+                    after_price=float(after_price),
                 )
             )
         return sorted(parsed, key=lambda r: r.date)

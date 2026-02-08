@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 try:
     from .market_data_client import FinMindApiError, FinMindClient, FinMindUpstreamError, PricePoint
@@ -43,13 +43,35 @@ class AnnualReturnResult:
     annual_return: float
 
 
+_CACHE_TTL_SECONDS = 3600
+_STOCK_INFO_CACHE: dict[str, object] = {"expires_at": datetime.min, "rows": []}
+_ANNUAL_RETURN_CACHE: dict[tuple[str, str], tuple[datetime, AnnualReturnResult]] = {}
+
+
+def _utcnow() -> datetime:
+    return datetime.utcnow()
+
+
+def _get_stock_universe_cached(client: FinMindClient) -> list[dict[str, str]]:
+    now = _utcnow()
+    expires_at = _STOCK_INFO_CACHE["expires_at"]
+    rows = _STOCK_INFO_CACHE["rows"]
+    if isinstance(expires_at, datetime) and now < expires_at and isinstance(rows, list) and rows:
+        return rows
+
+    universe = client.get_taiwan_stock_info()
+    _STOCK_INFO_CACHE["rows"] = universe
+    _STOCK_INFO_CACHE["expires_at"] = now + timedelta(seconds=_CACHE_TTL_SECONDS)
+    return universe
+
+
 def resolve_stock(query: str, client: FinMindClient) -> ResolvedStock:
     cleaned = query.strip()
     if not cleaned:
         raise StockQueryError("INVALID_QUERY", "query 不可為空白。")
 
     try:
-        universe = client.get_taiwan_stock_info()
+        universe = _get_stock_universe_cached(client)
     except FinMindUpstreamError as exc:
         raise UpstreamServiceError(str(exc)) from exc
     except FinMindApiError as exc:
@@ -79,6 +101,11 @@ def resolve_stock(query: str, client: FinMindClient) -> ResolvedStock:
 
 def compute_annual_return(stock_id: str, client: FinMindClient) -> AnnualReturnResult:
     today = date.today()
+    cache_key = (stock_id, today.isoformat())
+    cached = _ANNUAL_RETURN_CACHE.get(cache_key)
+    if cached and _utcnow() < cached[0]:
+        return cached[1]
+
     start_date = (today - timedelta(days=400)).isoformat()
     end_date = today.isoformat()
     target_base_date = today - timedelta(days=365)
@@ -109,14 +136,20 @@ def compute_annual_return(stock_id: str, client: FinMindClient) -> AnnualReturnR
     if base.close <= 0:
         raise StockQueryError("NO_PRICE_DATA", "基準收盤價異常，無法計算報酬率。", {"stock_id": stock_id})
 
-    annual_return = (latest.close / base.close) - 1.0
-    return AnnualReturnResult(
+    adjusted_base = _adjust_base_for_split(client, stock_id, base, latest)
+    if adjusted_base <= 0:
+        raise StockQueryError("NO_PRICE_DATA", "調整後基準收盤價異常，無法計算報酬率。", {"stock_id": stock_id})
+
+    annual_return = (latest.close / adjusted_base) - 1.0
+    result = AnnualReturnResult(
         price_date_latest=latest.date,
         price_latest=latest.close,
         price_date_base=base.date,
-        price_base=base.close,
+        price_base=adjusted_base,
         annual_return=annual_return,
     )
+    _ANNUAL_RETURN_CACHE[cache_key] = (_utcnow() + timedelta(seconds=_CACHE_TTL_SECONDS), result)
+    return result
 
 
 def _find_base_price(history: list[PricePoint], target_date: date) -> PricePoint | None:
@@ -131,3 +164,35 @@ def _find_base_price(history: list[PricePoint], target_date: date) -> PricePoint
     if not candidates:
         return None
     return candidates[-1]
+
+
+def _adjust_base_for_split(client: FinMindClient, stock_id: str, base: PricePoint, latest: PricePoint) -> float:
+    try:
+        base_date = date.fromisoformat(base.date)
+        latest_date = date.fromisoformat(latest.date)
+    except ValueError:
+        return base.close
+    if latest_date <= base_date:
+        return base.close
+
+    try:
+        events = client.get_split_events(
+            data_id=stock_id,
+            start_date=base_date.isoformat(),
+            end_date=latest_date.isoformat(),
+        )
+    except (FinMindApiError, FinMindUpstreamError):
+        return base.close
+
+    factor = 1.0
+    for event in events:
+        try:
+            event_date = date.fromisoformat(event.date)
+        except ValueError:
+            continue
+        if event_date <= base_date or event_date > latest_date:
+            continue
+        if event.before_price <= 0 or event.after_price <= 0:
+            continue
+        factor *= event.after_price / event.before_price
+    return base.close * factor

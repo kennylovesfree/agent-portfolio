@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from unittest.mock import patch
 
 from logic.market_data_client import FinMindApiError, PricePoint
+from logic import tw_stock_return_service as service_module
 
 try:
     from fastapi.testclient import TestClient
@@ -30,11 +31,19 @@ class FakeClient:
             raise FinMindApiError("upstream error")
         return self.history
 
+    def get_split_events(self, **_) -> list[object]:
+        if self.raise_api_error:
+            raise FinMindApiError("upstream error")
+        return []
+
 
 class ApiServerTests(unittest.TestCase):
     def setUp(self) -> None:
         if not HAS_FASTAPI:
             self.skipTest("fastapi is not installed")
+        service_module._STOCK_INFO_CACHE["rows"] = []
+        service_module._STOCK_INFO_CACHE["expires_at"] = service_module.datetime.min
+        service_module._ANNUAL_RETURN_CACHE.clear()
         self.client = TestClient(app)
 
     def test_api_annual_return_success(self) -> None:
