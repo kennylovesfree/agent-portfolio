@@ -1,13 +1,15 @@
-"""HTTP API for querying annual return of Taiwan and US stocks."""
+"""HTTP API for annual return, portfolio health, stress testing, and AI advice."""
 from __future__ import annotations
 
 import logging
+from dataclasses import asdict
+from typing import Optional
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 try:
     from .market_data_client import FinMindClient
@@ -17,6 +19,14 @@ try:
         AdviceRequest,
         AdviceUpstreamError,
         generate_advice,
+    )
+    from .portfolio_health_service import (
+        PortfolioInputError as HealthPortfolioInputError,
+        evaluate_portfolio_health,
+    )
+    from .stress_test_service import (
+        PortfolioInputError as StressPortfolioInputError,
+        run_stress_test,
     )
     from .tw_stock_return_service import (
         StockQueryError as TwStockQueryError,
@@ -38,6 +48,14 @@ except ImportError:  # pragma: no cover - support direct script-style imports
         AdviceUpstreamError,
         generate_advice,
     )
+    from portfolio_health_service import (
+        PortfolioInputError as HealthPortfolioInputError,
+        evaluate_portfolio_health,
+    )
+    from stress_test_service import (
+        PortfolioInputError as StressPortfolioInputError,
+        run_stress_test,
+    )
     from tw_stock_return_service import (
         StockQueryError as TwStockQueryError,
         UpstreamServiceError as TwUpstreamServiceError,
@@ -55,6 +73,43 @@ class AnnualReturnRequest(BaseModel):
     query: str
 
 
+class PortfolioProfile(BaseModel):
+    age: int = Field(ge=18, le=90)
+    riskLevel: str
+    taxRegion: str
+    horizonYears: int = Field(ge=1, le=30)
+
+
+class PortfolioPosition(BaseModel):
+    ticker: str = ""
+    market: str = "TW"
+    amountUsd: float = Field(ge=0)
+    expectedReturn: float
+    volatility: float = Field(ge=0)
+    weight: float = Field(ge=0, le=1)
+
+
+class PortfolioMetrics(BaseModel):
+    expectedReturn: float
+    volatility: float = Field(ge=0)
+    maxDrawdown: float = Field(ge=0)
+
+
+class PortfolioHealthCheckRequest(BaseModel):
+    profile: PortfolioProfile
+    positions: list[PortfolioPosition]
+    portfolio: PortfolioMetrics
+
+
+class StressScenarioRequest(BaseModel):
+    scenario_id: str
+
+
+class PortfolioStressTestRequest(BaseModel):
+    positions: list[PortfolioPosition]
+    scenarios: Optional[list[StressScenarioRequest]] = None
+
+
 class ApiError(RuntimeError):
     def __init__(self, *, status_code: int, error_code: str, message: str, details: dict | None = None) -> None:
         super().__init__(message)
@@ -65,7 +120,7 @@ class ApiError(RuntimeError):
 
 
 logger = logging.getLogger(__name__)
-app = FastAPI(title="Stock Annual Return API", version="1.1.0")
+app = FastAPI(title="Stock Annual Return API", version="1.2.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -172,6 +227,68 @@ def get_us_annual_return(payload: AnnualReturnRequest) -> dict:
         "price_date_base": result.price_date_base,
         "price_base": result.price_base,
         "annual_return": result.annual_return,
+    }
+
+
+@app.post("/api/v1/portfolio/health-check")
+def post_portfolio_health_check(payload: PortfolioHealthCheckRequest) -> dict:
+    try:
+        result = evaluate_portfolio_health(
+            positions=[position.model_dump() for position in payload.positions],
+            portfolio=payload.portfolio.model_dump(),
+        )
+    except HealthPortfolioInputError as exc:
+        raise ApiError(
+            status_code=422,
+            error_code="INVALID_PORTFOLIO_INPUT",
+            message=str(exc),
+            details=None,
+        ) from exc
+    except Exception as exc:  # pragma: no cover - defensive error mapping
+        logger.exception("portfolio_health_check_failed")
+        raise ApiError(
+            status_code=500,
+            error_code="RISK_ENGINE_ERROR",
+            message="健康度引擎暫時無法使用。",
+            details=None,
+        ) from exc
+
+    return {
+        "health_score": result.health_score,
+        "risk_band": result.risk_band,
+        "components": asdict(result.components),
+        "flags": result.flags,
+        "explanations": result.explanations,
+    }
+
+
+@app.post("/api/v1/portfolio/stress-test")
+def post_portfolio_stress_test(payload: PortfolioStressTestRequest) -> dict:
+    try:
+        result = run_stress_test(
+            positions=[position.model_dump() for position in payload.positions],
+            scenarios=[scenario.model_dump() for scenario in payload.scenarios] if payload.scenarios else None,
+        )
+    except StressPortfolioInputError as exc:
+        raise ApiError(
+            status_code=422,
+            error_code="INVALID_PORTFOLIO_INPUT",
+            message=str(exc),
+            details=None,
+        ) from exc
+    except Exception as exc:  # pragma: no cover - defensive error mapping
+        logger.exception("portfolio_stress_test_failed")
+        raise ApiError(
+            status_code=500,
+            error_code="RISK_ENGINE_ERROR",
+            message="壓力測試引擎暫時無法使用。",
+            details=None,
+        ) from exc
+
+    return {
+        "scenario_results": [asdict(item) for item in result.scenario_results],
+        "worst_case": asdict(result.worst_case),
+        "survival_days_est": result.survival_days_est,
     }
 
 

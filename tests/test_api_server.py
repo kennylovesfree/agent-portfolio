@@ -12,6 +12,7 @@ from logic import us_stock_return_service as us_service_module
 try:
     from fastapi.testclient import TestClient
     from logic.api_server import AdviceConfigError, app
+
     HAS_FASTAPI = True
 except ModuleNotFoundError:
     HAS_FASTAPI = False
@@ -179,6 +180,80 @@ class ApiServerTests(unittest.TestCase):
         self.assertEqual(body["error_code"], "INVALID_QUERY")
         self.assertIn("message", body)
         self.assertIn("details", body)
+
+    def _portfolio_payload(self) -> dict:
+        return {
+            "profile": {"age": 35, "riskLevel": "balanced", "taxRegion": "TW", "horizonYears": 10},
+            "positions": [
+                {
+                    "ticker": "AAPL",
+                    "market": "US",
+                    "amountUsd": 700,
+                    "expectedReturn": 0.12,
+                    "volatility": 0.28,
+                    "weight": 0.7,
+                },
+                {
+                    "ticker": "BND",
+                    "market": "US",
+                    "amountUsd": 300,
+                    "expectedReturn": 0.04,
+                    "volatility": 0.12,
+                    "weight": 0.3,
+                },
+            ],
+            "portfolio": {"expectedReturn": 0.1, "volatility": 0.24, "maxDrawdown": 0.31},
+        }
+
+    def test_api_portfolio_health_check_success(self) -> None:
+        response = self.client.post("/api/v1/portfolio/health-check", json=self._portfolio_payload())
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn("health_score", body)
+        self.assertIn("components", body)
+        self.assertIn("flags", body)
+
+    def test_api_portfolio_health_check_invalid_input_returns_422(self) -> None:
+        payload = self._portfolio_payload()
+        payload["positions"][0]["weight"] = 0
+        payload["positions"][1]["weight"] = 0
+        response = self.client.post("/api/v1/portfolio/health-check", json=payload)
+        self.assertEqual(response.status_code, 422)
+        body = response.json()
+        self.assertEqual(body["error_code"], "INVALID_PORTFOLIO_INPUT")
+
+    def test_api_portfolio_health_check_engine_error_returns_500(self) -> None:
+        with patch("logic.api_server.evaluate_portfolio_health", side_effect=RuntimeError("boom")):
+            response = self.client.post("/api/v1/portfolio/health-check", json=self._portfolio_payload())
+        self.assertEqual(response.status_code, 500)
+        body = response.json()
+        self.assertEqual(body["error_code"], "RISK_ENGINE_ERROR")
+
+    def test_api_portfolio_stress_test_success(self) -> None:
+        payload = {
+            "positions": self._portfolio_payload()["positions"],
+        }
+        response = self.client.post("/api/v1/portfolio/stress-test", json=payload)
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertIn("scenario_results", body)
+        self.assertEqual(len(body["scenario_results"]), 4)
+        self.assertIn("worst_case", body)
+
+    def test_api_portfolio_stress_test_invalid_input_returns_422(self) -> None:
+        payload = {"positions": [{**self._portfolio_payload()["positions"][0], "amountUsd": 0}]}
+        response = self.client.post("/api/v1/portfolio/stress-test", json=payload)
+        self.assertEqual(response.status_code, 422)
+        body = response.json()
+        self.assertEqual(body["error_code"], "INVALID_PORTFOLIO_INPUT")
+
+    def test_api_portfolio_stress_test_engine_error_returns_500(self) -> None:
+        payload = {"positions": self._portfolio_payload()["positions"]}
+        with patch("logic.api_server.run_stress_test", side_effect=RuntimeError("boom")):
+            response = self.client.post("/api/v1/portfolio/stress-test", json=payload)
+        self.assertEqual(response.status_code, 500)
+        body = response.json()
+        self.assertEqual(body["error_code"], "RISK_ENGINE_ERROR")
 
 
 if __name__ == "__main__":

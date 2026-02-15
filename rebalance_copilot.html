@@ -402,6 +402,93 @@
       top: 4px;
     }
 
+    .health-score {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin: 4px 0 12px;
+    }
+
+    .health-score strong {
+      font-size: 40px;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .health-band {
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .health-components {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .mini-stat {
+      border-radius: 12px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      background: rgba(8, 14, 24, 0.52);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .mini-stat strong {
+      display: block;
+      color: var(--ink);
+      font-size: 18px;
+      margin-top: 2px;
+    }
+
+    .flag-list {
+      margin: 12px 0 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .flag-list li {
+      list-style: disc;
+    }
+
+    .stress-table .table-head,
+    .stress-table .table-row {
+      grid-template-columns: 1.3fr 1fr 1fr 0.8fr;
+    }
+
+    .stress-table .table-row {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(8, 14, 24, 0.55);
+      font-size: 13px;
+    }
+
+    .data-quality-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .snapshot-result {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 20px;
+    }
+
     footer {
       padding: 18px clamp(18px, 4vw, 60px) 36px;
       color: var(--muted);
@@ -414,6 +501,10 @@
       header { flex-direction: column; align-items: flex-start; }
       .table-head, .table-row { grid-template-columns: 1fr; }
       .table-row button { width: 100%; }
+      .health-components,
+      .data-quality-grid,
+      .stress-table .table-head,
+      .stress-table .table-row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -510,6 +601,9 @@
             <button id="calcBtn">更新試算結果</button>
             <button id="aiBtn" type="button">查看 AI 建議</button>
             <button id="shareBtn" type="button">複製分享連結</button>
+            <button id="saveSnapshotBtn" type="button">儲存決策快照</button>
+            <button id="exportSnapshotsBtn" type="button">匯出快照 JSON</button>
+            <button id="compareSnapshotsBtn" type="button">比較最近兩次快照</button>
             <label class="chip" style="cursor:pointer;">
               <input id="overrideToggle" type="checkbox" style="margin:0;" />
               使用手動年化報酬
@@ -570,6 +664,51 @@
         <p class="expert-summary" id="expertSummary">填寫完股票與金額後，點擊「查看 AI 建議」。</p>
         <ul class="expert-list" id="expertList"></ul>
       </section>
+
+      <section class="card">
+        <h2>投資組合健康度</h2>
+        <div class="health-score">
+          <strong id="healthScore">--</strong>
+          <span id="healthBand" class="health-band">--</span>
+        </div>
+        <div class="health-components">
+          <div class="mini-stat">濃度分數<strong id="compConcentration">--</strong></div>
+          <div class="mini-stat">分散分數<strong id="compDiversification">--</strong></div>
+          <div class="mini-stat">波動分數<strong id="compVolatility">--</strong></div>
+          <div class="mini-stat">回撤分數<strong id="compDrawdown">--</strong></div>
+        </div>
+        <ul class="flag-list" id="healthFlags"></ul>
+      </section>
+
+      <section class="card stress-table">
+        <h2>標準壓力情境測試</h2>
+        <div class="table">
+          <div class="table-head">
+            <div>情境</div>
+            <div>組合損益 (USD)</div>
+            <div>估計回撤</div>
+            <div>風險標籤</div>
+          </div>
+          <div id="stressRows"></div>
+        </div>
+        <div class="note" id="stressMeta">worst-case: --；survival days: --</div>
+      </section>
+
+      <section class="card">
+        <h2>資料可信度</h2>
+        <div class="data-quality-grid">
+          <div class="mini-stat">最新價格日期<strong id="qualityLatest">--</strong></div>
+          <div class="mini-stat">基準價格日期<strong id="qualityBase">--</strong></div>
+          <div class="mini-stat">資料覆蓋率<strong id="qualityCoverage">--</strong></div>
+        </div>
+        <div class="note" id="qualityNote">資料來源：台股 FinMind、美股 Stooq。</div>
+      </section>
+
+      <section class="card">
+        <h2>決策快照</h2>
+        <p class="note">可儲存當下輸入與輸出，用於回放與比較。</p>
+        <div class="snapshot-result" id="snapshotResult">尚未儲存快照。</div>
+      </section>
     </main>
 
     <footer>
@@ -614,6 +753,23 @@
     const expertSummaryEl = document.getElementById('expertSummary');
     const expertListEl = document.getElementById('expertList');
     const aiBtnEl = document.getElementById('aiBtn');
+    const healthScoreEl = document.getElementById('healthScore');
+    const healthBandEl = document.getElementById('healthBand');
+    const compConcentrationEl = document.getElementById('compConcentration');
+    const compDiversificationEl = document.getElementById('compDiversification');
+    const compVolatilityEl = document.getElementById('compVolatility');
+    const compDrawdownEl = document.getElementById('compDrawdown');
+    const healthFlagsEl = document.getElementById('healthFlags');
+    const stressRowsEl = document.getElementById('stressRows');
+    const stressMetaEl = document.getElementById('stressMeta');
+    const qualityLatestEl = document.getElementById('qualityLatest');
+    const qualityBaseEl = document.getElementById('qualityBase');
+    const qualityCoverageEl = document.getElementById('qualityCoverage');
+    const qualityNoteEl = document.getElementById('qualityNote');
+    const snapshotResultEl = document.getElementById('snapshotResult');
+    const saveSnapshotBtnEl = document.getElementById('saveSnapshotBtn');
+    const exportSnapshotsBtnEl = document.getElementById('exportSnapshotsBtn');
+    const compareSnapshotsBtnEl = document.getElementById('compareSnapshotsBtn');
 
     const canvas = document.getElementById('trend');
     const ctx = canvas.getContext('2d');
@@ -633,13 +789,16 @@
     const AI_DEBOUNCE_MS = 1000;
     const AI_COOLDOWN_MS = 10000;
     const AI_RETRY_DELAY_MS = 6000;
+    const SNAPSHOT_STORAGE_KEY = 'rebalance_snapshots_v1';
     const annualReturnCache = new Map();
     const adviceCache = new Map();
     let activeReturnController = null;
     let activeAdviceController = null;
+    let activeRiskController = null;
     let lastAiRequestAt = 0;
     let lastAiPayloadKey = '';
     let aiAdviceStale = false;
+    let latestSnapshotDraft = null;
 
     function normalizeTicker(ticker, market = 'TW') {
       const normalized = (ticker || '').trim().toUpperCase();
@@ -768,6 +927,42 @@
       return { payload: parsed, cacheHit: false };
     }
 
+    async function fetchPortfolioHealth(payload, signal) {
+      const response = await fetch(`${API_BASE_URL}/api/v1/portfolio/health-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal
+      });
+      let parsed = null;
+      try { parsed = await response.json(); } catch (_) { parsed = null; }
+      if (!response.ok) {
+        const err = new Error(parsed?.message || 'Portfolio health check failed.');
+        err.status = response.status;
+        err.payload = parsed;
+        throw err;
+      }
+      return parsed;
+    }
+
+    async function fetchStressTest(payload, signal) {
+      const response = await fetch(`${API_BASE_URL}/api/v1/portfolio/stress-test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal
+      });
+      let parsed = null;
+      try { parsed = await response.json(); } catch (_) { parsed = null; }
+      if (!response.ok) {
+        const err = new Error(parsed?.message || 'Stress test failed.');
+        err.status = response.status;
+        err.payload = parsed;
+        throw err;
+      }
+      return parsed;
+    }
+
     function formatTimestamp(ts) {
       const date = new Date(ts);
       return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
@@ -792,6 +987,172 @@
       if (code === 'UPSTREAM_ERROR') return '行情服務暫時異常，請稍後再試。';
       if (code === 'CONFIG_ERROR') return '後端尚未設定 API Token。';
       return err?.payload?.message || err?.message || '查詢失敗，請稍後再試。';
+    }
+
+    function describeRiskApiError(err) {
+      const code = err?.payload?.error_code || '';
+      if (code === 'INVALID_PORTFOLIO_INPUT') return '組合輸入不完整，無法完成診斷。';
+      if (code === 'RISK_ENGINE_ERROR') return '風險引擎暫時異常，請稍後再試。';
+      return err?.payload?.message || err?.message || '風險模組暫時不可用。';
+    }
+
+    function clearHealthCheck(message = '等待試算結果。') {
+      healthScoreEl.textContent = '--';
+      healthBandEl.textContent = '--';
+      compConcentrationEl.textContent = '--';
+      compDiversificationEl.textContent = '--';
+      compVolatilityEl.textContent = '--';
+      compDrawdownEl.textContent = '--';
+      healthFlagsEl.innerHTML = `<li>${message}</li>`;
+    }
+
+    function clearStressTest(message = '等待試算結果。') {
+      stressRowsEl.innerHTML = `<div class="table-row"><div>${message}</div><div>--</div><div>--</div><div>--</div></div>`;
+      stressMetaEl.textContent = 'worst-case: --；survival days: --';
+    }
+
+    function clearDataQuality(message = '資料來源：台股 FinMind、美股 Stooq。') {
+      qualityLatestEl.textContent = '--';
+      qualityBaseEl.textContent = '--';
+      qualityCoverageEl.textContent = '--';
+      qualityNoteEl.textContent = message;
+    }
+
+    function renderHealthCheck(payload) {
+      healthScoreEl.textContent = String(payload.health_score ?? '--');
+      const band = payload.risk_band || '--';
+      healthBandEl.textContent = `risk: ${band}`;
+      compConcentrationEl.textContent = payload?.components?.concentration_score ?? '--';
+      compDiversificationEl.textContent = payload?.components?.diversification_score ?? '--';
+      compVolatilityEl.textContent = payload?.components?.volatility_score ?? '--';
+      compDrawdownEl.textContent = payload?.components?.drawdown_score ?? '--';
+      const explanations = payload.explanations || [];
+      healthFlagsEl.innerHTML = explanations.length
+        ? explanations.map(text => `<li>${text}</li>`).join('')
+        : '<li>目前無顯著風險旗標。</li>';
+    }
+
+    function renderStressTest(payload) {
+      const rows = payload?.scenario_results || [];
+      stressRowsEl.innerHTML = rows.length
+        ? rows.map(row => `<div class="table-row"><div>${row.scenario_id}</div><div>${formatCurrency(row.portfolio_pnl_usd || 0, 'USD')}</div><div>${((row.drawdown_est || 0) * 100).toFixed(2)}%</div><div>${row.risk_label || '--'}</div></div>`).join('')
+        : '<div class="table-row"><div>無情境資料</div><div>--</div><div>--</div><div>--</div></div>';
+      const worst = payload?.worst_case;
+      stressMetaEl.textContent = worst
+        ? `worst-case: ${worst.scenario_id} (${formatCurrency(worst.portfolio_pnl_usd || 0, 'USD')})；survival days: ${payload?.survival_days_est ?? '--'}`
+        : 'worst-case: --；survival days: --';
+    }
+
+    function renderDataQuality(details) {
+      const priced = details.filter(item => !item.isCash && item.priceDateLatest && item.priceDateBase);
+      const nonCash = details.filter(item => !item.isCash);
+      const coverage = nonCash.length ? priced.length / nonCash.length : 1;
+      const latestDate = priced.map(item => item.priceDateLatest).sort().slice(-1)[0] || '--';
+      const baseDate = priced.map(item => item.priceDateBase).sort()[0] || '--';
+
+      qualityLatestEl.textContent = latestDate;
+      qualityBaseEl.textContent = baseDate;
+      qualityCoverageEl.textContent = `${(coverage * 100).toFixed(0)}%`;
+      qualityNoteEl.textContent = nonCash.length
+        ? `已覆蓋 ${priced.length}/${nonCash.length} 檔非現金標的。`
+        : '目前組合為現金部位，資料覆蓋率視為 100%。';
+    }
+
+    function buildRiskPositions(details) {
+      return details.map(item => ({
+        ticker: item.normalizedTicker || '',
+        market: item.market || 'TW',
+        amountUsd: item.amountUsd,
+        expectedReturn: item.expectedReturn,
+        volatility: item.volatility,
+        weight: item.weight
+      }));
+    }
+
+    function buildHealthPayload(profile, details, portfolioReturn, portfolioVol, dd) {
+      return {
+        profile: {
+          age: profile.age,
+          riskLevel: profile.riskLevel,
+          taxRegion: profile.taxRegion,
+          horizonYears: profile.horizonYears
+        },
+        positions: buildRiskPositions(details),
+        portfolio: {
+          expectedReturn: portfolioReturn,
+          volatility: portfolioVol,
+          maxDrawdown: dd
+        }
+      };
+    }
+
+    function buildStressPayload(details) {
+      return { positions: buildRiskPositions(details) };
+    }
+
+    function readSnapshots() {
+      try {
+        const raw = localStorage.getItem(SNAPSHOT_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function writeSnapshots(snapshots) {
+      localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshots));
+    }
+
+    function saveSnapshot() {
+      if (!latestSnapshotDraft) {
+        snapshotResultEl.textContent = '目前沒有可儲存的結果，請先完成一次試算。';
+        return;
+      }
+      const snapshots = readSnapshots();
+      const snapshot = {
+        ...latestSnapshotDraft,
+        id: `snapshot_${Date.now()}`,
+        created_at: new Date().toISOString()
+      };
+      snapshots.push(snapshot);
+      writeSnapshots(snapshots.slice(-50));
+      snapshotResultEl.textContent = `已儲存快照：${snapshot.id}`;
+    }
+
+    function exportSnapshots() {
+      const snapshots = readSnapshots();
+      const blob = new Blob([JSON.stringify(snapshots, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'rebalance_snapshots.json';
+      anchor.click();
+      URL.revokeObjectURL(url);
+      snapshotResultEl.textContent = `已匯出 ${snapshots.length} 筆快照。`;
+    }
+
+    function compareLatestSnapshots() {
+      const snapshots = readSnapshots();
+      if (snapshots.length < 2) {
+        snapshotResultEl.textContent = '至少需要 2 筆快照才能比較。';
+        return;
+      }
+      const previous = snapshots[snapshots.length - 2];
+      const latest = snapshots[snapshots.length - 1];
+      const outputPrev = previous.outputs || {};
+      const outputLast = latest.outputs || {};
+      const healthPrev = previous.health || {};
+      const healthLast = latest.health || {};
+
+      const message = [
+        `比較 ${previous.id} -> ${latest.id}`,
+        `expectedReturn: ${(outputPrev.expectedReturn ?? 0).toFixed(4)} -> ${(outputLast.expectedReturn ?? 0).toFixed(4)}`,
+        `volatility: ${(outputPrev.volatility ?? 0).toFixed(4)} -> ${(outputLast.volatility ?? 0).toFixed(4)}`,
+        `maxDrawdown: ${(outputPrev.maxDrawdown ?? 0).toFixed(4)} -> ${(outputLast.maxDrawdown ?? 0).toFixed(4)}`,
+        `health_score: ${healthPrev.health_score ?? '--'} -> ${healthLast.health_score ?? '--'}`
+      ].join(' | ');
+      snapshotResultEl.textContent = message;
     }
 
     function buildUserProfile() {
@@ -953,6 +1314,7 @@
       const runId = ++latestCalcRun;
       if (activeReturnController) activeReturnController.abort();
       if (activeAdviceController) activeAdviceController.abort();
+      if (activeRiskController) activeRiskController.abort();
       activeReturnController = new AbortController();
 
       const years = Number(yearsEl.value || 1);
@@ -964,6 +1326,10 @@
       if (!rows.length) {
         outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
         drawChart([0, 1]); assumptionNoteEl.textContent = '請至少輸入一檔代碼與金額。'; expertSummaryEl.textContent = '--'; expertListEl.innerHTML = ''; allocationRowsEl.innerHTML = '';
+        clearHealthCheck('請先輸入有效部位。');
+        clearStressTest('請先輸入有效部位。');
+        clearDataQuality('請先完成有效行情查詢。');
+        latestSnapshotDraft = null;
         return;
       }
 
@@ -975,7 +1341,21 @@
         const amountUsd = row.amount * fx;
         row.rowEl.querySelector('.ticker').style.borderColor = '';
         setTickerError(row.rowEl, '');
-        if (!row.normalizedTicker) return { row, amountUsd, detail: { ...row, amountUsd, expectedReturn: 0.01, volatility: 0.02, isCash: true } };
+        if (!row.normalizedTicker) {
+          return {
+            row,
+            amountUsd,
+            detail: {
+              ...row,
+              amountUsd,
+              expectedReturn: 0.01,
+              volatility: 0.02,
+              isCash: true,
+              priceDateLatest: null,
+              priceDateBase: null
+            }
+          };
+        }
         const apiData = await fetchAnnualReturn(row.market, row.normalizedTicker, activeReturnController.signal);
         const expectedReturn = Number(apiData.annual_return);
         return {
@@ -988,7 +1368,9 @@
             resolvedStockName: apiData.resolved_stock_name,
             expectedReturn,
             volatility: estimateVolFromReturn(expectedReturn),
-            isCash: false
+            isCash: false,
+            priceDateLatest: apiData.price_date_latest || null,
+            priceDateBase: apiData.price_date_base || null
           }
         };
       });
@@ -1018,6 +1400,10 @@
         expertSummaryEl.textContent = '--';
         expertListEl.innerHTML = '';
         allocationRowsEl.innerHTML = '';
+        clearHealthCheck('輸入不通過，無法計算健康度。');
+        clearStressTest('輸入不通過，無法計算壓力測試。');
+        clearDataQuality('輸入不通過，請修正代碼後重試。');
+        latestSnapshotDraft = null;
         assumptionNoteEl.textContent = `輸入不通過：${invalidRows.map(x => `${x.query}（${x.message}）`).join('；')}`;
         return;
       }
@@ -1025,6 +1411,10 @@
       if (totalUsd === 0) {
         outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
         drawChart([0, 1]); assumptionNoteEl.textContent = '投資金額需大於 0。'; expertSummaryEl.textContent = '--'; expertListEl.innerHTML = ''; allocationRowsEl.innerHTML = '';
+        clearHealthCheck('投資金額需大於 0。');
+        clearStressTest('投資金額需大於 0。');
+        clearDataQuality('投資金額需大於 0。');
+        latestSnapshotDraft = null;
         return;
       }
 
@@ -1054,6 +1444,40 @@
 
       const suggestions = suggestAllocation(details, profile);
       renderAllocation(suggestions);
+      renderDataQuality(details);
+
+      const healthPayload = buildHealthPayload(profile, details, portfolioReturn, portfolioVol, dd);
+      const stressPayload = buildStressPayload(details);
+      activeRiskController = new AbortController();
+      let healthData = null;
+      let stressData = null;
+
+      try {
+        const [healthResult, stressResult] = await Promise.allSettled([
+          fetchPortfolioHealth(healthPayload, activeRiskController.signal),
+          fetchStressTest(stressPayload, activeRiskController.signal),
+        ]);
+
+        if (runId !== latestCalcRun || activeRiskController.signal.aborted) return;
+
+        if (healthResult.status === 'fulfilled') {
+          healthData = healthResult.value;
+          renderHealthCheck(healthData);
+        } else if (healthResult.reason?.name !== 'AbortError') {
+          clearHealthCheck(describeRiskApiError(healthResult.reason));
+        }
+
+        if (stressResult.status === 'fulfilled') {
+          stressData = stressResult.value;
+          renderStressTest(stressData);
+        } else if (stressResult.reason?.name !== 'AbortError') {
+          clearStressTest(describeRiskApiError(stressResult.reason));
+        }
+      } catch (_) {
+        clearHealthCheck('風險模組暫時不可用。');
+        clearStressTest('風險模組暫時不可用。');
+      }
+
       const aiPayload = buildAdvicePayload(profile, details, suggestions, portfolioReturn, portfolioVol, dd, totalUsd);
       const aiPayloadKey = JSON.stringify(aiPayload);
       const inputChangedSinceLastAi = lastAiPayloadKey && lastAiPayloadKey !== aiPayloadKey;
@@ -1102,6 +1526,26 @@
       const resolvedNote = resolved.length ? `已解析：${resolved.join('、')}` : '無股票代碼輸入。';
       assumptionNoteEl.textContent = `估算依據：台股(FinMind) / 美股(Stooq) 近一年報酬 + ${profile.riskLevel}風險模型 + ${profile.taxRegion}稅務地區假設 + 靜態匯率；${resolvedNote}`;
 
+      latestSnapshotDraft = {
+        scenario_seed: seed,
+        inputs: {
+          profile,
+          rows: getRowsForScenario(rows),
+          years,
+          displayCurrency,
+          override: overrideState
+        },
+        outputs: {
+          expectedReturn: portfolioReturn,
+          volatility: portfolioVol,
+          maxDrawdown: dd,
+          finalUsd,
+          gainUsd
+        },
+        health: healthData,
+        stress: stressData
+      };
+
       const query = serializeScenarioToQuery(profile, rows, years, displayCurrency, overrideState);
       history.replaceState(null, '', `${location.pathname}?${query}`);
     }
@@ -1120,10 +1564,20 @@
     document.getElementById('calcBtn').addEventListener('click', () => calculate({ includeAi: false }));
     aiBtnEl.addEventListener('click', () => calculate({ includeAi: true, forceAi: true }));
     document.getElementById('shareBtn').addEventListener('click', copyShareUrl);
+    saveSnapshotBtnEl.addEventListener('click', saveSnapshot);
+    exportSnapshotsBtnEl.addEventListener('click', exportSnapshots);
+    compareSnapshotsBtnEl.addEventListener('click', compareLatestSnapshots);
     document.getElementById('addRow').addEventListener('click', () => { addRow('', 0, 'TWD', 'TW'); calculate({ includeAi: false }); });
     [displayCurrencyEl, overrideEl, ageEl, riskLevelEl, taxRegionEl].forEach(el => el.addEventListener('input', scheduleCalculate));
 
     function init() {
+      clearHealthCheck();
+      clearStressTest();
+      clearDataQuality();
+      const existingSnapshots = readSnapshots();
+      snapshotResultEl.textContent = existingSnapshots.length
+        ? `已載入 ${existingSnapshots.length} 筆快照。`
+        : '尚未儲存快照。';
       const scenario = hydrateScenarioFromQuery();
       if (scenario) {
         rowsEl.innerHTML = '';

@@ -86,3 +86,173 @@ graph TD
 - 功能：輸入台股代碼或名稱，回傳近 1 年價格報酬率（年化）
 - 驗證：亂輸入、不存在代碼/名稱、非 4 位數字代碼，全部回傳 `422`
 - 啟動：`uvicorn logic.api_server:app --reload`
+
+## API 快速參考（v1.2）
+啟動方式：
+```bash
+uvicorn logic.api_server:app --reload
+```
+
+### 1) 台股年化報酬
+- `POST /api/v1/tw-stock/annual-return`
+
+Request:
+```json
+{
+  "query": "2330"
+}
+```
+
+Response 200（節錄）:
+```json
+{
+  "query": "2330",
+  "resolved_stock_id": "2330",
+  "resolved_stock_name": "台積電",
+  "price_date_latest": "2026-02-07",
+  "price_date_base": "2025-02-07",
+  "annual_return": 0.2
+}
+```
+
+### 2) 美股年化報酬
+- `POST /api/v1/us-stock/annual-return`
+
+Request:
+```json
+{
+  "query": "AAPL"
+}
+```
+
+Response 200（節錄）:
+```json
+{
+  "query": "AAPL",
+  "resolved_stock_id": "AAPL",
+  "resolved_stock_name": "AAPL",
+  "price_date_latest": "2026-02-13",
+  "price_date_base": "2025-02-13",
+  "annual_return": 0.11
+}
+```
+
+### 3) 投資組合健康度
+- `POST /api/v1/portfolio/health-check`
+- 錯誤碼：`INVALID_PORTFOLIO_INPUT`（422）、`RISK_ENGINE_ERROR`（500）
+
+Request:
+```json
+{
+  "profile": {
+    "age": 35,
+    "riskLevel": "balanced",
+    "taxRegion": "TW",
+    "horizonYears": 10
+  },
+  "positions": [
+    {
+      "ticker": "AAPL",
+      "market": "US",
+      "amountUsd": 700,
+      "expectedReturn": 0.12,
+      "volatility": 0.28,
+      "weight": 0.7
+    },
+    {
+      "ticker": "BND",
+      "market": "US",
+      "amountUsd": 300,
+      "expectedReturn": 0.04,
+      "volatility": 0.12,
+      "weight": 0.3
+    }
+  ],
+  "portfolio": {
+    "expectedReturn": 0.1,
+    "volatility": 0.24,
+    "maxDrawdown": 0.31
+  }
+}
+```
+
+Response 200（節錄）:
+```json
+{
+  "health_score": 63,
+  "risk_band": "medium",
+  "components": {
+    "concentration_score": 0,
+    "diversification_score": 100,
+    "volatility_score": 93,
+    "drawdown_score": 98
+  },
+  "flags": [
+    "OVER_CONCENTRATION",
+    "HIGH_VOLATILITY",
+    "DEEP_DRAWDOWN"
+  ],
+  "explanations": [
+    "單一標的比重超過 35%，集中風險偏高。"
+  ]
+}
+```
+
+### 4) 標準壓力情境測試
+- `POST /api/v1/portfolio/stress-test`
+- 預設情境：
+  - `GLOBAL_EQUITY_-15`
+  - `RATE_SHOCK_BOND_-8`
+  - `FX_USD_TWD_+5`
+  - `COMBINED_RISK_OFF`
+- 錯誤碼：`INVALID_PORTFOLIO_INPUT`（422）、`RISK_ENGINE_ERROR`（500）
+
+Request:
+```json
+{
+  "positions": [
+    {
+      "ticker": "AAPL",
+      "market": "US",
+      "amountUsd": 700,
+      "expectedReturn": 0.12,
+      "volatility": 0.28,
+      "weight": 0.7
+    },
+    {
+      "ticker": "BND",
+      "market": "US",
+      "amountUsd": 300,
+      "expectedReturn": 0.04,
+      "volatility": 0.12,
+      "weight": 0.3
+    }
+  ]
+}
+```
+
+Response 200（節錄）:
+```json
+{
+  "scenario_results": [
+    {
+      "scenario_id": "GLOBAL_EQUITY_-15",
+      "portfolio_pnl_usd": -105.0,
+      "drawdown_est": 0.105,
+      "risk_label": "medium"
+    }
+  ],
+  "worst_case": {
+    "scenario_id": "GLOBAL_EQUITY_-15",
+    "portfolio_pnl_usd": -105.0,
+    "drawdown_est": 0.105,
+    "risk_label": "medium"
+  },
+  "survival_days_est": 120
+}
+```
+
+### 5) AI 建議生成
+- `POST /api/v1/advice/generate`
+- 錯誤碼：`AI_CONFIG_ERROR`（503）、`AI_RATE_LIMITED`（429）、`AI_UPSTREAM_ERROR`（502）
+- 說明：請先設定 `OPENAI_API_KEY` 或 `GEMINI_API_KEY`
