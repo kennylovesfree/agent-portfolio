@@ -602,7 +602,7 @@
             <button id="aiBtn" type="button">查看 AI 建議</button>
             <button id="shareBtn" type="button">複製分享連結</button>
             <button id="saveSnapshotBtn" type="button">儲存決策快照</button>
-            <button id="exportSnapshotsBtn" type="button">匯出快照 JSON</button>
+            <button id="exportShareImageBtn" type="button">匯出分享圖片</button>
             <button id="compareSnapshotsBtn" type="button">比較最近兩次快照</button>
             <label class="chip" style="cursor:pointer;">
               <input id="overrideToggle" type="checkbox" style="margin:0;" />
@@ -705,8 +705,8 @@
       </section>
 
       <section class="card">
-        <h2>決策快照</h2>
-        <p class="note">可儲存當下輸入與輸出，用於回放與比較。</p>
+        <h2>決策快照與分享</h2>
+        <p class="note">可儲存當下輸入與輸出，並匯出手機友善分享圖片。</p>
         <div class="snapshot-result" id="snapshotResult">尚未儲存快照。</div>
       </section>
     </main>
@@ -768,7 +768,7 @@
     const qualityNoteEl = document.getElementById('qualityNote');
     const snapshotResultEl = document.getElementById('snapshotResult');
     const saveSnapshotBtnEl = document.getElementById('saveSnapshotBtn');
-    const exportSnapshotsBtnEl = document.getElementById('exportSnapshotsBtn');
+    const exportShareImageBtnEl = document.getElementById('exportShareImageBtn');
     const compareSnapshotsBtnEl = document.getElementById('compareSnapshotsBtn');
 
     const canvas = document.getElementById('trend');
@@ -1120,16 +1120,195 @@
       snapshotResultEl.textContent = `已儲存快照：${snapshot.id}`;
     }
 
-    function exportSnapshots() {
-      const snapshots = readSnapshots();
-      const blob = new Blob([JSON.stringify(snapshots, null, 2)], { type: 'application/json' });
+    function drawRoundedRect(ctxRef, x, y, width, height, radius, fillStyle, strokeStyle = '') {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctxRef.beginPath();
+      ctxRef.moveTo(x + r, y);
+      ctxRef.arcTo(x + width, y, x + width, y + height, r);
+      ctxRef.arcTo(x + width, y + height, x, y + height, r);
+      ctxRef.arcTo(x, y + height, x, y, r);
+      ctxRef.arcTo(x, y, x + width, y, r);
+      ctxRef.closePath();
+      ctxRef.fillStyle = fillStyle;
+      ctxRef.fill();
+      if (strokeStyle) {
+        ctxRef.strokeStyle = strokeStyle;
+        ctxRef.lineWidth = 2;
+        ctxRef.stroke();
+      }
+    }
+
+    function wrapTextLines(ctxRef, text, maxWidth) {
+      const words = String(text || '').split(/\s+/).filter(Boolean);
+      if (!words.length) return ['--'];
+      if (words.length === 1 && ctxRef.measureText(words[0]).width > maxWidth) {
+        const lines = [];
+        let line = '';
+        Array.from(words[0]).forEach(ch => {
+          const next = `${line}${ch}`;
+          if (ctxRef.measureText(next).width <= maxWidth || !line) {
+            line = next;
+          } else {
+            lines.push(line);
+            line = ch;
+          }
+        });
+        if (line) lines.push(line);
+        return lines;
+      }
+      const lines = [];
+      let line = '';
+      words.forEach(word => {
+        const next = line ? `${line} ${word}` : word;
+        if (ctxRef.measureText(next).width <= maxWidth || !line) {
+          line = next;
+        } else {
+          lines.push(line);
+          line = word;
+        }
+      });
+      if (line) lines.push(line);
+      return lines;
+    }
+
+    function downloadBlob(blob, filename) {
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = 'rebalance_snapshots.json';
+      anchor.download = filename;
       anchor.click();
       URL.revokeObjectURL(url);
-      snapshotResultEl.textContent = `已匯出 ${snapshots.length} 筆快照。`;
+    }
+
+    async function exportShareImage() {
+      if (!latestSnapshotDraft) {
+        snapshotResultEl.textContent = '目前沒有可分享內容，請先完成一次試算。';
+        return;
+      }
+
+      const snapshot = latestSnapshotDraft;
+      const outputs = snapshot.outputs || {};
+      const health = snapshot.health || {};
+      const stress = snapshot.stress || {};
+      const worst = stress.worst_case || {};
+      const summary = (expertSummaryEl.textContent || '').trim() || '本次試算提供風險與配置參考。';
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      const canvasShare = document.createElement('canvas');
+      canvasShare.width = 1080;
+      canvasShare.height = 1350;
+      const c = canvasShare.getContext('2d');
+      if (!c) {
+        snapshotResultEl.textContent = '無法產生分享圖片。';
+        return;
+      }
+
+      const bg = c.createLinearGradient(0, 0, canvasShare.width, canvasShare.height);
+      bg.addColorStop(0, '#0b1118');
+      bg.addColorStop(0.5, '#0f1a26');
+      bg.addColorStop(1, '#102433');
+      c.fillStyle = bg;
+      c.fillRect(0, 0, canvasShare.width, canvasShare.height);
+
+      c.fillStyle = '#f0c86a';
+      c.font = '700 48px Manrope, system-ui, sans-serif';
+      c.fillText('Rebalance Copilot 分享摘要', 64, 92);
+      c.fillStyle = 'rgba(232, 238, 246, 0.72)';
+      c.font = '400 26px Manrope, system-ui, sans-serif';
+      c.fillText(`Scenario #${snapshot.scenario_seed || '--'}  ·  ${timestamp}`, 64, 132);
+
+      const cardX = 64;
+      const cardW = 952;
+      const gap = 22;
+      let y = 164;
+
+      drawRoundedRect(c, cardX, y, cardW, 230, 24, 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.12)');
+      c.fillStyle = '#e8eef6';
+      c.font = '600 30px Manrope, system-ui, sans-serif';
+      c.fillText('核心績效', cardX + 26, y + 48);
+      c.font = '700 54px Manrope, system-ui, sans-serif';
+      c.fillStyle = '#f0c86a';
+      c.fillText(`${((outputs.expectedReturn || 0) * 100).toFixed(2)}%`, cardX + 26, y + 122);
+      c.fillStyle = 'rgba(232,238,246,0.72)';
+      c.font = '400 24px Manrope, system-ui, sans-serif';
+      c.fillText('預期年化收益', cardX + 26, y + 156);
+      c.fillStyle = '#e8eef6';
+      c.font = '600 34px Manrope, system-ui, sans-serif';
+      c.fillText(`波動 ${(outputs.volatility * 100 || 0).toFixed(2)}%`, cardX + 430, y + 110);
+      c.fillText(`回撤 ${(outputs.maxDrawdown * 100 || 0).toFixed(2)}%`, cardX + 430, y + 158);
+      c.fillText(`健康度 ${health.health_score ?? '--'}`, cardX + 430, y + 206);
+      y += 230 + gap;
+
+      drawRoundedRect(c, cardX, y, cardW, 190, 24, 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.12)');
+      c.fillStyle = '#e8eef6';
+      c.font = '600 30px Manrope, system-ui, sans-serif';
+      c.fillText('風險診斷', cardX + 26, y + 48);
+      c.font = '500 26px Manrope, system-ui, sans-serif';
+      c.fillStyle = 'rgba(232,238,246,0.80)';
+      const explain = (health.explanations || []).slice(0, 2).join(' / ') || '目前無顯著風險旗標。';
+      wrapTextLines(c, explain, cardW - 52).slice(0, 2).forEach((line, idx) => {
+        c.fillText(line, cardX + 26, y + 96 + idx * 36);
+      });
+      c.fillStyle = '#5fd6c2';
+      c.fillText(`Risk Band: ${(health.risk_band || '--').toUpperCase()}`, cardX + 26, y + 164);
+      y += 190 + gap;
+
+      drawRoundedRect(c, cardX, y, cardW, 190, 24, 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.12)');
+      c.fillStyle = '#e8eef6';
+      c.font = '600 30px Manrope, system-ui, sans-serif';
+      c.fillText('壓力測試重點', cardX + 26, y + 48);
+      c.font = '500 26px Manrope, system-ui, sans-serif';
+      c.fillStyle = 'rgba(232,238,246,0.85)';
+      c.fillText(`Worst Case: ${worst.scenario_id || '--'}`, cardX + 26, y + 96);
+      c.fillText(`PnL: ${formatCurrency(worst.portfolio_pnl_usd || 0, 'USD')}`, cardX + 26, y + 136);
+      c.fillText(`Survival Days: ${stress.survival_days_est ?? '--'}`, cardX + 26, y + 176);
+      y += 190 + gap;
+
+      drawRoundedRect(c, cardX, y, cardW, 280, 24, 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.12)');
+      c.fillStyle = '#e8eef6';
+      c.font = '600 30px Manrope, system-ui, sans-serif';
+      c.fillText('AI 摘要與資料品質', cardX + 26, y + 48);
+      c.font = '500 24px Manrope, system-ui, sans-serif';
+      c.fillStyle = 'rgba(232,238,246,0.82)';
+      wrapTextLines(c, summary, cardW - 52).slice(0, 4).forEach((line, idx) => {
+        c.fillText(line, cardX + 26, y + 94 + idx * 34);
+      });
+      c.fillStyle = '#87a9ff';
+      c.fillText(`資料覆蓋率 ${qualityCoverageEl.textContent || '--'}，僅供參考，不構成投資建議。`, cardX + 26, y + 244);
+
+      c.fillStyle = 'rgba(232,238,246,0.56)';
+      c.font = '400 20px Manrope, system-ui, sans-serif';
+      c.fillText('Generated by Rebalance Copilot', 64, 1316);
+
+      const blob = await new Promise(resolve => canvasShare.toBlob(resolve, 'image/png'));
+      if (!blob) {
+        snapshotResultEl.textContent = '匯出圖片失敗，請稍後再試。';
+        return;
+      }
+
+      const filename = `rebalance_share_${Date.now()}.png`;
+      let shareFile = null;
+      try {
+        shareFile = new File([blob], filename, { type: 'image/png' });
+      } catch (_) {
+        shareFile = null;
+      }
+      if (shareFile && navigator.share && navigator.canShare && navigator.canShare({ files: [shareFile] })) {
+        try {
+          await navigator.share({ files: [shareFile], title: 'Rebalance 分享摘要' });
+          snapshotResultEl.textContent = '已開啟系統分享，分享圖已準備完成。';
+          return;
+        } catch (err) {
+          if (err?.name === 'AbortError') {
+            snapshotResultEl.textContent = '已取消分享。';
+            return;
+          }
+        }
+      }
+
+      downloadBlob(blob, filename);
+      snapshotResultEl.textContent = '已下載分享圖片（PNG）。';
     }
 
     function compareLatestSnapshots() {
@@ -1565,7 +1744,7 @@
     aiBtnEl.addEventListener('click', () => calculate({ includeAi: true, forceAi: true }));
     document.getElementById('shareBtn').addEventListener('click', copyShareUrl);
     saveSnapshotBtnEl.addEventListener('click', saveSnapshot);
-    exportSnapshotsBtnEl.addEventListener('click', exportSnapshots);
+    exportShareImageBtnEl.addEventListener('click', exportShareImage);
     compareSnapshotsBtnEl.addEventListener('click', compareLatestSnapshots);
     document.getElementById('addRow').addEventListener('click', () => { addRow('', 0, 'TWD', 'TW'); calculate({ includeAi: false }); });
     [displayCurrencyEl, overrideEl, ageEl, riskLevelEl, taxRegionEl].forEach(el => el.addEventListener('input', scheduleCalculate));
