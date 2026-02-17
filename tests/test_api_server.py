@@ -255,6 +255,39 @@ class ApiServerTests(unittest.TestCase):
         body = response.json()
         self.assertEqual(body["error_code"], "RISK_ENGINE_ERROR")
 
+    def test_api_crypto_news_digest_success(self) -> None:
+        fake_payload = {
+            "as_of": "2026-02-17T09:05:00Z",
+            "lang": "zh",
+            "daily_overview": ["高影響 | ETF 監管更新"],
+            "items": [],
+            "source_health": {"coindesk_rss": "ok"},
+            "cache_hit": True,
+        }
+        with patch("logic.api_server.get_news_digest", return_value=fake_payload):
+            response = self.client.get("/api/v1/crypto/news-digest?lang=zh&limit=6&force_refresh=0")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["lang"], "zh")
+
+    def test_api_crypto_news_digest_refresh_unauthorized(self) -> None:
+        with patch.dict("os.environ", {"CRYPTO_NEWS_REFRESH_TOKEN": "secret"}, clear=False):
+            response = self.client.post("/api/v1/crypto/news-digest/refresh", json={"lang": "both"})
+        self.assertEqual(response.status_code, 401)
+        body = response.json()
+        self.assertEqual(body["error_code"], "CRYPTO_NEWS_UNAUTHORIZED")
+
+    def test_api_crypto_news_digest_refresh_success(self) -> None:
+        fake_refresh = {"status": "ok", "results": {"zh": {"items": []}}}
+        with patch.dict("os.environ", {"CRYPTO_NEWS_REFRESH_TOKEN": "secret"}, clear=False):
+            with patch("logic.api_server.refresh_news_digest", return_value=fake_refresh):
+                response = self.client.post(
+                    "/api/v1/crypto/news-digest/refresh",
+                    headers={"Authorization": "Bearer secret"},
+                    json={"lang": "both"},
+                )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "ok")
+
 
 if __name__ == "__main__":
     unittest.main()

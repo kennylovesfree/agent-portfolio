@@ -11,7 +11,7 @@ from typing import Any, Optional
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -247,7 +247,10 @@ def _call_openai(payload: AdviceRequest, config: _AiConfig) -> AdviceResponse:
         "model": config.model,
         "latency_ms": latency_ms,
     }
-    return AdviceResponse.model_validate(advice_payload)
+    try:
+        return AdviceResponse.model_validate(advice_payload)
+    except ValidationError as exc:
+        raise AdviceUpstreamError("OpenAI response schema mismatch.") from exc
 
 
 def _build_gemini_text_payload(payload: AdviceRequest) -> str:
@@ -308,7 +311,10 @@ def _call_gemini(payload: AdviceRequest, config: _AiConfig) -> AdviceResponse:
         "model": config.model,
         "latency_ms": latency_ms,
     }
-    return AdviceResponse.model_validate(advice_payload)
+    try:
+        return AdviceResponse.model_validate(advice_payload)
+    except ValidationError as exc:
+        raise AdviceUpstreamError("Gemini response schema mismatch.") from exc
 
 
 def generate_advice(payload: AdviceRequest) -> AdviceResponse:

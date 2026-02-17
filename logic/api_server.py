@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import asdict
+import os
 from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -39,6 +40,14 @@ try:
         UpstreamServiceError as UsUpstreamServiceError,
         compute_annual_return as compute_us_annual_return,
     )
+    from .crypto_news_service import (
+        CryptoNewsConfigError,
+        CryptoNewsRateLimitError,
+        CryptoNewsUpstreamError,
+        get_news_digest,
+        refresh_news_digest,
+    )
+    from .crypto_news_store import CryptoNewsStoreConfigError, CryptoNewsStoreError
 except ImportError:  # pragma: no cover - support direct script-style imports
     from market_data_client import FinMindClient
     from advice_service import (
@@ -67,6 +76,14 @@ except ImportError:  # pragma: no cover - support direct script-style imports
         UpstreamServiceError as UsUpstreamServiceError,
         compute_annual_return as compute_us_annual_return,
     )
+    from crypto_news_service import (
+        CryptoNewsConfigError,
+        CryptoNewsRateLimitError,
+        CryptoNewsUpstreamError,
+        get_news_digest,
+        refresh_news_digest,
+    )
+    from crypto_news_store import CryptoNewsStoreConfigError, CryptoNewsStoreError
 
 
 class AnnualReturnRequest(BaseModel):
@@ -108,6 +125,10 @@ class StressScenarioRequest(BaseModel):
 class PortfolioStressTestRequest(BaseModel):
     positions: list[PortfolioPosition]
     scenarios: Optional[list[StressScenarioRequest]] = None
+
+
+class CryptoNewsRefreshRequest(BaseModel):
+    lang: str = "both"
 
 
 class ApiError(RuntimeError):
@@ -317,6 +338,14 @@ def post_generate_advice(payload: AdviceRequest) -> dict:
             message=str(exc),
             details=None,
         ) from exc
+    except Exception as exc:  # pragma: no cover - defensive mapping for provider/schema drift
+        logger.exception("advice_generate_unhandled_error")
+        raise ApiError(
+            status_code=502,
+            error_code="AI_UPSTREAM_ERROR",
+            message="AI provider response is not in the expected format.",
+            details=None,
+        ) from exc
 
     logger.info(
         "advice_success risk=%s model=%s latency_ms=%s",
@@ -325,3 +354,75 @@ def post_generate_advice(payload: AdviceRequest) -> dict:
         advice.model_meta.latency_ms,
     )
     return advice.model_dump()
+
+
+@app.get("/api/v1/crypto/news-digest")
+def get_crypto_news_digest(
+    lang: str = Query(default="zh"),
+    limit: int = Query(default=6, ge=3, le=12),
+    force_refresh: int = Query(default=0),
+) -> dict:
+    try:
+        return get_news_digest(lang=lang, limit=limit, force_refresh=force_refresh == 1)
+    except (CryptoNewsConfigError, CryptoNewsStoreConfigError) as exc:
+        raise ApiError(
+            status_code=500,
+            error_code="CRYPTO_NEWS_CONFIG_ERROR",
+            message=str(exc),
+            details=None,
+        ) from exc
+    except CryptoNewsRateLimitError as exc:
+        raise ApiError(
+            status_code=429,
+            error_code="CRYPTO_NEWS_RATE_LIMITED",
+            message=str(exc),
+            details=None,
+        ) from exc
+    except (CryptoNewsUpstreamError, CryptoNewsStoreError) as exc:
+        raise ApiError(
+            status_code=502,
+            error_code="CRYPTO_NEWS_UPSTREAM_ERROR",
+            message=str(exc),
+            details=None,
+        ) from exc
+
+
+@app.post("/api/v1/crypto/news-digest/refresh")
+def post_crypto_news_digest_refresh(
+    payload: CryptoNewsRefreshRequest,
+    authorization: Optional[str] = Header(default=None),
+) -> dict:
+    expected = os.getenv("CRYPTO_NEWS_REFRESH_TOKEN", "").strip()
+    token = (authorization or "").replace("Bearer ", "", 1).strip()
+    if expected and token != expected:
+        raise ApiError(
+            status_code=401,
+            error_code="CRYPTO_NEWS_UNAUTHORIZED",
+            message="Invalid refresh token.",
+            details=None,
+        )
+
+    lang = payload.lang if payload.lang in {"zh", "en", "both"} else "both"
+    try:
+        return refresh_news_digest(lang=lang)
+    except (CryptoNewsConfigError, CryptoNewsStoreConfigError) as exc:
+        raise ApiError(
+            status_code=500,
+            error_code="CRYPTO_NEWS_CONFIG_ERROR",
+            message=str(exc),
+            details=None,
+        ) from exc
+    except CryptoNewsRateLimitError as exc:
+        raise ApiError(
+            status_code=429,
+            error_code="CRYPTO_NEWS_RATE_LIMITED",
+            message=str(exc),
+            details=None,
+        ) from exc
+    except (CryptoNewsUpstreamError, CryptoNewsStoreError) as exc:
+        raise ApiError(
+            status_code=502,
+            error_code="CRYPTO_NEWS_UPSTREAM_ERROR",
+            message=str(exc),
+            details=None,
+        ) from exc

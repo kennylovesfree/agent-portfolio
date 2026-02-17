@@ -362,6 +362,85 @@
       line-height: 1.55;
     }
 
+    .news-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .news-overview {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .news-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .news-item {
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      display: grid;
+      gap: 8px;
+    }
+
+    .news-item-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .news-item-head a {
+      font-weight: 700;
+      text-decoration: underline;
+      text-decoration-color: rgba(255, 255, 255, 0.2);
+      text-underline-offset: 3px;
+    }
+
+    .impact-badge {
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      white-space: nowrap;
+    }
+
+    .impact-badge.high {
+      color: #ffb5b5;
+      border-color: rgba(255, 107, 107, 0.4);
+      background: rgba(255, 107, 107, 0.14);
+    }
+
+    .impact-badge.medium {
+      color: #ffe0a8;
+      border-color: rgba(240, 200, 106, 0.45);
+      background: rgba(240, 200, 106, 0.12);
+    }
+
+    .impact-badge.low {
+      color: #b8f4e8;
+      border-color: rgba(106, 231, 208, 0.45);
+      background: rgba(106, 231, 208, 0.12);
+    }
+
+    .news-source {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
     footer {
       padding: 18px clamp(18px, 4vw, 60px) 28px;
       color: var(--muted);
@@ -552,6 +631,18 @@
             <div class="bar" aria-label="risk bar"><div id="riskBar"></div></div>
             <ul id="riskNotes"></ul>
           </section>
+
+          <section class="card">
+            <h2 id="newsTitle">Daily Crypto News Risk Brief</h2>
+            <p id="newsSub" class="sub">每日彙整最新 crypto 新聞，優先標記對風險管理有影響的事件。</p>
+            <div class="news-meta">
+              <span id="newsUpdatedAt">最後更新：--</span>
+              <button id="newsRefreshBtn" class="btn secondary" type="button">刷新新聞</button>
+            </div>
+            <ul id="newsOverview" class="news-overview"></ul>
+            <div id="newsList" class="news-list"></div>
+            <div id="newsError" class="note"></div>
+          </section>
         </div>
       </section>
     </main>
@@ -610,6 +701,18 @@
         riskScoreLabel: 'Risk Score（0–100）',
         riskRegimeLabel: '風險狀態',
         ddRefLabel: '回撤刻度參考',
+        newsTitle: 'Daily Crypto News Risk Brief',
+        newsSub: '每日彙整最新 crypto 新聞，優先標記對風險管理有影響的事件。',
+        newsUpdatedAtLabel: '最後更新',
+        newsRefreshBtn: '刷新新聞',
+        newsLoading: '正在更新今日新聞摘要...',
+        newsNoItems: '目前沒有可顯示的新聞摘要。',
+        newsError: '目前無法更新新聞，已顯示最近可用摘要（若有）。',
+        newsStalePrefix: '資料延遲',
+        newsImpactHigh: '高影響',
+        newsImpactMedium: '中影響',
+        newsImpactLow: '低影響',
+        newsWhyLabel: '為何重要',
         footerLine1: 'Crypto Risk Copilot · BTC proxy · 本地規則引擎（MVP）',
         bucketConservative: '保守',
         bucketNeutral: '中性',
@@ -661,6 +764,18 @@
         riskScoreLabel: 'Risk Score (0-100)',
         riskRegimeLabel: 'Risk State',
         ddRefLabel: 'Drawdown Scale',
+        newsTitle: 'Daily Crypto News Risk Brief',
+        newsSub: 'Daily aggregation of latest crypto headlines with risk-impact-first prioritization.',
+        newsUpdatedAtLabel: 'Last updated',
+        newsRefreshBtn: 'Refresh News',
+        newsLoading: 'Refreshing today\\'s crypto news digest...',
+        newsNoItems: 'No news digest available at the moment.',
+        newsError: 'Unable to refresh now. Showing latest available digest if present.',
+        newsStalePrefix: 'Stale data',
+        newsImpactHigh: 'High Impact',
+        newsImpactMedium: 'Medium Impact',
+        newsImpactLow: 'Low Impact',
+        newsWhyLabel: 'Why it matters',
         footerLine1: 'Crypto Risk Copilot · BTC proxy · local rule engine (MVP)',
         bucketConservative: 'Conservative',
         bucketNeutral: 'Neutral',
@@ -677,9 +792,43 @@
     }
 
     let currentLang = resolveInitialLang();
+    const newsState = {
+      loading: false,
+      payload: null,
+      error: '',
+    };
 
     function t(key) {
       return i18n[currentLang][key];
+    }
+
+    function formatNewsTime(isoTime) {
+      if (!isoTime) return '--';
+      const dt = new Date(isoTime);
+      if (Number.isNaN(dt.getTime())) return '--';
+      const locale = currentLang === 'en' ? 'en-US' : 'zh-TW';
+      return new Intl.DateTimeFormat(locale, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(dt);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('\"', '&quot;')
+        .replaceAll('\'', '&#39;');
+    }
+
+    function impactLabel(level) {
+      if (level === 'high') return t('newsImpactHigh');
+      if (level === 'low') return t('newsImpactLow');
+      return t('newsImpactMedium');
     }
 
     function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
@@ -821,6 +970,9 @@
         riskScoreLabel: 'riskScoreLabel',
         riskRegimeLabel: 'riskRegimeLabel',
         ddRefLabel: 'ddRefLabel',
+        newsTitle: 'newsTitle',
+        newsSub: 'newsSub',
+        newsRefreshBtn: 'newsRefreshBtn',
         footerLine1: 'footerLine1'
       };
 
@@ -846,6 +998,77 @@
       document.getElementById('lang-en').classList.toggle('active', currentLang === 'en');
 
       render();
+      renderNewsDigest();
+      fetchNewsDigest(false);
+    }
+
+    function renderNewsDigest() {
+      const updatedEl = document.getElementById('newsUpdatedAt');
+      const overviewEl = document.getElementById('newsOverview');
+      const listEl = document.getElementById('newsList');
+      const errorEl = document.getElementById('newsError');
+      const refreshBtn = document.getElementById('newsRefreshBtn');
+
+      const payload = newsState.payload;
+      const asOf = payload && payload.as_of ? formatNewsTime(payload.as_of) : '--';
+      const staleText = payload && payload.stale ? ` · ${t('newsStalePrefix')}` : '';
+      updatedEl.textContent = `${t('newsUpdatedAtLabel')}：${asOf}${staleText}`;
+      errorEl.textContent = newsState.error || '';
+      refreshBtn.disabled = newsState.loading;
+
+      if (newsState.loading && !payload) {
+        overviewEl.innerHTML = `<li>${t('newsLoading')}</li>`;
+        listEl.innerHTML = '';
+        return;
+      }
+
+      const overview = payload && Array.isArray(payload.daily_overview) ? payload.daily_overview : [];
+      if (!overview.length) {
+        overviewEl.innerHTML = `<li>${t('newsNoItems')}</li>`;
+      } else {
+        overviewEl.innerHTML = overview.map((line) => `<li>${line}</li>`).join('');
+      }
+
+      const items = payload && Array.isArray(payload.items) ? payload.items : [];
+      listEl.innerHTML = items.map((item) => {
+        const safeTitle = escapeHtml(item.title || '');
+        const safeUrl = String(item.url || '#');
+        const safeSource = escapeHtml(item.source || '');
+        const safeTime = formatNewsTime(item.published_at);
+        const safeSummary = escapeHtml(item.summary || '');
+        const safeWhy = escapeHtml(item.why_it_matters || '');
+        const level = item.impact_level === 'high' || item.impact_level === 'low' ? item.impact_level : 'medium';
+        return `
+          <article class="news-item">
+            <div class="news-item-head">
+              <a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeTitle}</a>
+              <span class="impact-badge ${level}">${impactLabel(level)}</span>
+            </div>
+            <div class="news-source">${safeSource} · ${safeTime}</div>
+            <div>${safeSummary}</div>
+            <div class="note">${t('newsWhyLabel')}：${safeWhy}</div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    async function fetchNewsDigest(forceRefresh) {
+      newsState.loading = true;
+      if (forceRefresh) newsState.error = '';
+      renderNewsDigest();
+      const url = `/api/v1/crypto/news-digest?lang=${encodeURIComponent(currentLang)}&limit=6&force_refresh=${forceRefresh ? 1 : 0}`;
+      try {
+        const response = await fetch(url, { method: 'GET' });
+        if (!response.ok) throw new Error(`HTTP_${response.status}`);
+        const payload = await response.json();
+        newsState.payload = payload;
+        newsState.error = '';
+      } catch (_) {
+        newsState.error = t('newsError');
+      } finally {
+        newsState.loading = false;
+        renderNewsDigest();
+      }
     }
 
     function render() {
@@ -1006,6 +1229,7 @@
     document.getElementById('runBtn').addEventListener('click', render);
     document.getElementById('shareBtn').addEventListener('click', copyShareUrl);
     document.getElementById('demoBtn').addEventListener('click', applyDemoHot);
+    document.getElementById('newsRefreshBtn').addEventListener('click', () => fetchNewsDigest(true));
     document.getElementById('lang-zh').addEventListener('click', () => applyLanguage('zh'));
     document.getElementById('lang-en').addEventListener('click', () => applyLanguage('en'));
     ['mddLimit','currentWeight','valuation','leverage','trend','macro'].forEach(id => {

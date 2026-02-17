@@ -93,6 +93,31 @@ graph TD
 uvicorn logic.api_server:app --reload
 ```
 
+## Crypto 新聞摘要 API（新增）
+
+- `GET /api/v1/crypto/news-digest`
+  - Query:
+    - `lang`: `zh` / `en`（預設 `zh`）
+    - `limit`: 3-12（預設 6）
+    - `force_refresh`: `0` / `1`（預設 `0`）
+  - 回傳：每日新聞重點摘要、重要性分數、風險標籤與來源健康狀態
+
+- `POST /api/v1/crypto/news-digest/refresh`
+  - Header:
+    - `Authorization: Bearer <CRYPTO_NEWS_REFRESH_TOKEN>`
+  - Body:
+    - `{ "lang": "zh" | "en" | "both" }`
+  - 功能：手動/排程刷新摘要快取
+
+### 新增環境變數
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `CRYPTO_NEWS_REFRESH_TOKEN`
+- `CRYPTO_NEWS_DEFAULT_LIMIT`（預設 `6`）
+- `CRYPTO_NEWS_CACHE_TTL_HOURS`（預設 `24`）
+- `CRYPTOPANIC_API_KEY`（可選；未提供時仍可用 RSS 降級）
+- `AI_PROVIDER` / `OPENAI_API_KEY` / `GEMINI_API_KEY`（沿用既有 AI 摘要設定）
+
 ### 1) 台股年化報酬
 - `POST /api/v1/tw-stock/annual-return`
 
