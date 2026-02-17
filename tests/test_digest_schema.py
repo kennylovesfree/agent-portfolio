@@ -51,9 +51,21 @@ class DigestSchemaTests(unittest.TestCase):
             service.fetch_from_primary_apis = original_primary
             service.fetch_from_rss_feeds = original_rss
 
-        self.assertTrue({"as_of", "lang", "daily_overview", "items", "source_health", "source_health_detail"}.issubset(digest.keys()))
+        self.assertTrue(
+            {
+                "as_of",
+                "lang",
+                "daily_overview",
+                "daily_analysis",
+                "items",
+                "source_health",
+                "source_health_detail",
+            }.issubset(digest.keys())
+        )
         self.assertEqual(digest["lang"], "zh")
         self.assertIsInstance(digest["daily_overview"], list)
+        self.assertIsInstance(digest["daily_analysis"], str)
+        self.assertTrue(digest["daily_analysis"])
         self.assertTrue(digest["items"])
 
         item = digest["items"][0]

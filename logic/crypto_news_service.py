@@ -70,6 +70,23 @@ RISK_KEYWORDS = {
     "macro": ["fed", "rate", "cpi", "inflation", "usd", "yield", "聯準會", "利率", "通膨", "美元"],
 }
 
+RISK_THEME_TEXT = {
+    "zh": {
+        "regulation": "監管/政策",
+        "security": "安全事件",
+        "liquidity": "流動性",
+        "market-structure": "市場結構",
+        "macro": "宏觀流動性",
+    },
+    "en": {
+        "regulation": "regulation/policy",
+        "security": "security incidents",
+        "liquidity": "liquidity",
+        "market-structure": "market structure",
+        "macro": "macro liquidity",
+    },
+}
+
 DEFAULT_HTTP_HEADERS = {
     "User-Agent": "RebalanceLabsNewsBot/1.0 (+https://agent-portfolio.vercel.app)",
     "Accept": "application/json, application/xml, text/xml, text/plain;q=0.9, */*;q=0.8",
@@ -754,6 +771,52 @@ def _build_overview(items: list[dict[str, Any]], lang: str) -> list[str]:
     return lines
 
 
+def _build_daily_analysis(items: list[dict[str, Any]], lang: str) -> str:
+    if not items:
+        return (
+            "今日可用新聞不足，暫時以風險溫度計與倉位上限作為主要決策依據。"
+            if lang == "zh"
+            else "Not enough usable headlines today. Prioritize risk thermometer and position limits."
+        )
+
+    high = sum(1 for item in items if item.get("impact_level") == "high")
+    medium = sum(1 for item in items if item.get("impact_level") == "medium")
+    low = sum(1 for item in items if item.get("impact_level") == "low")
+
+    tag_count: dict[str, int] = {}
+    for item in items:
+        for tag in item.get("risk_tags", [])[:2]:
+            tag_count[tag] = tag_count.get(tag, 0) + 1
+
+    top_tags = sorted(tag_count.items(), key=lambda kv: kv[1], reverse=True)[:2]
+    theme_map = RISK_THEME_TEXT["en" if lang == "en" else "zh"]
+    theme_text = ", ".join(theme_map.get(tag, tag) for tag, _ in top_tags) if top_tags else ""
+
+    event_pressure = high * 2 + medium
+    if lang == "en":
+        if event_pressure >= 6:
+            tone = "Today's flow indicates elevated event risk."
+        elif event_pressure >= 3:
+            tone = "Today's flow is mixed and requires selective risk control."
+        else:
+            tone = "Today's flow is relatively calm."
+        structure = f"Headline mix: {high} high-impact, {medium} medium-impact, {low} low-impact."
+        theme = f"Dominant themes: {theme_text}." if theme_text else ""
+        action = "Keep position sizing disciplined and avoid leverage expansion during noisy headlines."
+        return " ".join(part for part in [tone, structure, theme, action] if part)
+
+    if event_pressure >= 6:
+        tone = "今日新聞流顯示事件風險偏高。"
+    elif event_pressure >= 3:
+        tone = "今日新聞流偏中性，但需選擇性控風險。"
+    else:
+        tone = "今日新聞流相對平穩。"
+    structure = f"事件結構為：高影響 {high} 則、中影響 {medium} 則、低影響 {low} 則。"
+    theme = f"主要主題集中在：{theme_text}。" if theme_text else ""
+    action = "建議維持紀律化倉位管理，避免在雜訊期擴大槓桿曝險。"
+    return "".join(part for part in [tone, structure, theme, action] if part)
+
+
 def build_digest(lang: str, limit: int, config: CryptoNewsConfig) -> dict[str, Any]:
     primary = fetch_from_primary_apis(config)
     rss = fetch_from_rss_feeds(config)
@@ -804,6 +867,7 @@ def build_digest(lang: str, limit: int, config: CryptoNewsConfig) -> dict[str, A
         "as_of": _utcnow().isoformat().replace("+00:00", "Z"),
         "lang": lang,
         "daily_overview": _build_overview(items, lang),
+        "daily_analysis": _build_daily_analysis(items, lang),
         "items": items,
         "source_health": source_health,
         "source_health_detail": source_health_detail,

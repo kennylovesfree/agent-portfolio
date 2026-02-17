@@ -126,6 +126,14 @@
 
     nav a:hover { border-color: var(--line); color: var(--ink); }
 
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
     .btn {
       display: inline-flex;
       align-items: center;
@@ -373,6 +381,28 @@
       color: var(--muted);
     }
 
+    .news-analysis-wrap {
+      margin-bottom: 10px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .news-analysis-title {
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .news-analysis {
+      margin: 0;
+      line-height: 1.6;
+      font-size: 13px;
+      color: var(--ink);
+    }
+
     .news-overview {
       margin: 0;
       padding-left: 18px;
@@ -454,6 +484,26 @@
       .row { grid-template-columns: 1fr; }
       nav { display: none; }
     }
+
+    @media (max-width: 640px) {
+      header {
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      #backBtn, #runBtn {
+        flex: 1 1 calc(50% - 4px);
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+      .lang-switch {
+        margin-left: auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -472,7 +522,7 @@
         <a id="navFutures" href="futures_risk_copilot.html">期貨風控</a>
         <a id="navMethod" href="#about">方法論</a>
       </nav>
-      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <div class="header-actions">
         <a id="backBtn" class="btn secondary" href="rebalance_copilot.html">回到金融配置</a>
         <button class="btn primary" id="runBtn" type="button">更新評估</button>
         <div class="lang-switch" role="group" aria-label="Language switch">
@@ -639,6 +689,10 @@
               <span id="newsUpdatedAt">最後更新：--</span>
               <button id="newsRefreshBtn" class="btn secondary" type="button">刷新新聞</button>
             </div>
+            <div class="news-analysis-wrap">
+              <div id="newsAnalysisTitle" class="news-analysis-title">今日重點分析</div>
+              <p id="newsAnalysis" class="news-analysis">--</p>
+            </div>
             <ul id="newsOverview" class="news-overview"></ul>
             <div id="newsList" class="news-list"></div>
             <div id="newsError" class="note"></div>
@@ -704,6 +758,8 @@
         ddRefLabel: '回撤刻度參考',
         newsTitle: 'Daily Crypto News Risk Brief',
         newsSub: '每日彙整最新 crypto 新聞，優先標記對風險管理有影響的事件。',
+        newsAnalysisTitle: '今日重點分析',
+        newsAnalysisFallback: '目前無法產生今日總結，請先參考下方重點事件與風險標籤。',
         newsUpdatedAtLabel: '最後更新',
         newsRefreshBtn: '刷新新聞',
         newsLoading: '正在更新今日新聞摘要...',
@@ -713,6 +769,12 @@
         newsFallbackHint: '目前來源異常，顯示最近可用摘要。',
         newsStalePrefix: '資料延遲',
         newsSourceHealthLabel: '來源健康',
+        newsHealthOk: '正常',
+        newsHealthDegraded: '降級',
+        newsHealthDown: '失敗',
+        newsHealthDisabled: '停用',
+        newsHealthUnknown: '未知',
+        newsHealthIssueSources: '異常來源',
         newsImpactHigh: '高影響',
         newsImpactMedium: '中影響',
         newsImpactLow: '低影響',
@@ -770,6 +832,8 @@
         ddRefLabel: 'Drawdown Scale',
         newsTitle: 'Daily Crypto News Risk Brief',
         newsSub: 'Daily aggregation of latest crypto headlines with risk-impact-first prioritization.',
+        newsAnalysisTitle: 'Today\'s Risk Takeaway',
+        newsAnalysisFallback: 'Unable to generate today\'s narrative summary. Please use the key headlines below.',
         newsUpdatedAtLabel: 'Last updated',
         newsRefreshBtn: 'Refresh News',
         newsLoading: "Refreshing today's crypto news digest...",
@@ -779,6 +843,12 @@
         newsFallbackHint: 'Source error detected. Showing latest available digest.',
         newsStalePrefix: 'Stale data',
         newsSourceHealthLabel: 'Source health',
+        newsHealthOk: 'ok',
+        newsHealthDegraded: 'degraded',
+        newsHealthDown: 'down',
+        newsHealthDisabled: 'disabled',
+        newsHealthUnknown: 'unknown',
+        newsHealthIssueSources: 'issue sources',
         newsImpactHigh: 'High Impact',
         newsImpactMedium: 'Medium Impact',
         newsImpactLow: 'Low Impact',
@@ -807,6 +877,38 @@
 
     function t(key) {
       return i18n[currentLang][key];
+    }
+
+    function sourceLabel(sourceKey) {
+      const key = String(sourceKey || '').toLowerCase();
+      const table = currentLang === 'en'
+        ? {
+            cryptopanic: 'CryptoPanic',
+            newsapi: 'NewsAPI',
+            thenewsapi: 'TheNewsAPI',
+            coindesk_rss: 'CoinDesk',
+            cointelegraph_rss: 'Cointelegraph',
+            decrypt_rss: 'Decrypt',
+            theblock_rss: 'The Block',
+          }
+        : {
+            cryptopanic: 'CryptoPanic',
+            newsapi: 'NewsAPI',
+            thenewsapi: 'TheNewsAPI',
+            coindesk_rss: 'CoinDesk',
+            cointelegraph_rss: 'Cointelegraph',
+            decrypt_rss: 'Decrypt',
+            theblock_rss: 'The Block',
+          };
+      return table[key] || sourceKey || '--';
+    }
+
+    function healthStatusLabel(status) {
+      if (status === 'ok') return t('newsHealthOk');
+      if (status === 'degraded') return t('newsHealthDegraded');
+      if (status === 'down') return t('newsHealthDown');
+      if (status === 'disabled') return t('newsHealthDisabled');
+      return t('newsHealthUnknown');
     }
 
     function formatNewsTime(isoTime) {
@@ -979,6 +1081,7 @@
         ddRefLabel: 'ddRefLabel',
         newsTitle: 'newsTitle',
         newsSub: 'newsSub',
+        newsAnalysisTitle: 'newsAnalysisTitle',
         newsRefreshBtn: 'newsRefreshBtn',
         footerLine1: 'footerLine1'
       };
@@ -1011,6 +1114,7 @@
 
     function renderNewsDigest() {
       const updatedEl = document.getElementById('newsUpdatedAt');
+      const analysisEl = document.getElementById('newsAnalysis');
       const overviewEl = document.getElementById('newsOverview');
       const listEl = document.getElementById('newsList');
       const errorEl = document.getElementById('newsError');
@@ -1030,11 +1134,17 @@
       refreshBtn.disabled = newsState.loading;
 
       if (newsState.loading && !payload) {
+        analysisEl.textContent = t('newsLoading');
         overviewEl.innerHTML = `<li>${t('newsLoading')}</li>`;
         listEl.innerHTML = '';
         healthEl.textContent = '';
         return;
       }
+
+      const analysisText = payload && typeof payload.daily_analysis === 'string' && payload.daily_analysis.trim()
+        ? payload.daily_analysis.trim()
+        : t('newsAnalysisFallback');
+      analysisEl.textContent = analysisText;
 
       const overview = payload && Array.isArray(payload.daily_overview) ? payload.daily_overview : [];
       if (!overview.length) {
@@ -1047,7 +1157,7 @@
       listEl.innerHTML = items.map((item) => {
         const safeTitle = escapeHtml(item.title || '');
         const safeUrl = String(item.url || '#');
-        const safeSource = escapeHtml(item.source || '');
+        const safeSource = escapeHtml(sourceLabel(item.source || ''));
         const safeTime = formatNewsTime(item.published_at);
         const safeSummary = escapeHtml(item.summary || '');
         const safeWhy = escapeHtml(item.why_it_matters || '');
@@ -1072,13 +1182,26 @@
         healthEl.textContent = '';
         return;
       }
-      const healthLine = Object.entries(detail)
-        .map(([name, value]) => {
-          const status = value && typeof value.status === 'string' ? value.status : 'unknown';
-          return `${name}:${status}`;
-        })
-        .join(' | ');
-      healthEl.textContent = healthLine ? `${t('newsSourceHealthLabel')}: ${healthLine}` : '';
+      const counts = { ok: 0, degraded: 0, down: 0, disabled: 0, unknown: 0 };
+      const issues = [];
+      Object.entries(detail).forEach(([name, value]) => {
+        const status = value && typeof value.status === 'string' ? value.status : 'unknown';
+        if (status in counts) counts[status] += 1;
+        else counts.unknown += 1;
+        if (status === 'degraded' || status === 'down') issues.push(sourceLabel(name));
+      });
+      const summaryParts = [
+        `${counts.ok} ${healthStatusLabel('ok')}`,
+        `${counts.degraded} ${healthStatusLabel('degraded')}`,
+        `${counts.down} ${healthStatusLabel('down')}`,
+      ];
+      if (counts.disabled > 0) summaryParts.push(`${counts.disabled} ${healthStatusLabel('disabled')}`);
+      if (counts.unknown > 0) summaryParts.push(`${counts.unknown} ${healthStatusLabel('unknown')}`);
+
+      const issueText = issues.length
+        ? ` · ${t('newsHealthIssueSources')}: ${issues.join(currentLang === 'en' ? ', ' : '、')}`
+        : '';
+      healthEl.textContent = `${t('newsSourceHealthLabel')}: ${summaryParts.join(' · ')}${issueText}`;
     }
 
     async function fetchNewsDigest(forceRefresh) {
