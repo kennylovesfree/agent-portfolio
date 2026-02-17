@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Rebalance Copilot | 智能資產配置預估</title>
+  <meta name="description" content="AI 投資組合配置與風險試算工具，支援中英文切換、壓力測試與快照分享。" />
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@300;400;600;700&display=swap');
 
@@ -103,6 +104,41 @@
       color: #0d1218;
       font-weight: 800;
       box-shadow: 0 12px 30px rgba(124, 156, 255, 0.35);
+    }
+
+    .header-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .lang-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .lang-btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+    }
+
+    .lang-btn.active {
+      background: rgba(255, 255, 255, 0.14);
+      color: var(--ink);
     }
 
     .hero {
@@ -499,6 +535,7 @@
       main { grid-template-columns: 1fr; }
       .row { grid-template-columns: 1fr; }
       header { flex-direction: column; align-items: flex-start; }
+      .header-actions { justify-content: flex-start; }
       .table-head, .table-row { grid-template-columns: 1fr; }
       .table-row button { width: 100%; }
       .health-components,
@@ -516,84 +553,90 @@
     <header>
       <div class="brand">
         <div class="brand-mark">R</div>
-        <div>Rebalance Copilot</div>
+        <div id="brandTitle">Rebalance Copilot</div>
       </div>
-      <span class="chip" id="universeLabel">Universe: Taiwan + US stocks (API)</span>
+      <div class="header-actions">
+        <span class="chip" id="universeLabel">Universe: Taiwan + US stocks (API)</span>
+        <div class="lang-switch" role="group" aria-label="Language switch">
+          <button id="lang-zh" class="lang-btn active" type="button">中文</button>
+          <button id="lang-en" class="lang-btn" type="button">EN</button>
+        </div>
+      </div>
     </header>
 
     <section class="hero">
-      <span class="eyebrow">Portfolio Forecast Studio</span>
-      <h1>輸入台股或美股代碼，快速預估年化收益、波動率與資產成長曲線。</h1>
-      <p class="subtitle">此頁面會即時呼叫市場資料 API 取得近一年報酬。回測與未來績效皆非保證，請勿視為投資建議。</p>
+      <span id="heroEyebrow" class="eyebrow">Portfolio Forecast Studio</span>
+      <h1 id="heroTitle">輸入台股或美股代碼，快速預估年化收益、波動率與資產成長曲線。</h1>
+      <p id="heroSubtitle" class="subtitle">此頁面會即時呼叫市場資料 API 取得近一年報酬。回測與未來績效皆非保證，請勿視為投資建議。</p>
     </section>
 
     <main>
       <section class="card">
-        <h2>投資條件輸入</h2>
+        <h2 id="inputCardTitle">投資條件輸入</h2>
         <div class="grid">
           <div class="table">
             <div class="table-head">
-              <div>市場</div>
-              <div>代碼</div>
-              <div>金額</div>
-              <div>幣種</div>
+              <div id="tableHeadMarket">市場</div>
+              <div id="tableHeadTicker">代碼</div>
+              <div id="tableHeadAmount">金額</div>
+              <div id="tableHeadCurrency">幣種</div>
               <div></div>
             </div>
             <div id="rows"></div>
           </div>
           <div class="actions">
             <button id="addRow">新增標的</button>
-            <span class="chip">最多 10 檔</span>
+            <span id="maxCountChip" class="chip">最多 10 檔</span>
           </div>
           <div class="row">
             <div>
-              <label for="years">投資期限（1 - 30 年）</label>
+              <label id="labelYears" for="years">投資期限（1 - 30 年）</label>
               <input id="years" type="range" min="1" max="30" value="10" />
             </div>
             <div>
-              <label for="yearsNumber">年數</label>
+              <label id="labelYearsNumber" for="yearsNumber">年數</label>
               <input id="yearsNumber" type="number" min="1" max="30" value="10" />
             </div>
           </div>
           <div class="row">
             <div>
-              <label for="age">年齡</label>
+              <label id="labelAge" for="age">年齡</label>
               <input id="age" type="number" min="18" max="90" value="35" />
             </div>
             <div>
-              <label for="riskLevel">風險承受等級</label>
+              <label id="labelRiskLevel" for="riskLevel">風險承受等級</label>
               <select id="riskLevel">
-                <option value="conservative">保守</option>
-                <option value="balanced" selected>中性</option>
-                <option value="aggressive">積極</option>
+                <option id="riskConservative" value="conservative">保守</option>
+                <option id="riskBalanced" value="balanced" selected>中性</option>
+                <option id="riskAggressive" value="aggressive">積極</option>
               </select>
             </div>
           </div>
           <div class="row">
             <div>
-              <label for="taxRegion">主要稅務地區</label>
+              <label id="labelTaxRegion" for="taxRegion">主要稅務地區</label>
               <select id="taxRegion">
-                <option value="TW" selected>台灣 (TW)</option>
-                <option value="US">美國 (US)</option>
-                <option value="HK">香港 (HK)</option>
-                <option value="SG">新加坡 (SG)</option>
+                <option id="taxTw" value="TW" selected>台灣 (TW)</option>
+                <option id="taxUs" value="US">美國 (US)</option>
+                <option id="taxHk" value="HK">香港 (HK)</option>
+                <option id="taxSg" value="SG">新加坡 (SG)</option>
               </select>
             </div>
             <div>
-              <label for="displayCurrency">報表幣種</label>
+              <label id="labelDisplayCurrency" for="displayCurrency">報表幣種</label>
               <select id="displayCurrency">
-                <option value="USD" selected>USD 美元</option>
-                <option value="TWD">TWD 台幣</option>
-                <option value="HKD">HKD 港幣</option>
-                <option value="JPY">JPY 日圓</option>
-                <option value="CNY">CNY 人民幣</option>
-                <option value="EUR">EUR 歐元</option>
+                <option id="ccyUsd" value="USD" selected>USD 美元</option>
+                <option id="ccyTwd" value="TWD">TWD 台幣</option>
+                <option id="ccyHkd" value="HKD">HKD 港幣</option>
+                <option id="ccyJpy" value="JPY">JPY 日圓</option>
+                <option id="ccyCny" value="CNY">CNY 人民幣</option>
+                <option id="ccyEur" value="EUR">EUR 歐元</option>
               </select>
             </div>
           </div>
           <div class="row">
             <div>
-              <label for="override">手動調整年化報酬（%）</label>
+              <label id="labelOverride" for="override">手動調整年化報酬（%）</label>
               <input id="override" type="number" min="-95" max="50" step="0.1" value="8.0" disabled />
             </div>
           </div>
@@ -604,9 +647,9 @@
             <button id="saveSnapshotBtn" type="button">儲存決策快照</button>
             <button id="exportShareImageBtn" type="button">匯出分享圖片</button>
             <button id="compareSnapshotsBtn" type="button">比較最近兩次快照</button>
-            <label class="chip" style="cursor:pointer;">
+            <label id="overrideToggleLabel" class="chip" style="cursor:pointer;">
               <input id="overrideToggle" type="checkbox" style="margin:0;" />
-              使用手動年化報酬
+              <span id="overrideToggleText">使用手動年化報酬</span>
             </label>
             <span class="chip" id="scenarioId">Scenario: --</span>
           </div>
@@ -614,26 +657,26 @@
       </section>
 
       <section class="card">
-        <h2>預估輸出</h2>
+        <h2 id="outputCardTitle">預估輸出</h2>
         <div class="stats">
           <div class="stat">
-            <span>預期年化收益率</span>
+            <span id="statLabelRate">預期年化收益率</span>
             <strong id="outputRate">--</strong>
           </div>
           <div class="stat">
-            <span>年化波動率</span>
+            <span id="statLabelVol">年化波動率</span>
             <strong id="outputVol">--</strong>
           </div>
           <div class="stat">
-            <span>最大回撤（模擬）</span>
+            <span id="statLabelDd">最大回撤（模擬）</span>
             <strong id="outputDD">--</strong>
           </div>
           <div class="stat">
-            <span>期末資產總額</span>
+            <span id="statLabelTotal">期末資產總額</span>
             <strong id="outputTotal">--</strong>
           </div>
           <div class="stat">
-            <span>累積收益</span>
+            <span id="statLabelGain">累積收益</span>
             <strong id="outputGain">--</strong>
           </div>
         </div>
@@ -646,48 +689,48 @@
       </section>
 
       <section class="card allocation-table">
-        <h2>配置優化建議</h2>
+        <h2 id="allocationTitle">配置優化建議</h2>
         <div class="table">
           <div class="table-head">
-            <div>資產類別</div>
-            <div>目前占比</div>
-            <div>建議占比</div>
-            <div>調整方向</div>
+            <div id="allocationHeadBucket">資產類別</div>
+            <div id="allocationHeadCurrent">目前占比</div>
+            <div id="allocationHeadTarget">建議占比</div>
+            <div id="allocationHeadDelta">調整方向</div>
           </div>
           <div id="allocationRows"></div>
         </div>
       </section>
 
       <section class="card expert-card">
-        <h2>專家建議（個性化）</h2>
+        <h2 id="expertTitle">專家建議（個性化）</h2>
         <div class="expert-badge">Expert Insight</div>
         <p class="expert-summary" id="expertSummary">填寫完股票與金額後，點擊「查看 AI 建議」。</p>
         <ul class="expert-list" id="expertList"></ul>
       </section>
 
       <section class="card">
-        <h2>投資組合健康度</h2>
+        <h2 id="healthTitle">投資組合健康度</h2>
         <div class="health-score">
           <strong id="healthScore">--</strong>
           <span id="healthBand" class="health-band">--</span>
         </div>
         <div class="health-components">
-          <div class="mini-stat">濃度分數<strong id="compConcentration">--</strong></div>
-          <div class="mini-stat">分散分數<strong id="compDiversification">--</strong></div>
-          <div class="mini-stat">波動分數<strong id="compVolatility">--</strong></div>
-          <div class="mini-stat">回撤分數<strong id="compDrawdown">--</strong></div>
+          <div class="mini-stat"><span id="compLabelConcentration">濃度分數</span><strong id="compConcentration">--</strong></div>
+          <div class="mini-stat"><span id="compLabelDiversification">分散分數</span><strong id="compDiversification">--</strong></div>
+          <div class="mini-stat"><span id="compLabelVolatility">波動分數</span><strong id="compVolatility">--</strong></div>
+          <div class="mini-stat"><span id="compLabelDrawdown">回撤分數</span><strong id="compDrawdown">--</strong></div>
         </div>
         <ul class="flag-list" id="healthFlags"></ul>
       </section>
 
       <section class="card stress-table">
-        <h2>標準壓力情境測試</h2>
+        <h2 id="stressTitle">標準壓力情境測試</h2>
         <div class="table">
           <div class="table-head">
-            <div>情境</div>
-            <div>組合損益 (USD)</div>
-            <div>估計回撤</div>
-            <div>風險標籤</div>
+            <div id="stressHeadScenario">情境</div>
+            <div id="stressHeadPnl">組合損益 (USD)</div>
+            <div id="stressHeadDd">估計回撤</div>
+            <div id="stressHeadRisk">風險標籤</div>
           </div>
           <div id="stressRows"></div>
         </div>
@@ -695,23 +738,23 @@
       </section>
 
       <section class="card">
-        <h2>資料可信度</h2>
+        <h2 id="qualityTitle">資料可信度</h2>
         <div class="data-quality-grid">
-          <div class="mini-stat">最新價格日期<strong id="qualityLatest">--</strong></div>
-          <div class="mini-stat">基準價格日期<strong id="qualityBase">--</strong></div>
-          <div class="mini-stat">資料覆蓋率<strong id="qualityCoverage">--</strong></div>
+          <div class="mini-stat"><span id="qualityLabelLatest">最新價格日期</span><strong id="qualityLatest">--</strong></div>
+          <div class="mini-stat"><span id="qualityLabelBase">基準價格日期</span><strong id="qualityBase">--</strong></div>
+          <div class="mini-stat"><span id="qualityLabelCoverage">資料覆蓋率</span><strong id="qualityCoverage">--</strong></div>
         </div>
         <div class="note" id="qualityNote">資料來源：台股 FinMind、美股 Stooq。</div>
       </section>
 
       <section class="card">
-        <h2>決策快照與分享</h2>
-        <p class="note">可儲存當下輸入與輸出，並匯出手機友善分享圖片。</p>
+        <h2 id="snapshotTitle">決策快照與分享</h2>
+        <p id="snapshotDescription" class="note">可儲存當下輸入與輸出，並匯出手機友善分享圖片。</p>
         <div class="snapshot-result" id="snapshotResult">尚未儲存快照。</div>
       </section>
     </main>
 
-    <footer>
+    <footer id="footerText">
       年化報酬率來源：台股使用 FinMind API；美股使用 Stooq 日線資料。
     </footer>
   </div>
@@ -770,9 +813,341 @@
     const saveSnapshotBtnEl = document.getElementById('saveSnapshotBtn');
     const exportShareImageBtnEl = document.getElementById('exportShareImageBtn');
     const compareSnapshotsBtnEl = document.getElementById('compareSnapshotsBtn');
+    const zhButton = document.getElementById('lang-zh');
+    const enButton = document.getElementById('lang-en');
 
     const canvas = document.getElementById('trend');
     const ctx = canvas.getContext('2d');
+    let currentLanguage = localStorage.getItem('rb-language') === 'en' ? 'en' : 'zh';
+
+    const i18n = {
+      zh: {
+        htmlLang: 'zh-Hant',
+        title: 'Rebalance Copilot | 智能資產配置預估',
+        metaDescription: 'AI 投資組合配置與風險試算工具，支援中英文切換、壓力測試與快照分享。',
+        universeLabel: 'Universe: Taiwan + US stocks (API)',
+        heroTitle: '輸入台股或美股代碼，快速預估年化收益、波動率與資產成長曲線。',
+        heroSubtitle: '此頁面會即時呼叫市場資料 API 取得近一年報酬。回測與未來績效皆非保證，請勿視為投資建議。',
+        inputCardTitle: '投資條件輸入',
+        tableHeadMarket: '市場',
+        tableHeadTicker: '代碼',
+        tableHeadAmount: '金額',
+        tableHeadCurrency: '幣種',
+        addRow: '新增標的',
+        maxCountChip: '最多 10 檔',
+        labelYears: '投資期限（1 - 30 年）',
+        labelYearsNumber: '年數',
+        labelAge: '年齡',
+        labelRiskLevel: '風險承受等級',
+        riskConservative: '保守',
+        riskBalanced: '中性',
+        riskAggressive: '積極',
+        labelTaxRegion: '主要稅務地區',
+        taxTw: '台灣 (TW)',
+        taxUs: '美國 (US)',
+        taxHk: '香港 (HK)',
+        taxSg: '新加坡 (SG)',
+        labelDisplayCurrency: '報表幣種',
+        ccyUsd: 'USD 美元',
+        ccyTwd: 'TWD 台幣',
+        ccyHkd: 'HKD 港幣',
+        ccyJpy: 'JPY 日圓',
+        ccyCny: 'CNY 人民幣',
+        ccyEur: 'EUR 歐元',
+        labelOverride: '手動調整年化報酬（%）',
+        calcBtn: '更新試算結果',
+        aiBtn: '查看 AI 建議',
+        shareBtn: '複製分享連結',
+        saveSnapshotBtn: '儲存決策快照',
+        exportShareImageBtn: '匯出分享圖片',
+        compareSnapshotsBtn: '比較最近兩次快照',
+        overrideToggleText: '使用手動年化報酬',
+        outputCardTitle: '預估輸出',
+        statLabelRate: '預期年化收益率',
+        statLabelVol: '年化波動率',
+        statLabelDd: '最大回撤（模擬）',
+        statLabelTotal: '期末資產總額',
+        statLabelGain: '累積收益',
+        allocationTitle: '配置優化建議',
+        allocationHeadBucket: '資產類別',
+        allocationHeadCurrent: '目前占比',
+        allocationHeadTarget: '建議占比',
+        allocationHeadDelta: '調整方向',
+        expertTitle: '專家建議（個性化）',
+        expertInitial: '填寫完股票與金額後，點擊「查看 AI 建議」。',
+        healthTitle: '投資組合健康度',
+        compLabelConcentration: '濃度分數',
+        compLabelDiversification: '分散分數',
+        compLabelVolatility: '波動分數',
+        compLabelDrawdown: '回撤分數',
+        stressTitle: '標準壓力情境測試',
+        stressHeadScenario: '情境',
+        stressHeadPnl: '組合損益 (USD)',
+        stressHeadDd: '估計回撤',
+        stressHeadRisk: '風險標籤',
+        qualityTitle: '資料可信度',
+        qualityLabelLatest: '最新價格日期',
+        qualityLabelBase: '基準價格日期',
+        qualityLabelCoverage: '資料覆蓋率',
+        qualitySource: '資料來源：台股 FinMind、美股 Stooq。',
+        snapshotTitle: '決策快照與分享',
+        snapshotDescription: '可儲存當下輸入與輸出，並匯出手機友善分享圖片。',
+        snapshotEmpty: '尚未儲存快照。',
+        footerText: '年化報酬率來源：台股使用 FinMind API；美股使用 Stooq 日線資料。',
+        remove: '移除',
+        tickerPlaceholderUs: '例：AAPL 或 MSFT',
+        tickerPlaceholderTw: '例：2330 或 台積電',
+        aiGenerating: 'AI 生成中...',
+        aiView: '查看 AI 建議',
+        emptyRows: '請至少輸入一檔代碼與金額。',
+        invalidInputPrefix: '輸入不通過：',
+        invalidPosition: '請先輸入有效部位。',
+        invalidDataQuery: '請先完成有效行情查詢。',
+        amountPositive: '投資金額需大於 0。',
+        waitResult: '等待試算結果。',
+        stressMetaEmpty: 'worst-case: --；survival days: --',
+        noRiskFlags: '目前無顯著風險旗標。',
+        noScenario: '無情境資料',
+        coveredAssets: (priced, nonCash) => `已覆蓋 ${priced}/${nonCash} 檔非現金標的。`,
+        cashOnlyCoverage: '目前組合為現金部位，資料覆蓋率視為 100%。',
+        noSnapshotToSave: '目前沒有可儲存的結果，請先完成一次試算。',
+        snapshotSaved: (id) => `已儲存快照：${id}`,
+        noSnapshotToShare: '目前沒有可分享內容，請先完成一次試算。',
+        exportFailed: '匯出圖片失敗，請稍後再試。',
+        shareOpened: '已開啟系統分享，分享圖已準備完成。',
+        shareCanceled: '已取消分享。',
+        shareDownloaded: '已下載分享圖片（PNG）。',
+        needTwoSnapshots: '至少需要 2 筆快照才能比較。',
+        copied: '已複製',
+        copyManual: '請手動複製網址',
+        loadedSnapshots: (count) => `已載入 ${count} 筆快照。`,
+        analyzeLoading: '正在分析組合與風險。',
+        aiUnavailable: 'AI 服務暫時不可用，請稍後再試。',
+        aiCooldown: 'AI 建議冷卻中，請稍後再試。',
+        aiNeedsRefresh: '輸入已變更，請按「查看 AI 建議」重新生成。',
+        aiUpdatedHint: '已更新試算；按「查看 AI 建議」產生 AI 建議。'
+      },
+      en: {
+        htmlLang: 'en',
+        title: 'Rebalance Copilot | AI Portfolio Forecast',
+        metaDescription: 'AI portfolio allocation and risk simulator with bilingual UI, stress testing, and snapshot sharing.',
+        universeLabel: 'Universe: Taiwan + US stocks (API)',
+        heroTitle: 'Enter Taiwan or US tickers to quickly project annual return, volatility, and growth path.',
+        heroSubtitle: 'This page calls market data APIs in real time for one-year return signals. Backtests and future performance are not guaranteed and are not investment advice.',
+        inputCardTitle: 'Portfolio Input Settings',
+        tableHeadMarket: 'Market',
+        tableHeadTicker: 'Ticker',
+        tableHeadAmount: 'Amount',
+        tableHeadCurrency: 'Currency',
+        addRow: 'Add Asset',
+        maxCountChip: 'Up to 10 assets',
+        labelYears: 'Investment Horizon (1 - 30 years)',
+        labelYearsNumber: 'Years',
+        labelAge: 'Age',
+        labelRiskLevel: 'Risk Profile',
+        riskConservative: 'Conservative',
+        riskBalanced: 'Balanced',
+        riskAggressive: 'Aggressive',
+        labelTaxRegion: 'Primary Tax Region',
+        taxTw: 'Taiwan (TW)',
+        taxUs: 'United States (US)',
+        taxHk: 'Hong Kong (HK)',
+        taxSg: 'Singapore (SG)',
+        labelDisplayCurrency: 'Display Currency',
+        ccyUsd: 'USD',
+        ccyTwd: 'TWD',
+        ccyHkd: 'HKD',
+        ccyJpy: 'JPY',
+        ccyCny: 'CNY',
+        ccyEur: 'EUR',
+        labelOverride: 'Manual Annual Return Override (%)',
+        calcBtn: 'Update Results',
+        aiBtn: 'View AI Advice',
+        shareBtn: 'Copy Share Link',
+        saveSnapshotBtn: 'Save Snapshot',
+        exportShareImageBtn: 'Export Share Image',
+        compareSnapshotsBtn: 'Compare Latest Snapshots',
+        overrideToggleText: 'Use Manual Return Override',
+        outputCardTitle: 'Forecast Output',
+        statLabelRate: 'Expected Annual Return',
+        statLabelVol: 'Annual Volatility',
+        statLabelDd: 'Max Drawdown (Simulated)',
+        statLabelTotal: 'Ending Portfolio Value',
+        statLabelGain: 'Cumulative Gain',
+        allocationTitle: 'Allocation Optimization',
+        allocationHeadBucket: 'Asset Class',
+        allocationHeadCurrent: 'Current Weight',
+        allocationHeadTarget: 'Suggested Weight',
+        allocationHeadDelta: 'Adjustment',
+        expertTitle: 'Personalized Expert Advice',
+        expertInitial: 'After entering tickers and amounts, click "View AI Advice".',
+        healthTitle: 'Portfolio Health',
+        compLabelConcentration: 'Concentration Score',
+        compLabelDiversification: 'Diversification Score',
+        compLabelVolatility: 'Volatility Score',
+        compLabelDrawdown: 'Drawdown Score',
+        stressTitle: 'Standard Stress Scenarios',
+        stressHeadScenario: 'Scenario',
+        stressHeadPnl: 'Portfolio PnL (USD)',
+        stressHeadDd: 'Estimated Drawdown',
+        stressHeadRisk: 'Risk Label',
+        qualityTitle: 'Data Reliability',
+        qualityLabelLatest: 'Latest Price Date',
+        qualityLabelBase: 'Base Price Date',
+        qualityLabelCoverage: 'Data Coverage',
+        qualitySource: 'Sources: FinMind (TW) and Stooq (US).',
+        snapshotTitle: 'Decision Snapshot & Sharing',
+        snapshotDescription: 'Save current inputs and outputs, then export a mobile-friendly share image.',
+        snapshotEmpty: 'No snapshot saved yet.',
+        footerText: 'Annual return data source: FinMind API for TW stocks, Stooq daily data for US stocks.',
+        remove: 'Remove',
+        tickerPlaceholderUs: 'e.g., AAPL or MSFT',
+        tickerPlaceholderTw: 'e.g., 2330 or TSMC',
+        aiGenerating: 'Generating AI advice...',
+        aiView: 'View AI Advice',
+        emptyRows: 'Please enter at least one ticker and amount.',
+        invalidInputPrefix: 'Invalid input:',
+        invalidPosition: 'Please enter valid positions first.',
+        invalidDataQuery: 'Please complete valid market data queries first.',
+        amountPositive: 'Investment amount must be greater than 0.',
+        waitResult: 'Waiting for calculation results.',
+        stressMetaEmpty: 'worst-case: --; survival days: --',
+        noRiskFlags: 'No significant risk flags detected.',
+        noScenario: 'No scenario data',
+        coveredAssets: (priced, nonCash) => `Covered ${priced}/${nonCash} non-cash assets.`,
+        cashOnlyCoverage: 'Portfolio is currently cash-only; data coverage is treated as 100%.',
+        noSnapshotToSave: 'No result is available to save yet. Run a calculation first.',
+        snapshotSaved: (id) => `Snapshot saved: ${id}`,
+        noSnapshotToShare: 'No shareable result yet. Run a calculation first.',
+        exportFailed: 'Image export failed. Please try again later.',
+        shareOpened: 'System share opened. The share image is ready.',
+        shareCanceled: 'Share canceled.',
+        shareDownloaded: 'Share image downloaded (PNG).',
+        needTwoSnapshots: 'At least 2 snapshots are required for comparison.',
+        copied: 'Copied',
+        copyManual: 'Please copy the URL manually',
+        loadedSnapshots: (count) => `Loaded ${count} snapshot(s).`,
+        analyzeLoading: 'Analyzing portfolio and risk...',
+        aiUnavailable: 'AI service is temporarily unavailable. Please try again later.',
+        aiCooldown: 'AI advice is cooling down. Please try again shortly.',
+        aiNeedsRefresh: 'Inputs changed. Click "View AI Advice" to regenerate.',
+        aiUpdatedHint: 'Calculation updated. Click "View AI Advice" to generate AI guidance.'
+      }
+    };
+
+    function t(key) {
+      return i18n[currentLanguage]?.[key] ?? i18n.zh[key] ?? key;
+    }
+
+    function applyLanguage(lang) {
+      currentLanguage = lang === 'en' ? 'en' : 'zh';
+      localStorage.setItem('rb-language', currentLanguage);
+      document.documentElement.lang = t('htmlLang');
+      document.title = t('title');
+      const meta = document.querySelector('meta[name="description"]');
+      if (meta) meta.setAttribute('content', t('metaDescription'));
+
+      const textMap = {
+        universeLabel: 'universeLabel',
+        heroTitle: 'heroTitle',
+        heroSubtitle: 'heroSubtitle',
+        inputCardTitle: 'inputCardTitle',
+        tableHeadMarket: 'tableHeadMarket',
+        tableHeadTicker: 'tableHeadTicker',
+        tableHeadAmount: 'tableHeadAmount',
+        tableHeadCurrency: 'tableHeadCurrency',
+        addRow: 'addRow',
+        maxCountChip: 'maxCountChip',
+        labelYears: 'labelYears',
+        labelYearsNumber: 'labelYearsNumber',
+        labelAge: 'labelAge',
+        labelRiskLevel: 'labelRiskLevel',
+        riskConservative: 'riskConservative',
+        riskBalanced: 'riskBalanced',
+        riskAggressive: 'riskAggressive',
+        labelTaxRegion: 'labelTaxRegion',
+        taxTw: 'taxTw',
+        taxUs: 'taxUs',
+        taxHk: 'taxHk',
+        taxSg: 'taxSg',
+        labelDisplayCurrency: 'labelDisplayCurrency',
+        ccyUsd: 'ccyUsd',
+        ccyTwd: 'ccyTwd',
+        ccyHkd: 'ccyHkd',
+        ccyJpy: 'ccyJpy',
+        ccyCny: 'ccyCny',
+        ccyEur: 'ccyEur',
+        labelOverride: 'labelOverride',
+        calcBtn: 'calcBtn',
+        aiBtn: 'aiBtn',
+        shareBtn: 'shareBtn',
+        saveSnapshotBtn: 'saveSnapshotBtn',
+        exportShareImageBtn: 'exportShareImageBtn',
+        compareSnapshotsBtn: 'compareSnapshotsBtn',
+        overrideToggleText: 'overrideToggleText',
+        outputCardTitle: 'outputCardTitle',
+        statLabelRate: 'statLabelRate',
+        statLabelVol: 'statLabelVol',
+        statLabelDd: 'statLabelDd',
+        statLabelTotal: 'statLabelTotal',
+        statLabelGain: 'statLabelGain',
+        allocationTitle: 'allocationTitle',
+        allocationHeadBucket: 'allocationHeadBucket',
+        allocationHeadCurrent: 'allocationHeadCurrent',
+        allocationHeadTarget: 'allocationHeadTarget',
+        allocationHeadDelta: 'allocationHeadDelta',
+        expertTitle: 'expertTitle',
+        healthTitle: 'healthTitle',
+        compLabelConcentration: 'compLabelConcentration',
+        compLabelDiversification: 'compLabelDiversification',
+        compLabelVolatility: 'compLabelVolatility',
+        compLabelDrawdown: 'compLabelDrawdown',
+        stressTitle: 'stressTitle',
+        stressHeadScenario: 'stressHeadScenario',
+        stressHeadPnl: 'stressHeadPnl',
+        stressHeadDd: 'stressHeadDd',
+        stressHeadRisk: 'stressHeadRisk',
+        qualityTitle: 'qualityTitle',
+        qualityLabelLatest: 'qualityLabelLatest',
+        qualityLabelBase: 'qualityLabelBase',
+        qualityLabelCoverage: 'qualityLabelCoverage',
+        snapshotTitle: 'snapshotTitle',
+        snapshotDescription: 'snapshotDescription',
+        footerText: 'footerText'
+      };
+      Object.keys(textMap).forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = t(textMap[id]);
+      });
+
+      const currentQualityText = qualityNoteEl.textContent || '';
+      if (currentQualityText === i18n.zh.qualitySource || currentQualityText === i18n.en.qualitySource) {
+        qualityNoteEl.textContent = t('qualitySource');
+      }
+      if (!snapshotResultEl.textContent || snapshotResultEl.textContent === i18n.zh.snapshotEmpty || snapshotResultEl.textContent === i18n.en.snapshotEmpty) {
+        snapshotResultEl.textContent = t('snapshotEmpty');
+      }
+      if (expertSummaryEl.textContent === i18n.zh.expertInitial || expertSummaryEl.textContent === i18n.en.expertInitial) {
+        expertSummaryEl.textContent = t('expertInitial');
+      }
+
+      rowsEl.querySelectorAll('.table-row').forEach((row) => {
+        const marketSelect = row.querySelector('.market');
+        const tickerInput = row.querySelector('.ticker');
+        const removeBtn = row.querySelector('.remove');
+        if (marketSelect?.options?.length >= 2) {
+          marketSelect.options[0].textContent = currentLanguage === 'en' ? 'TW Market' : '台股 TW';
+          marketSelect.options[1].textContent = currentLanguage === 'en' ? 'US Market' : '美股 US';
+        }
+        if (tickerInput) tickerInput.placeholder = getTickerPlaceholder(marketSelect?.value || 'TW');
+        if (removeBtn) removeBtn.textContent = t('remove');
+      });
+
+      zhButton.classList.toggle('active', currentLanguage === 'zh');
+      enButton.classList.toggle('active', currentLanguage === 'en');
+      zhButton.setAttribute('aria-pressed', String(currentLanguage === 'zh'));
+      enButton.setAttribute('aria-pressed', String(currentLanguage === 'en'));
+    }
 
     function formatCurrency(value, currency) {
       try { return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value); }
@@ -814,7 +1189,7 @@
     }
 
     function getTickerPlaceholder(market) {
-      return market === 'US' ? '例：AAPL 或 MSFT' : '例：2330 或 台積電';
+      return market === 'US' ? t('tickerPlaceholderUs') : t('tickerPlaceholderTw');
     }
 
     function createRow(ticker = '', amount = 0, currency = 'TWD', market = 'TW') {
@@ -822,8 +1197,8 @@
       row.className = 'table-row';
       row.innerHTML = `
         <select class="market">
-          <option value="TW" ${market === 'TW' ? 'selected' : ''}>台股 TW</option>
-          <option value="US" ${market === 'US' ? 'selected' : ''}>美股 US</option>
+          <option value="TW" ${market === 'TW' ? 'selected' : ''}>${currentLanguage === 'en' ? 'TW Market' : '台股 TW'}</option>
+          <option value="US" ${market === 'US' ? 'selected' : ''}>${currentLanguage === 'en' ? 'US Market' : '美股 US'}</option>
         </select>
         <div class="ticker-cell">
           <input class="ticker" type="text" placeholder="${getTickerPlaceholder(market)}" value="${ticker}" />
@@ -831,7 +1206,7 @@
         </div>
         <input class="amount" type="number" min="0" step="100" value="${amount}" />
         <select class="currency"><option value="USD" ${currency === 'USD' ? 'selected' : ''}>USD</option><option value="TWD" ${currency === 'TWD' ? 'selected' : ''}>TWD</option><option value="HKD" ${currency === 'HKD' ? 'selected' : ''}>HKD</option><option value="JPY" ${currency === 'JPY' ? 'selected' : ''}>JPY</option><option value="CNY" ${currency === 'CNY' ? 'selected' : ''}>CNY</option><option value="EUR" ${currency === 'EUR' ? 'selected' : ''}>EUR</option></select>
-        <button type="button" class="remove">移除</button>`;
+        <button type="button" class="remove">${t('remove')}</button>`;
       row.querySelector('.remove').addEventListener('click', () => { row.remove(); calculate(); });
       row.querySelector('.market').addEventListener('input', (event) => {
         row.querySelector('.ticker').placeholder = getTickerPlaceholder(event.target.value);
@@ -970,7 +1345,7 @@
 
     function setAiButtonLoading(isLoading) {
       aiBtnEl.disabled = isLoading;
-      aiBtnEl.textContent = isLoading ? 'AI 生成中...' : '查看 AI 建議';
+      aiBtnEl.textContent = isLoading ? t('aiGenerating') : t('aiView');
     }
 
     function setTickerError(rowEl, message = '') {
@@ -980,6 +1355,15 @@
 
     function describeApiError(err, market = 'TW') {
       const code = err?.payload?.error_code || '';
+      if (currentLanguage === 'en') {
+        if (code === 'STOCK_NOT_FOUND') return market === 'US' ? 'US ticker not found.' : 'TW ticker or name not found.';
+        if (code === 'AMBIGUOUS_NAME') return 'Multiple matches found. Please use ticker code.';
+        if (code === 'INVALID_QUERY') return 'Invalid input format.';
+        if (code === 'NO_PRICE_DATA') return 'No usable price data found.';
+        if (code === 'UPSTREAM_ERROR') return 'Market data service is temporarily unavailable.';
+        if (code === 'CONFIG_ERROR') return 'Backend API token is not configured.';
+        return err?.payload?.message || err?.message || 'Request failed. Please try again later.';
+      }
       if (code === 'STOCK_NOT_FOUND') return market === 'US' ? '查無此美股代碼。' : '查無此台股代碼或名稱。';
       if (code === 'AMBIGUOUS_NAME') return '名稱對應多筆，請改用代碼。';
       if (code === 'INVALID_QUERY') return '輸入格式不正確。';
@@ -991,12 +1375,17 @@
 
     function describeRiskApiError(err) {
       const code = err?.payload?.error_code || '';
+      if (currentLanguage === 'en') {
+        if (code === 'INVALID_PORTFOLIO_INPUT') return 'Portfolio input is incomplete.';
+        if (code === 'RISK_ENGINE_ERROR') return 'Risk engine is temporarily unavailable.';
+        return err?.payload?.message || err?.message || 'Risk module is temporarily unavailable.';
+      }
       if (code === 'INVALID_PORTFOLIO_INPUT') return '組合輸入不完整，無法完成診斷。';
       if (code === 'RISK_ENGINE_ERROR') return '風險引擎暫時異常，請稍後再試。';
       return err?.payload?.message || err?.message || '風險模組暫時不可用。';
     }
 
-    function clearHealthCheck(message = '等待試算結果。') {
+    function clearHealthCheck(message = t('waitResult')) {
       healthScoreEl.textContent = '--';
       healthBandEl.textContent = '--';
       compConcentrationEl.textContent = '--';
@@ -1006,12 +1395,12 @@
       healthFlagsEl.innerHTML = `<li>${message}</li>`;
     }
 
-    function clearStressTest(message = '等待試算結果。') {
+    function clearStressTest(message = t('waitResult')) {
       stressRowsEl.innerHTML = `<div class="table-row"><div>${message}</div><div>--</div><div>--</div><div>--</div></div>`;
-      stressMetaEl.textContent = 'worst-case: --；survival days: --';
+      stressMetaEl.textContent = t('stressMetaEmpty');
     }
 
-    function clearDataQuality(message = '資料來源：台股 FinMind、美股 Stooq。') {
+    function clearDataQuality(message = t('qualitySource')) {
       qualityLatestEl.textContent = '--';
       qualityBaseEl.textContent = '--';
       qualityCoverageEl.textContent = '--';
@@ -1029,18 +1418,18 @@
       const explanations = payload.explanations || [];
       healthFlagsEl.innerHTML = explanations.length
         ? explanations.map(text => `<li>${text}</li>`).join('')
-        : '<li>目前無顯著風險旗標。</li>';
+        : `<li>${t('noRiskFlags')}</li>`;
     }
 
     function renderStressTest(payload) {
       const rows = payload?.scenario_results || [];
       stressRowsEl.innerHTML = rows.length
         ? rows.map(row => `<div class="table-row"><div>${row.scenario_id}</div><div>${formatCurrency(row.portfolio_pnl_usd || 0, 'USD')}</div><div>${((row.drawdown_est || 0) * 100).toFixed(2)}%</div><div>${row.risk_label || '--'}</div></div>`).join('')
-        : '<div class="table-row"><div>無情境資料</div><div>--</div><div>--</div><div>--</div></div>';
+        : `<div class="table-row"><div>${t('noScenario')}</div><div>--</div><div>--</div><div>--</div></div>`;
       const worst = payload?.worst_case;
       stressMetaEl.textContent = worst
-        ? `worst-case: ${worst.scenario_id} (${formatCurrency(worst.portfolio_pnl_usd || 0, 'USD')})；survival days: ${payload?.survival_days_est ?? '--'}`
-        : 'worst-case: --；survival days: --';
+        ? `worst-case: ${worst.scenario_id} (${formatCurrency(worst.portfolio_pnl_usd || 0, 'USD')})${currentLanguage === 'en' ? ';' : '；'} survival days: ${payload?.survival_days_est ?? '--'}`
+        : t('stressMetaEmpty');
     }
 
     function renderDataQuality(details) {
@@ -1054,8 +1443,8 @@
       qualityBaseEl.textContent = baseDate;
       qualityCoverageEl.textContent = `${(coverage * 100).toFixed(0)}%`;
       qualityNoteEl.textContent = nonCash.length
-        ? `已覆蓋 ${priced.length}/${nonCash.length} 檔非現金標的。`
-        : '目前組合為現金部位，資料覆蓋率視為 100%。';
+        ? t('coveredAssets')(priced.length, nonCash.length)
+        : t('cashOnlyCoverage');
     }
 
     function buildRiskPositions(details) {
@@ -1106,7 +1495,7 @@
 
     function saveSnapshot() {
       if (!latestSnapshotDraft) {
-        snapshotResultEl.textContent = '目前沒有可儲存的結果，請先完成一次試算。';
+        snapshotResultEl.textContent = t('noSnapshotToSave');
         return;
       }
       const snapshots = readSnapshots();
@@ -1117,7 +1506,7 @@
       };
       snapshots.push(snapshot);
       writeSnapshots(snapshots.slice(-50));
-      snapshotResultEl.textContent = `已儲存快照：${snapshot.id}`;
+      snapshotResultEl.textContent = t('snapshotSaved')(snapshot.id);
     }
 
     function drawRoundedRect(ctxRef, x, y, width, height, radius, fillStyle, strokeStyle = '') {
@@ -1182,7 +1571,7 @@
 
     async function exportShareImage() {
       if (!latestSnapshotDraft) {
-        snapshotResultEl.textContent = '目前沒有可分享內容，請先完成一次試算。';
+        snapshotResultEl.textContent = t('noSnapshotToShare');
         return;
       }
 
@@ -1200,7 +1589,7 @@
       canvasShare.height = 1350;
       const c = canvasShare.getContext('2d');
       if (!c) {
-        snapshotResultEl.textContent = '無法產生分享圖片。';
+        snapshotResultEl.textContent = t('exportFailed');
         return;
       }
 
@@ -1283,7 +1672,7 @@
 
       const blob = await new Promise(resolve => canvasShare.toBlob(resolve, 'image/png'));
       if (!blob) {
-        snapshotResultEl.textContent = '匯出圖片失敗，請稍後再試。';
+        snapshotResultEl.textContent = t('exportFailed');
         return;
       }
 
@@ -1297,24 +1686,24 @@
       if (shareFile && navigator.share && navigator.canShare && navigator.canShare({ files: [shareFile] })) {
         try {
           await navigator.share({ files: [shareFile], title: 'Rebalance 分享摘要' });
-          snapshotResultEl.textContent = '已開啟系統分享，分享圖已準備完成。';
+          snapshotResultEl.textContent = t('shareOpened');
           return;
         } catch (err) {
           if (err?.name === 'AbortError') {
-            snapshotResultEl.textContent = '已取消分享。';
+            snapshotResultEl.textContent = t('shareCanceled');
             return;
           }
         }
       }
 
       downloadBlob(blob, filename);
-      snapshotResultEl.textContent = '已下載分享圖片（PNG）。';
+      snapshotResultEl.textContent = t('shareDownloaded');
     }
 
     function compareLatestSnapshots() {
       const snapshots = readSnapshots();
       if (snapshots.length < 2) {
-        snapshotResultEl.textContent = '至少需要 2 筆快照才能比較。';
+        snapshotResultEl.textContent = t('needTwoSnapshots');
         return;
       }
       const previous = snapshots[snapshots.length - 2];
@@ -1381,10 +1770,10 @@
       });
       const target = computeSuggestedTargets(profile);
       const rows = [
-        { bucket: '股票', currentWeight: current.stock, targetWeight: target.stock },
-        { bucket: '債券', currentWeight: current.bond, targetWeight: target.bond },
-        { bucket: '現金', currentWeight: current.cash, targetWeight: target.cash },
-      ].map(r => ({ ...r, delta: r.targetWeight - r.currentWeight, rationale: r.delta > 0 ? '建議提高配置' : (r.delta < 0 ? '建議降低配置' : '維持現況') }));
+        { bucket: currentLanguage === 'en' ? 'Equity' : '股票', currentWeight: current.stock, targetWeight: target.stock },
+        { bucket: currentLanguage === 'en' ? 'Bond' : '債券', currentWeight: current.bond, targetWeight: target.bond },
+        { bucket: currentLanguage === 'en' ? 'Cash' : '現金', currentWeight: current.cash, targetWeight: target.cash },
+      ].map(r => ({ ...r, delta: r.targetWeight - r.currentWeight, rationale: r.delta > 0 ? (currentLanguage === 'en' ? 'Increase allocation' : '建議提高配置') : (r.delta < 0 ? (currentLanguage === 'en' ? 'Reduce allocation' : '建議降低配置') : (currentLanguage === 'en' ? 'Keep current' : '維持現況')) }));
       return rows;
     }
 
@@ -1394,20 +1783,44 @@
 
     function generateAdviceFallback(details, years, portfolioReturn, portfolioVol, dd, profile, suggestions) {
       const top = details.slice().sort((a,b)=>b.weight-a.weight)[0];
-      const topLabel = top ? `${top.normalizedTicker || '現金'} (${(top.weight*100).toFixed(0)}%)` : '無';
-      const riskWord = profile.riskLevel === 'conservative' ? '保守' : profile.riskLevel === 'aggressive' ? '積極' : '中性';
+      const topLabel = top ? `${top.normalizedTicker || (currentLanguage === 'en' ? 'Cash' : '現金')} (${(top.weight*100).toFixed(0)}%)` : (currentLanguage === 'en' ? 'N/A' : '無');
+      const riskWord = profile.riskLevel === 'conservative'
+        ? (currentLanguage === 'en' ? 'conservative' : '保守')
+        : profile.riskLevel === 'aggressive'
+          ? (currentLanguage === 'en' ? 'aggressive' : '積極')
+          : (currentLanguage === 'en' ? 'balanced' : '中性');
       return {
-        summary: `依 ${profile.age} 歲、${profile.taxRegion} 稅務地區與 ${riskWord}風險等級，組合目前最大持倉為 ${topLabel}，模擬回撤 ${(dd*100).toFixed(1)}%。`,
+        summary: currentLanguage === 'en'
+          ? `For age ${profile.age}, tax region ${profile.taxRegion}, and ${riskWord} profile, the largest position is ${topLabel} with simulated drawdown ${(dd*100).toFixed(1)}%.`
+          : `依 ${profile.age} 歲、${profile.taxRegion} 稅務地區與 ${riskWord}風險等級，組合目前最大持倉為 ${topLabel}，模擬回撤 ${(dd*100).toFixed(1)}%。`,
         risk_level: portfolioVol >= 0.24 ? 'high' : (portfolioVol >= 0.15 ? 'medium' : 'low'),
         actions: [
-          { title: '配置調整', reason: `股票 ${(suggestions[0].targetWeight*100).toFixed(0)}% / 債券 ${(suggestions[1].targetWeight*100).toFixed(0)}% / 現金 ${(suggestions[2].targetWeight*100).toFixed(0)}%。`, priority: 'high' },
-          { title: '期限匹配', reason: years <= 3 ? '期限偏短，建議提高防禦資產比例。' : (years >= 15 ? '期限偏長，可維持成長配置並定期再平衡。' : '期限中等，維持股債平衡配置。'), priority: 'medium' }
+          {
+            title: currentLanguage === 'en' ? 'Allocation Shift' : '配置調整',
+            reason: currentLanguage === 'en'
+              ? `Equity ${(suggestions[0].targetWeight*100).toFixed(0)}% / Bond ${(suggestions[1].targetWeight*100).toFixed(0)}% / Cash ${(suggestions[2].targetWeight*100).toFixed(0)}%.`
+              : `股票 ${(suggestions[0].targetWeight*100).toFixed(0)}% / 債券 ${(suggestions[1].targetWeight*100).toFixed(0)}% / 現金 ${(suggestions[2].targetWeight*100).toFixed(0)}%。`,
+            priority: 'high'
+          },
+          {
+            title: currentLanguage === 'en' ? 'Horizon Match' : '期限匹配',
+            reason: years <= 3
+              ? (currentLanguage === 'en' ? 'Short horizon: increase defensive assets.' : '期限偏短，建議提高防禦資產比例。')
+              : (years >= 15
+                  ? (currentLanguage === 'en' ? 'Long horizon: keep growth tilt and rebalance regularly.' : '期限偏長，可維持成長配置並定期再平衡。')
+                  : (currentLanguage === 'en' ? 'Medium horizon: keep balanced stock-bond mix.' : '期限中等，維持股債平衡配置。')),
+            priority: 'medium'
+          }
         ],
         watchouts: [
-          portfolioVol >= 0.24 ? '波動偏高，請確認心理承受度與現金備援。' : '波動尚可，重點是紀律執行再平衡。',
-          portfolioReturn >= 0.1 ? '預期報酬偏積極，需搭配風險管理。' : '預期報酬中性至保守，可依目標調整。'
+          portfolioVol >= 0.24
+            ? (currentLanguage === 'en' ? 'Volatility is elevated; verify risk tolerance and cash buffer.' : '波動偏高，請確認心理承受度與現金備援。')
+            : (currentLanguage === 'en' ? 'Volatility is manageable; focus on disciplined rebalancing.' : '波動尚可，重點是紀律執行再平衡。'),
+          portfolioReturn >= 0.1
+            ? (currentLanguage === 'en' ? 'Expected return is aggressive; pair with stronger risk controls.' : '預期報酬偏積極，需搭配風險管理。')
+            : (currentLanguage === 'en' ? 'Expected return is moderate to conservative; adjust to goal.' : '預期報酬中性至保守，可依目標調整。')
         ],
-        disclaimer: '本建議僅供參考，不構成投資建議。',
+        disclaimer: currentLanguage === 'en' ? 'For reference only; not investment advice.' : '本建議僅供參考，不構成投資建議。',
         model_meta: { provider: 'rule-engine', model: 'fallback-v1', latency_ms: 0 }
       };
     }
@@ -1415,10 +1828,10 @@
     function renderExpertAdvice(advice, fallbackUsed, fallbackMessage = '', metadata = {}) {
       expertSummaryEl.textContent = advice.summary || '--';
       const items = [];
-      if (fallbackUsed) items.push('<li>AI 暫時不可用，已切換規則建議。</li>');
+      if (fallbackUsed) items.push(`<li>${currentLanguage === 'en' ? 'AI is unavailable. Switched to rule-based guidance.' : 'AI 暫時不可用，已切換規則建議。'}</li>`);
       if (fallbackMessage) items.push(`<li>${fallbackMessage}</li>`);
-      if (!fallbackUsed && metadata.cacheHit) items.push('<li>輸入未變更，已復用上次 AI 建議。</li>');
-      if (!fallbackUsed && metadata.generatedAt) items.push(`<li>建議生成時間：${formatTimestamp(metadata.generatedAt)}</li>`);
+      if (!fallbackUsed && metadata.cacheHit) items.push(`<li>${currentLanguage === 'en' ? 'Inputs unchanged. Reused previous AI response.' : '輸入未變更，已復用上次 AI 建議。'}</li>`);
+      if (!fallbackUsed && metadata.generatedAt) items.push(`<li>${currentLanguage === 'en' ? 'Generated at' : '建議生成時間'}: ${formatTimestamp(metadata.generatedAt)}</li>`);
       (advice.actions || []).slice(0, 3).forEach(action => {
         items.push(`<li>【${action.priority || 'medium'}】${action.title}：${action.reason}</li>`);
       });
@@ -1454,7 +1867,7 @@
             delta: s.delta
           }))
         },
-        locale: 'zh-TW'
+        locale: currentLanguage === 'en' ? 'en-US' : 'zh-TW'
       };
     }
 
@@ -1504,10 +1917,10 @@
 
       if (!rows.length) {
         outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
-        drawChart([0, 1]); assumptionNoteEl.textContent = '請至少輸入一檔代碼與金額。'; expertSummaryEl.textContent = '--'; expertListEl.innerHTML = ''; allocationRowsEl.innerHTML = '';
-        clearHealthCheck('請先輸入有效部位。');
-        clearStressTest('請先輸入有效部位。');
-        clearDataQuality('請先完成有效行情查詢。');
+        drawChart([0, 1]); assumptionNoteEl.textContent = t('emptyRows'); expertSummaryEl.textContent = '--'; expertListEl.innerHTML = ''; allocationRowsEl.innerHTML = '';
+        clearHealthCheck(t('invalidPosition'));
+        clearStressTest(t('invalidPosition'));
+        clearDataQuality(t('invalidDataQuery'));
         latestSnapshotDraft = null;
         return;
       }
@@ -1579,20 +1992,20 @@
         expertSummaryEl.textContent = '--';
         expertListEl.innerHTML = '';
         allocationRowsEl.innerHTML = '';
-        clearHealthCheck('輸入不通過，無法計算健康度。');
-        clearStressTest('輸入不通過，無法計算壓力測試。');
-        clearDataQuality('輸入不通過，請修正代碼後重試。');
+        clearHealthCheck(t('invalidPosition'));
+        clearStressTest(t('invalidPosition'));
+        clearDataQuality(t('invalidDataQuery'));
         latestSnapshotDraft = null;
-        assumptionNoteEl.textContent = `輸入不通過：${invalidRows.map(x => `${x.query}（${x.message}）`).join('；')}`;
+        assumptionNoteEl.textContent = `${t('invalidInputPrefix')} ${invalidRows.map(x => `${x.query}（${x.message}）`).join('；')}`;
         return;
       }
 
       if (totalUsd === 0) {
         outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
-        drawChart([0, 1]); assumptionNoteEl.textContent = '投資金額需大於 0。'; expertSummaryEl.textContent = '--'; expertListEl.innerHTML = ''; allocationRowsEl.innerHTML = '';
-        clearHealthCheck('投資金額需大於 0。');
-        clearStressTest('投資金額需大於 0。');
-        clearDataQuality('投資金額需大於 0。');
+        drawChart([0, 1]); assumptionNoteEl.textContent = t('amountPositive'); expertSummaryEl.textContent = '--'; expertListEl.innerHTML = ''; allocationRowsEl.innerHTML = '';
+        clearHealthCheck(t('amountPositive'));
+        clearStressTest(t('amountPositive'));
+        clearDataQuality(t('amountPositive'));
         latestSnapshotDraft = null;
         return;
       }
@@ -1653,8 +2066,9 @@
           clearStressTest(describeRiskApiError(stressResult.reason));
         }
       } catch (_) {
-        clearHealthCheck('風險模組暫時不可用。');
-        clearStressTest('風險模組暫時不可用。');
+        const riskMsg = currentLanguage === 'en' ? 'Risk module is temporarily unavailable.' : '風險模組暫時不可用。';
+        clearHealthCheck(riskMsg);
+        clearStressTest(riskMsg);
       }
 
       const aiPayload = buildAdvicePayload(profile, details, suggestions, portfolioReturn, portfolioVol, dd, totalUsd);
@@ -1670,14 +2084,14 @@
 
       if (!includeAi) {
         fallbackMessage = aiAdviceStale
-          ? '輸入已變更，請按「查看 AI 建議」重新生成。'
-          : '已更新試算；按「查看 AI 建議」產生 AI 建議。';
+          ? t('aiNeedsRefresh')
+          : t('aiUpdatedHint');
       } else if (underCooldown && !forceAi) {
-        fallbackMessage = 'AI 建議冷卻中，請稍後再試。';
+        fallbackMessage = t('aiCooldown');
       } else {
         setAiButtonLoading(true);
-        expertSummaryEl.textContent = 'AI 建議生成中...';
-        expertListEl.innerHTML = '<li>正在分析組合與風險。</li>';
+        expertSummaryEl.textContent = t('aiGenerating');
+        expertListEl.innerHTML = `<li>${t('analyzeLoading')}</li>`;
         try {
           activeAdviceController = new AbortController();
           const aiResult = await fetchAiAdvice(aiPayload, activeAdviceController.signal);
@@ -1690,8 +2104,8 @@
           aiAdviceStale = false;
         } catch (err) {
           if (err?.name === 'AbortError') return;
-          if (err?.status === 429) fallbackMessage = 'AI 目前流量較高，已自動重試一次；請稍後再按更新。';
-          else fallbackMessage = 'AI 服務暫時不可用，請稍後再試。';
+          if (err?.status === 429) fallbackMessage = t('aiCooldown');
+          else fallbackMessage = t('aiUnavailable');
         } finally {
           if (runId === latestCalcRun) setAiButtonLoading(false);
         }
@@ -1731,9 +2145,9 @@
 
     function copyShareUrl() {
       navigator.clipboard.writeText(window.location.href).then(() => {
-        scenarioIdEl.textContent = `${scenarioIdEl.textContent} · 已複製`;
+        scenarioIdEl.textContent = `${scenarioIdEl.textContent} · ${t('copied')}`;
       }).catch(() => {
-        scenarioIdEl.textContent = `${scenarioIdEl.textContent} · 請手動複製網址`;
+        scenarioIdEl.textContent = `${scenarioIdEl.textContent} · ${t('copyManual')}`;
       });
     }
 
@@ -1748,15 +2162,17 @@
     compareSnapshotsBtnEl.addEventListener('click', compareLatestSnapshots);
     document.getElementById('addRow').addEventListener('click', () => { addRow('', 0, 'TWD', 'TW'); calculate({ includeAi: false }); });
     [displayCurrencyEl, overrideEl, ageEl, riskLevelEl, taxRegionEl].forEach(el => el.addEventListener('input', scheduleCalculate));
+    zhButton.addEventListener('click', () => { applyLanguage('zh'); calculate({ includeAi: false }); });
+    enButton.addEventListener('click', () => { applyLanguage('en'); calculate({ includeAi: false }); });
 
     function init() {
-      clearHealthCheck();
-      clearStressTest();
-      clearDataQuality();
+      clearHealthCheck(t('waitResult'));
+      clearStressTest(t('waitResult'));
+      clearDataQuality(t('qualitySource'));
       const existingSnapshots = readSnapshots();
       snapshotResultEl.textContent = existingSnapshots.length
-        ? `已載入 ${existingSnapshots.length} 筆快照。`
-        : '尚未儲存快照。';
+        ? t('loadedSnapshots')(existingSnapshots.length)
+        : t('snapshotEmpty');
       const scenario = hydrateScenarioFromQuery();
       if (scenario) {
         rowsEl.innerHTML = '';
@@ -1777,6 +2193,7 @@
         addRow('2454', 40000, 'TWD', 'TW');
         syncYearsFromRange();
       }
+      applyLanguage(currentLanguage);
       calculate({ includeAi: false });
     }
 

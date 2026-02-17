@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Rebalance Labs | 跨境金融配置平台</title>
+  <title>Rebalance Lab | AI 投資組合助理</title>
+  <meta name="description" content="你的 AI 投資組合助理，由 AgentPortfolio 驅動。專為小範圍上線與真實工作流程設計。" />
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Manrope:wght@300;400;600;700&display=swap');
 
@@ -121,6 +122,41 @@
 
     nav a:hover {
       border-color: var(--line);
+      color: var(--ink);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .lang-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .lang-btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+    }
+
+    .lang-btn.active {
+      background: rgba(255, 255, 255, 0.14);
       color: var(--ink);
     }
 
@@ -315,6 +351,7 @@
         grid-template-columns: 1fr;
       }
       nav { display: none; }
+      .header-actions { justify-content: flex-start; }
       .metric { grid-template-columns: 1fr; }
     }
   </style>
@@ -327,84 +364,217 @@
     <header>
       <div class="brand">
         <div class="brand-mark">R</div>
-        <div>Rebalance Labs</div>
+        <div>Rebalance Lab</div>
       </div>
       <nav>
-        <a href="#solutions">解決方案</a>
-        <a href="#platform">AI 平台</a>
-        <a href="futures_risk_copilot.html">期貨風險管理</a>
-        <a href="#contact">聯絡我們</a>
+        <a id="nav-solutions" href="#solutions">解決方案</a>
+        <a id="nav-platform" href="#platform">AI 平台</a>
+        <a id="nav-futures" href="futures_risk_copilot.html">期貨風險管理</a>
+        <a id="nav-contact" href="#contact">聯絡我們</a>
       </nav>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <a class="btn secondary" href="rebalance_copilot.html">進入金融配置平台</a>
-        <a class="btn secondary" href="futures_risk_copilot.html">期貨風險管理</a>
+      <div class="header-actions">
+        <a id="top-cta-platform" class="btn secondary" href="rebalance_copilot.html">進入金融配置平台</a>
+        <a id="top-cta-futures" class="btn secondary" href="futures_risk_copilot.html">期貨風險管理</a>
+        <div class="lang-switch" role="group" aria-label="Language switch">
+          <button id="lang-zh" class="lang-btn active" type="button" data-lang="zh">中文</button>
+          <button id="lang-en" class="lang-btn" type="button" data-lang="en">EN</button>
+        </div>
       </div>
     </header>
 
     <main class="hero">
       <section>
-        <div class="eyebrow">Global Wealth Architecture</div>
-        <h1>跨境金融佈局，讓資產配置更有秩序、更有速度、更有視野。</h1>
-        <p class="lead">Rebalance Labs 專注於跨境金融佈局、個性化優化資產配置與 AI 智能投顧分析。以專業策略框架整合多國市場動態，為高淨值與成長型資產提供具前瞻性的配置方案。</p>
+        <div id="hero-eyebrow" class="eyebrow">AI 投資組合助理</div>
+        <h1 id="hero-title">Rebalance Lab</h1>
+        <p id="hero-lead" class="lead">你的 AI 投資組合助理，由 AgentPortfolio 驅動。</p>
         <div class="cta-row">
-          <a class="btn primary" href="rebalance_copilot.html">立即啟動 AI 配置</a>
-          <a class="btn secondary" href="futures_risk_copilot.html">開啟期貨風控頁</a>
-          <a class="btn secondary" href="#solutions">了解我們的服務</a>
+          <a id="hero-primary-cta" class="btn primary" href="rebalance_copilot.html">探索產品</a>
+          <a id="hero-secondary-cta" class="btn secondary" href="#solutions">了解 AgentPortfolio</a>
         </div>
         <div class="metric">
           <div class="card">
-            <div class="value">多市場</div>
-            <div class="label">跨境資產與貨幣風險一體化視角</div>
+            <div id="metric-1-value" class="value">多市場</div>
+            <div id="metric-1-label" class="label">跨境資產與貨幣風險一體化視角</div>
           </div>
           <div class="card">
-            <div class="value">個性化</div>
-            <div class="label">以目標風險與現金流打造配置</div>
+            <div id="metric-2-value" class="value">個性化</div>
+            <div id="metric-2-label" class="label">以目標風險與現金流打造配置</div>
           </div>
           <div class="card">
-            <div class="value">AI 解析</div>
-            <div class="label">量化信號 + 智能投顧支援決策</div>
+            <div id="metric-3-value" class="value">AI 解析</div>
+            <div id="metric-3-label" class="label">量化信號 + 智能投顧支援決策</div>
           </div>
         </div>
       </section>
 
-      <section class="hero-visual" aria-label="平台示意">
+      <section id="hero-visual" class="hero-visual" aria-label="平台示意">
         <div class="panel" id="solutions">
-          <h3>核心能力</h3>
+          <h3 id="panel-title">核心能力</h3>
           <div class="feature-list">
             <div class="feature">
               <span>01</span>
               <div>
-                <strong>跨境金融佈局</strong>
-                <div>整合多區域資產、稅務與貨幣結構，降低集中風險。</div>
+                <strong id="feature-1-title">跨境金融佈局</strong>
+                <div id="feature-1-desc">整合多區域資產、稅務與貨幣結構，降低集中風險。</div>
               </div>
             </div>
             <div class="feature">
               <span>02</span>
               <div>
-                <strong>個性化優化資產配置</strong>
-                <div>以流動性、目標報酬與風險偏好建立配置模型。</div>
+                <strong id="feature-2-title">個性化優化資產配置</strong>
+                <div id="feature-2-desc">以流動性、目標報酬與風險偏好建立配置模型。</div>
               </div>
             </div>
             <div class="feature">
               <span>03</span>
               <div>
-                <strong>AI 智能投顧分析</strong>
-                <div>即時策略回測、風險情境模擬與再平衡建議。</div>
+                <strong id="feature-3-title">AI 智能投顧分析</strong>
+                <div id="feature-3-desc">即時策略回測、風險情境模擬與再平衡建議。</div>
               </div>
             </div>
           </div>
         </div>
         <div class="card" id="platform">
           <div class="chart" aria-hidden="true"></div>
-          <p style="margin: 14px 0 0; color: var(--muted);">AI 配置儀表板即時呈現風險、收益與跨境曝險。</p>
+          <p id="chart-caption" style="margin: 14px 0 0; color: var(--muted);">AI 配置儀表板即時呈現風險、收益與跨境曝險。</p>
         </div>
       </section>
     </main>
 
     <footer id="contact">
-      <div>聯絡我們：info@rebalancelabs.example</div>
-      <div>© 2026 Rebalance Labs. All rights reserved.</div>
+      <div id="footer-contact">聯絡我們：info@rebalancelab.example</div>
+      <div>© 2026 Rebalance Lab. All rights reserved.</div>
     </footer>
   </div>
+  <script>
+    const i18n = {
+      zh: {
+        htmlLang: "zh-Hant",
+        title: "Rebalance Lab | AI 投資組合助理",
+        metaDescription: "你的 AI 投資組合助理，由 AgentPortfolio 驅動。專為小範圍上線與真實工作流程設計。",
+        navSolutions: "解決方案",
+        navPlatform: "AI 平台",
+        navFutures: "期貨風險管理",
+        navContact: "聯絡我們",
+        topCtaPlatform: "進入金融配置平台",
+        topCtaFutures: "期貨風險管理",
+        heroEyebrow: "AI 投資組合助理",
+        heroTitle: "Rebalance Lab",
+        heroLead: "你的 AI 投資組合助理，由 AgentPortfolio 驅動。",
+        heroPrimaryCta: "探索產品",
+        heroSecondaryCta: "了解 AgentPortfolio",
+        metric1Value: "多市場",
+        metric1Label: "跨境資產與貨幣風險一體化視角",
+        metric2Value: "個性化",
+        metric2Label: "以目標風險與現金流打造配置",
+        metric3Value: "AI 解析",
+        metric3Label: "量化信號 + 智能投顧支援決策",
+        panelTitle: "核心能力",
+        feature1Title: "跨境金融佈局",
+        feature1Desc: "整合多區域資產、稅務與貨幣結構，降低集中風險。",
+        feature2Title: "個性化優化資產配置",
+        feature2Desc: "以流動性、目標報酬與風險偏好建立配置模型。",
+        feature3Title: "AI 智能投顧分析",
+        feature3Desc: "即時策略回測、風險情境模擬與再平衡建議。",
+        chartCaption: "AI 配置儀表板即時呈現風險、收益與跨境曝險。",
+        footerContact: "聯絡我們：info@rebalancelab.example",
+        visualAria: "平台示意"
+      },
+      en: {
+        htmlLang: "en",
+        title: "Rebalance Lab | AI Portfolio Assistant",
+        metaDescription: "Your AI Portfolio Assistant, powered by AgentPortfolio. Designed for focused, real-world portfolio workflows in a limited rollout.",
+        navSolutions: "Solutions",
+        navPlatform: "AI Platform",
+        navFutures: "Futures Risk",
+        navContact: "Contact",
+        topCtaPlatform: "Open Portfolio Platform",
+        topCtaFutures: "Futures Risk Console",
+        heroEyebrow: "AI Portfolio Assistant",
+        heroTitle: "Rebalance Lab",
+        heroLead: "Your AI Portfolio Assistant, powered by AgentPortfolio.",
+        heroPrimaryCta: "Explore the Product",
+        heroSecondaryCta: "Learn About AgentPortfolio",
+        metric1Value: "Multi-Market",
+        metric1Label: "Unified visibility across cross-border assets and currency risk.",
+        metric2Value: "Personalized",
+        metric2Label: "Allocation models shaped by risk targets and cash-flow needs.",
+        metric3Value: "AI Insights",
+        metric3Label: "Quant signals and assistant analysis for portfolio decisions.",
+        panelTitle: "Core Capabilities",
+        feature1Title: "Cross-Border Allocation",
+        feature1Desc: "Integrate regions, tax considerations, and currency structure to reduce concentration risk.",
+        feature2Title: "Personalized Portfolio Optimization",
+        feature2Desc: "Build allocation models by liquidity, target return, and risk preference.",
+        feature3Title: "AI Advisory Analysis",
+        feature3Desc: "Run scenario simulations, stress checks, and rebalance guidance in real time.",
+        chartCaption: "The AI dashboard highlights risk, return, and cross-border exposure in one view.",
+        footerContact: "Contact: info@rebalancelab.example",
+        visualAria: "Platform preview"
+      }
+    };
+
+    const elements = {
+      navSolutions: document.getElementById("nav-solutions"),
+      navPlatform: document.getElementById("nav-platform"),
+      navFutures: document.getElementById("nav-futures"),
+      navContact: document.getElementById("nav-contact"),
+      topCtaPlatform: document.getElementById("top-cta-platform"),
+      topCtaFutures: document.getElementById("top-cta-futures"),
+      heroEyebrow: document.getElementById("hero-eyebrow"),
+      heroTitle: document.getElementById("hero-title"),
+      heroLead: document.getElementById("hero-lead"),
+      heroPrimaryCta: document.getElementById("hero-primary-cta"),
+      heroSecondaryCta: document.getElementById("hero-secondary-cta"),
+      metric1Value: document.getElementById("metric-1-value"),
+      metric1Label: document.getElementById("metric-1-label"),
+      metric2Value: document.getElementById("metric-2-value"),
+      metric2Label: document.getElementById("metric-2-label"),
+      metric3Value: document.getElementById("metric-3-value"),
+      metric3Label: document.getElementById("metric-3-label"),
+      panelTitle: document.getElementById("panel-title"),
+      feature1Title: document.getElementById("feature-1-title"),
+      feature1Desc: document.getElementById("feature-1-desc"),
+      feature2Title: document.getElementById("feature-2-title"),
+      feature2Desc: document.getElementById("feature-2-desc"),
+      feature3Title: document.getElementById("feature-3-title"),
+      feature3Desc: document.getElementById("feature-3-desc"),
+      chartCaption: document.getElementById("chart-caption"),
+      footerContact: document.getElementById("footer-contact"),
+      heroVisual: document.getElementById("hero-visual")
+    };
+
+    const zhButton = document.getElementById("lang-zh");
+    const enButton = document.getElementById("lang-en");
+
+    function applyLanguage(lang) {
+      const copy = i18n[lang] || i18n.zh;
+      document.documentElement.lang = copy.htmlLang;
+      document.title = copy.title;
+      const metaDescription = document.querySelector('meta[name="description"]');
+      if (metaDescription) metaDescription.setAttribute("content", copy.metaDescription);
+
+      Object.keys(elements).forEach((key) => {
+        if (!elements[key]) return;
+        if (key === "heroVisual") {
+          elements.heroVisual.setAttribute("aria-label", copy.visualAria);
+          return;
+        }
+        elements[key].textContent = copy[key];
+      });
+
+      zhButton.classList.toggle("active", lang === "zh");
+      enButton.classList.toggle("active", lang === "en");
+      zhButton.setAttribute("aria-pressed", String(lang === "zh"));
+      enButton.setAttribute("aria-pressed", String(lang === "en"));
+      localStorage.setItem("rb-language", lang);
+    }
+
+    zhButton.addEventListener("click", () => applyLanguage("zh"));
+    enButton.addEventListener("click", () => applyLanguage("en"));
+
+    const savedLanguage = localStorage.getItem("rb-language");
+    applyLanguage(savedLanguage === "en" ? "en" : "zh");
+  </script>
 </body>
 </html>
