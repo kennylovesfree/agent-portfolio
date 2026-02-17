@@ -668,7 +668,15 @@
       }
     };
 
-    let currentLang = localStorage.getItem('crypto-risk-lang') === 'en' ? 'en' : 'zh';
+    function resolveInitialLang() {
+      const cryptoLang = localStorage.getItem('crypto-risk-lang');
+      if (cryptoLang === 'en' || cryptoLang === 'zh') return cryptoLang;
+      const sharedLang = localStorage.getItem('rb-language');
+      if (sharedLang === 'en' || sharedLang === 'zh') return sharedLang;
+      return 'zh';
+    }
+
+    let currentLang = resolveInitialLang();
 
     function t(key) {
       return i18n[currentLang][key];
@@ -773,6 +781,7 @@
     function applyLanguage(lang) {
       currentLang = lang === 'en' ? 'en' : 'zh';
       localStorage.setItem('crypto-risk-lang', currentLang);
+      localStorage.setItem('rb-language', currentLang);
       document.documentElement.lang = t('htmlLang');
       document.title = t('title');
 
@@ -951,11 +960,15 @@
       const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
       const url = new URL(window.location.href);
       url.searchParams.set('s', encoded);
+      url.searchParams.set('lang', currentLang);
       window.history.replaceState({}, '', url);
     }
 
     function loadFromUrl() {
       const url = new URL(window.location.href);
+      const langParam = url.searchParams.get('lang');
+      const hasValidLangParam = langParam === 'en' || langParam === 'zh';
+      if (hasValidLangParam) currentLang = langParam;
       const s = url.searchParams.get('s');
       if (!s) return;
       try {
@@ -966,7 +979,7 @@
         if (decoded.leverage) document.getElementById('leverage').value = decoded.leverage;
         if (decoded.trend) document.getElementById('trend').value = decoded.trend;
         if (decoded.macro) document.getElementById('macro').value = decoded.macro;
-        if (decoded.lang) currentLang = decoded.lang === 'en' ? 'en' : 'zh';
+        if (!hasValidLangParam && decoded.lang) currentLang = decoded.lang === 'en' ? 'en' : 'zh';
       } catch (_) {}
     }
 

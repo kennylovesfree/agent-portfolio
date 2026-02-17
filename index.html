@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Rebalance Lab | AI 投資組合助理</title>
-  <meta name="description" content="你的 AI 投資組合助理，由 AgentPortfolio 驅動。專為小範圍上線與真實工作流程設計。" />
+  <meta name="description" content="你的 AI 投資組合助理，協助你完成資產配置、風險評估與再平衡決策。" />
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Manrope:wght@300;400;600;700&display=swap');
 
@@ -21,7 +21,12 @@
       --accent-2: #6ae7d0;
       --accent-3: #7c9cff;
       --shadow: 0 22px 70px rgba(6, 12, 20, 0.55);
+      --header-h: 86px;
+      --surface-elevated: rgba(14, 22, 32, 0.78);
+      --focus-ring: 0 0 0 3px rgba(240, 200, 106, 0.34);
     }
+
+    html { scroll-behavior: smooth; }
 
     * { box-sizing: border-box; }
 
@@ -34,13 +39,36 @@
         radial-gradient(900px 700px at 90% 10%, rgba(106, 231, 208, 0.15), transparent 62%),
         linear-gradient(160deg, var(--bg-0), var(--bg-1) 55%, var(--bg-2));
       min-height: 100vh;
+      transition: opacity 120ms ease;
+    }
+
+    body.is-leaving {
+      cursor: progress;
+      opacity: 0.9;
+    }
+
+    body.page-enter main {
+      opacity: 0;
+      transform: translateY(12px);
+      animation: page-enter 360ms ease forwards;
+    }
+
+    @keyframes page-enter {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     a { color: inherit; text-decoration: none; }
 
+    a:focus-visible,
+    button:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring);
+    }
+
     .page {
-      display: flex;
-      flex-direction: column;
       min-height: 100vh;
       position: relative;
       overflow: hidden;
@@ -49,27 +77,28 @@
     .orb {
       position: absolute;
       border-radius: 999px;
-      filter: blur(0px);
-      opacity: 0.6;
+      opacity: 0.55;
       mix-blend-mode: screen;
       animation: float 12s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
     }
 
     .orb.one {
-      width: 260px;
-      height: 260px;
-      background: radial-gradient(circle at 30% 30%, rgba(124, 156, 255, 0.7), transparent 70%);
-      top: -80px;
-      right: -40px;
+      width: 280px;
+      height: 280px;
+      background: radial-gradient(circle at 30% 30%, rgba(124, 156, 255, 0.68), transparent 70%);
+      top: -100px;
+      right: -60px;
       animation-delay: -2s;
     }
 
     .orb.two {
-      width: 340px;
-      height: 340px;
+      width: 360px;
+      height: 360px;
       background: radial-gradient(circle at 50% 40%, rgba(240, 200, 106, 0.5), transparent 70%);
-      bottom: -140px;
-      left: -80px;
+      bottom: -160px;
+      left: -100px;
       animation-delay: -6s;
     }
 
@@ -78,12 +107,29 @@
       50% { transform: translateY(18px) translateX(-12px); }
     }
 
+    .shell {
+      position: relative;
+      z-index: 1;
+    }
+
     header {
-      padding: 28px clamp(18px, 4vw, 60px);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: var(--header-h);
+      padding: 14px clamp(18px, 4vw, 60px);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      gap: 14px;
+      transition: background 200ms ease, border-color 200ms ease, backdrop-filter 200ms ease;
+      border-bottom: 1px solid transparent;
+    }
+
+    header.scrolled {
+      background: var(--surface-elevated);
+      backdrop-filter: blur(10px);
+      border-color: rgba(255, 255, 255, 0.1);
     }
 
     .brand {
@@ -92,45 +138,48 @@
       gap: 12px;
       font-weight: 700;
       letter-spacing: 0.6px;
+      white-space: nowrap;
     }
 
     .brand-mark {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
       background: linear-gradient(140deg, var(--accent), var(--accent-3));
       display: grid;
       place-items: center;
       color: #0d1218;
       font-weight: 800;
       box-shadow: 0 12px 30px rgba(124, 156, 255, 0.35);
+      flex-shrink: 0;
     }
 
-    nav {
-      display: flex;
-      gap: 18px;
-      font-size: 14px;
-      color: var(--muted);
-    }
-
-    nav a {
-      padding: 6px 12px;
-      border-radius: 999px;
-      border: 1px solid transparent;
-      transition: all 0.2s ease;
-    }
-
-    nav a:hover {
-      border-color: var(--line);
-      color: var(--ink);
-    }
-
-    .header-actions {
+    .top-nav {
       display: flex;
       gap: 10px;
-      flex-wrap: wrap;
       align-items: center;
-      justify-content: flex-end;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .top-nav a {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      transition: border-color 180ms ease, color 180ms ease, background 180ms ease;
+    }
+
+    .top-nav a.is-active,
+    .top-nav a:hover {
+      color: var(--ink);
+      border-color: var(--line);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
     .lang-switch {
@@ -160,23 +209,74 @@
       color: var(--ink);
     }
 
-    .hero {
-      flex: 1;
-      padding: 30px clamp(18px, 4vw, 60px) 60px;
-      display: grid;
-      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
-      gap: 32px;
+    .btn {
+      display: inline-flex;
       align-items: center;
+      justify-content: center;
+      padding: 11px 18px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+
+    .btn.primary {
+      background: linear-gradient(140deg, var(--accent), #f6dda1);
+      color: #1a1a1a;
+      box-shadow: 0 14px 26px rgba(240, 200, 106, 0.28);
+    }
+
+    .btn.secondary {
+      border-color: var(--line);
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .menu-btn {
+      display: none;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--ink);
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    main {
+      padding: 12px clamp(18px, 4vw, 60px) 42px;
+      display: grid;
+      gap: 24px;
+    }
+
+    section[data-section] {
+      scroll-margin-top: calc(var(--header-h) + 14px);
+    }
+
+    .hero {
+      min-height: clamp(520px, 72vh, 760px);
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      align-items: center;
+      gap: 22px;
+      padding: 14px 0;
     }
 
     .eyebrow {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
-      padding: 6px 14px;
-      border-radius: 999px;
+      gap: 8px;
       border: 1px solid rgba(240, 200, 106, 0.35);
       color: var(--accent);
+      border-radius: 999px;
+      padding: 6px 14px;
       font-size: 13px;
       letter-spacing: 0.8px;
       text-transform: uppercase;
@@ -184,405 +284,787 @@
 
     h1 {
       font-family: "Fraunces", serif;
-      font-size: clamp(34px, 4vw, 58px);
+      font-size: clamp(32px, 4vw, 56px);
       line-height: 1.08;
-      margin: 18px 0 16px;
+      margin: 18px 0 12px;
     }
 
     .lead {
-      font-size: clamp(15px, 2.2vw, 18px);
       color: var(--muted);
       line-height: 1.7;
-      margin-bottom: 28px;
-      max-width: 560px;
+      font-size: clamp(15px, 2.2vw, 18px);
+      max-width: 640px;
+      margin: 0 0 24px;
     }
 
-    .cta-row {
+    .hero-ctas {
       display: flex;
       flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .tool-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .tool-card {
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 10px;
+    }
+
+    .tool-card strong {
+      font-size: 16px;
+    }
+
+    .tool-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 13px;
+    }
+
+    .section-card {
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      padding: clamp(18px, 2.8vw, 28px);
+    }
+
+    .section-head {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: clamp(24px, 2.5vw, 34px);
+      font-family: "Fraunces", serif;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 860px;
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 14px;
-      align-items: center;
     }
 
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px 22px;
-      border-radius: 999px;
-      border: 1px solid transparent;
-      font-weight: 700;
-      letter-spacing: 0.3px;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    .product {
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      padding: 16px;
+      display: grid;
+      gap: 12px;
     }
 
-    .btn.primary {
-      background: linear-gradient(140deg, var(--accent), #f6dda1);
-      color: #1a1a1a;
-      box-shadow: 0 18px 36px rgba(240, 200, 106, 0.35);
+    .product h3 {
+      margin: 0;
+      font-size: 18px;
     }
 
-    .btn.secondary {
-      border-color: var(--line);
-      color: var(--ink);
+    .product p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      min-height: 58px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .step {
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
       background: rgba(255, 255, 255, 0.04);
     }
 
-    .btn:hover { transform: translateY(-2px); }
-
-    .grid {
-      display: grid;
-      gap: 18px;
-    }
-
-    .card {
-      padding: 18px 20px;
-      border-radius: 18px;
-      background: var(--card);
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow);
-    }
-
-    .metric {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 16px;
-      margin-top: 26px;
-    }
-
-    .metric .value {
-      font-size: 22px;
+    .step .idx {
+      display: inline-grid;
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      background: rgba(106, 231, 208, 0.18);
+      color: var(--accent-2);
+      place-items: center;
       font-weight: 700;
-      color: var(--accent);
+      margin-bottom: 10px;
     }
 
-    .metric .label {
-      font-size: 13px;
-      color: var(--muted);
-      margin-top: 6px;
-    }
-
-    .panel {
-      padding: 22px 24px;
-      border-radius: 24px;
-      background: linear-gradient(160deg, rgba(124, 156, 255, 0.14), rgba(106, 231, 208, 0.06));
-      border: 1px solid var(--card-strong);
-      box-shadow: var(--shadow);
-    }
-
-    .panel h3 {
-      font-size: 18px;
-      margin: 0 0 10px;
-    }
-
-    .panel p {
+    .step p {
       margin: 0;
       color: var(--muted);
       line-height: 1.6;
     }
 
-    .feature-list {
+    .trust-grid {
       display: grid;
-      gap: 16px;
-      margin-top: 18px;
-    }
-
-    .feature {
-      display: grid;
-      grid-template-columns: 28px 1fr;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
-      align-items: start;
     }
 
-    .feature span {
-      width: 28px;
-      height: 28px;
-      border-radius: 10px;
-      background: rgba(106, 231, 208, 0.18);
+    .trust-item {
+      border-radius: 14px;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .trust-item .value {
+      color: var(--accent);
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .trust-item .label {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .contact {
       display: grid;
-      place-items: center;
-      color: var(--accent-2);
-      font-weight: 700;
+      gap: 10px;
+      align-items: center;
     }
 
-    .hero-visual {
-      display: grid;
-      gap: 18px;
-      align-content: center;
-      animation: rise 0.9s ease forwards;
-      opacity: 0;
-      transform: translateY(16px);
-    }
-
-    @keyframes rise {
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .chart {
-      height: 220px;
-      border-radius: 20px;
-      background:
-        linear-gradient(120deg, rgba(124, 156, 255, 0.25), rgba(240, 200, 106, 0.1)),
-        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 44px),
-        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 44px);
-      border: 1px solid var(--line);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .chart::after {
-      content: "";
-      position: absolute;
-      inset: 22px;
-      border-radius: 16px;
-      background: linear-gradient(90deg, rgba(106, 231, 208, 0.5), rgba(124, 156, 255, 0.55));
-      clip-path: polygon(0 80%, 20% 55%, 45% 62%, 65% 35%, 85% 45%, 100% 20%, 100% 100%, 0 100%);
+    .contact p {
+      margin: 0;
+      color: var(--muted);
     }
 
     footer {
-      padding: 24px clamp(18px, 4vw, 60px) 36px;
+      padding: 18px clamp(18px, 4vw, 60px) 30px;
       color: var(--muted);
       font-size: 13px;
       border-top: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+      z-index: 1;
+    }
+
+    .mobile-drawer {
+      position: fixed;
+      top: var(--header-h);
+      right: 14px;
+      left: 14px;
+      z-index: 25;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(15, 22, 33, 0.98);
+      backdrop-filter: blur(8px);
+      padding: 14px;
+      display: none;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      box-shadow: var(--shadow);
+    }
+
+    .mobile-drawer.open { display: grid; }
+
+    .mobile-drawer a,
+    .mobile-drawer button {
+      width: 100%;
+    }
+
+    .mobile-drawer .stack {
+      display: grid;
+      gap: 8px;
     }
 
     @media (max-width: 960px) {
-      .hero {
+      .top-nav,
+      .top-actions .btn.primary { display: none; }
+      .menu-btn { display: inline-flex; align-items: center; justify-content: center; }
+      .hero,
+      .products-grid,
+      .steps,
+      .trust-grid {
         grid-template-columns: 1fr;
       }
-      nav { display: none; }
-      .header-actions { justify-content: flex-start; }
-      .metric { grid-template-columns: 1fr; }
+      .hero {
+        min-height: auto;
+        padding-top: 8px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      main {
+        gap: 16px;
+        padding-bottom: 28px;
+      }
+      .hero-ctas {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+      .btn { width: 100%; }
+      .top-actions { gap: 6px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .orb,
+      body.page-enter main,
+      .btn,
+      .top-nav a,
+      header,
+      body {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+      }
     }
   </style>
 </head>
-<body>
+<body class="page-enter">
   <div class="page">
     <div class="orb one"></div>
     <div class="orb two"></div>
 
-    <header>
-      <div class="brand">
-        <div class="brand-mark">R</div>
-        <div>Rebalance Lab</div>
-      </div>
-      <nav>
-        <a id="nav-solutions" href="#solutions">解決方案</a>
-        <a id="nav-platform" href="#platform">AI 平台</a>
-        <a id="nav-futures" href="futures_risk_copilot.html">期貨風險管理</a>
-        <a id="nav-crypto" href="crypto_risk_copilot.html">Crypto Risk Copilot</a>
-        <a id="nav-contact" href="#contact">聯絡我們</a>
-      </nav>
-      <div class="header-actions">
-        <a id="top-cta-platform" class="btn secondary" href="rebalance_copilot.html">進入金融配置平台</a>
-        <a id="top-cta-futures" class="btn secondary" href="futures_risk_copilot.html">期貨風險管理</a>
-        <a id="top-cta-crypto" class="btn secondary" href="crypto_risk_copilot.html">Crypto Risk Copilot</a>
-        <div class="lang-switch" role="group" aria-label="Language switch">
-          <button id="lang-zh" class="lang-btn active" type="button" data-lang="zh">中文</button>
-          <button id="lang-en" class="lang-btn" type="button" data-lang="en">EN</button>
+    <div class="shell">
+      <header id="top" aria-label="Main navigation">
+        <div class="brand">
+          <div class="brand-mark">R</div>
+          <div id="brand-title">Rebalance Lab</div>
         </div>
-      </div>
-    </header>
 
-    <main class="hero">
-      <section>
-        <div id="hero-eyebrow" class="eyebrow">AI 投資組合助理</div>
-        <h1 id="hero-title">Rebalance Lab</h1>
-        <p id="hero-lead" class="lead">你的 AI 投資組合助理，由 AgentPortfolio 驅動。</p>
-        <div class="cta-row">
-          <a id="hero-primary-cta" class="btn primary" href="rebalance_copilot.html">探索產品</a>
-          <a id="hero-secondary-cta" class="btn secondary" href="#solutions">了解 AgentPortfolio</a>
-        </div>
-        <div class="metric">
-          <div class="card">
-            <div id="metric-1-value" class="value">多市場</div>
-            <div id="metric-1-label" class="label">跨境資產與貨幣風險一體化視角</div>
-          </div>
-          <div class="card">
-            <div id="metric-2-value" class="value">個性化</div>
-            <div id="metric-2-label" class="label">以目標風險與現金流打造配置</div>
-          </div>
-          <div class="card">
-            <div id="metric-3-value" class="value">AI 解析</div>
-            <div id="metric-3-label" class="label">量化信號 + 智能投顧支援決策</div>
-          </div>
-        </div>
-      </section>
+        <nav class="top-nav">
+          <a id="nav-solutions" href="#products" data-scroll-link="products">解決方案</a>
+          <a id="nav-how" href="#how-it-works" data-scroll-link="how-it-works">方法</a>
+          <a id="nav-contact" href="#contact" data-scroll-link="contact">聯絡</a>
+        </nav>
 
-      <section id="hero-visual" class="hero-visual" aria-label="平台示意">
-        <div class="panel" id="solutions">
-          <h3 id="panel-title">核心能力</h3>
-          <div class="feature-list">
-            <div class="feature">
-              <span>01</span>
-              <div>
-                <strong id="feature-1-title">跨境金融佈局</strong>
-                <div id="feature-1-desc">整合多區域資產、稅務與貨幣結構，降低集中風險。</div>
-              </div>
-            </div>
-            <div class="feature">
-              <span>02</span>
-              <div>
-                <strong id="feature-2-title">個性化優化資產配置</strong>
-                <div id="feature-2-desc">以流動性、目標報酬與風險偏好建立配置模型。</div>
-              </div>
-            </div>
-            <div class="feature">
-              <span>03</span>
-              <div>
-                <strong id="feature-3-title">AI 智能投顧分析</strong>
-                <div id="feature-3-desc">即時策略回測、風險情境模擬與再平衡建議。</div>
-              </div>
+        <div class="top-actions">
+          <div class="lang-switch" role="group" aria-label="Language switch">
+            <button id="lang-zh" class="lang-btn active" type="button" data-lang="zh" aria-pressed="true">中文</button>
+            <button id="lang-en" class="lang-btn" type="button" data-lang="en" aria-pressed="false">EN</button>
+          </div>
+          <a id="top-cta-start" class="btn primary" href="rebalance_copilot.html" data-route-link>開始使用</a>
+          <button id="menu-btn" class="menu-btn" type="button" aria-expanded="false" aria-controls="mobile-drawer" aria-label="Open navigation">☰</button>
+        </div>
+      </header>
+
+      <aside id="mobile-drawer" class="mobile-drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Mobile navigation">
+        <div class="stack">
+          <a id="m-nav-solutions" class="btn secondary" href="#products" data-scroll-link="products">解決方案</a>
+          <a id="m-nav-how" class="btn secondary" href="#how-it-works" data-scroll-link="how-it-works">方法</a>
+          <a id="m-nav-contact" class="btn secondary" href="#contact" data-scroll-link="contact">聯絡</a>
+        </div>
+        <div class="stack">
+          <a id="m-route-rebalance" class="btn secondary" href="rebalance_copilot.html" data-route-link>金融配置</a>
+          <a id="m-route-futures" class="btn secondary" href="futures_risk_copilot.html" data-route-link>期貨風控</a>
+          <a id="m-route-crypto" class="btn secondary" href="crypto_risk_copilot.html" data-route-link>Crypto Risk Copilot</a>
+        </div>
+      </aside>
+
+      <main>
+        <section id="hero" class="hero" data-section="hero">
+          <div>
+            <div id="hero-eyebrow" class="eyebrow">AI 投資組合助理</div>
+            <h1 id="hero-title">Rebalance Lab</h1>
+            <p id="hero-lead" class="lead">你的 AI 投資組合助理，協助你從資產配置到風險控管做出更清楚、更有紀律的投資決策。</p>
+            <div class="hero-ctas">
+              <a id="hero-primary-cta" class="btn primary" href="rebalance_copilot.html" data-route-link>進入金融配置</a>
+              <a id="hero-secondary-cta" class="btn secondary" href="#products" data-scroll-link="products">查看三大工具</a>
             </div>
           </div>
-        </div>
-        <div class="card" id="platform">
-          <div class="chart" aria-hidden="true"></div>
-          <p id="chart-caption" style="margin: 14px 0 0; color: var(--muted);">AI 配置儀表板即時呈現風險、收益與跨境曝險。</p>
-        </div>
-      </section>
-    </main>
+          <div class="tool-grid">
+            <article class="tool-card">
+              <strong id="hero-card-rebalance-title">Rebalance Copilot</strong>
+              <p id="hero-card-rebalance-desc">投資組合試算、配置與再平衡建議，適合長期資產規劃。</p>
+              <a id="hero-card-rebalance-cta" class="btn secondary" href="rebalance_copilot.html" data-route-link>前往金融配置</a>
+            </article>
+            <article class="tool-card">
+              <strong id="hero-card-futures-title">Futures Risk Copilot</strong>
+              <p id="hero-card-futures-desc">針對保證金、槓桿與爆倉風險做快速壓力評估。</p>
+              <a id="hero-card-futures-cta" class="btn secondary" href="futures_risk_copilot.html" data-route-link>前往期貨風控</a>
+            </article>
+            <article class="tool-card">
+              <strong id="hero-card-crypto-title">Crypto Risk Copilot</strong>
+              <p id="hero-card-crypto-desc">用週期位置與風險溫度計，管理 BTC 倉位區間與回撤承受。</p>
+              <a id="hero-card-crypto-cta" class="btn secondary" href="crypto_risk_copilot.html" data-route-link>前往 Crypto Risk</a>
+            </article>
+          </div>
+        </section>
 
-    <footer id="contact">
-      <div id="footer-contact">聯絡我們：info@rebalancelab.example</div>
-      <div>© 2026 Rebalance Lab. All rights reserved.</div>
-    </footer>
+        <section id="products" class="section-card" data-section="products">
+          <div class="section-head">
+            <h2 id="products-title">依你的目標選擇工具</h2>
+            <p id="products-subtitle">無論你在做長期配置、期貨風控或加密資產管理，都能快速找到對應工具並立即開始。</p>
+          </div>
+          <div class="products-grid">
+            <article class="product">
+              <h3 id="product-rebalance-title">金融配置</h3>
+              <p id="product-rebalance-desc">台股/美股組合試算、報酬風險預估、配置建議與分享。</p>
+              <a id="product-rebalance-cta" class="btn secondary" href="rebalance_copilot.html" data-route-link>開啟 Rebalance Copilot</a>
+            </article>
+            <article class="product">
+              <h3 id="product-futures-title">期貨風險管理</h3>
+              <p id="product-futures-desc">用保證金與部位參數推算風險區間與可能的壓力情境。</p>
+              <a id="product-futures-cta" class="btn secondary" href="futures_risk_copilot.html" data-route-link>開啟 Futures Risk</a>
+            </article>
+            <article class="product">
+              <h3 id="product-crypto-title">Crypto 風險管理</h3>
+              <p id="product-crypto-desc">不做價格預測，聚焦週期狀態、風險分數與倉位建議。</p>
+              <a id="product-crypto-cta" class="btn secondary" href="crypto_risk_copilot.html" data-route-link>開啟 Crypto Risk</a>
+            </article>
+          </div>
+        </section>
+
+        <section id="how-it-works" class="section-card" data-section="how-it-works">
+          <div class="section-head">
+            <h2 id="how-title">使用方式</h2>
+            <p id="how-subtitle">用簡單三步驟建立你的投資節奏，降低情緒波動對決策的影響。</p>
+          </div>
+          <div class="steps">
+            <article class="step">
+              <div class="idx">1</div>
+              <p id="how-step-1">先定義目標與限制條件：投資期限、風險承受度、最大回撤邊界。</p>
+            </article>
+            <article class="step">
+              <div class="idx">2</div>
+              <p id="how-step-2">選擇對應工具快速評估，確認配置或槓桿是否在你可承受的風險區間。</p>
+            </article>
+            <article class="step">
+              <div class="idx">3</div>
+              <p id="how-step-3">設定再平衡與風控紀律，定期檢查偏離幅度並做出調整。</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="trust" class="section-card" data-section="trust">
+          <div class="section-head">
+            <h2 id="trust-title">為什麼選擇 Rebalance Lab</h2>
+            <p id="trust-subtitle">用清楚、可理解的方式呈現評估結果，幫助你在關鍵時刻做出穩定判斷。</p>
+          </div>
+          <div class="trust-grid">
+            <article class="trust-item">
+              <div class="value">3</div>
+              <div id="trust-item-1" class="label">跨市場工具：金融配置、期貨風控、Crypto 風險。</div>
+            </article>
+            <article class="trust-item">
+              <div class="value">100%</div>
+              <div id="trust-item-2" class="label">重點結果可快速檢視與分享，方便你和夥伴一起討論決策。</div>
+            </article>
+            <article class="trust-item">
+              <div class="value">Local</div>
+              <div id="trust-item-3" class="label">介面回饋即時、操作流程直覺，讓你專注在決策而不是操作成本。</div>
+            </article>
+          </div>
+        </section>
+
+        <section id="contact" class="section-card" data-section="contact">
+          <div class="contact">
+            <h2 id="contact-title" style="margin:0; font-family:'Fraunces',serif;">準備開始？</h2>
+            <p id="contact-lead">先從最貼近你目前任務的工具開始。若有企業導入需求，也可直接聯繫我們。</p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <a id="contact-cta" class="btn primary" href="rebalance_copilot.html" data-route-link>開始使用平台</a>
+              <a id="contact-email" class="btn secondary" href="mailto:info@rebalancelab.example">info@rebalancelab.example</a>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <div id="footer-copy">© 2026 Rebalance Lab. All rights reserved.</div>
+      </footer>
+    </div>
   </div>
+
   <script>
     const i18n = {
       zh: {
         htmlLang: "zh-Hant",
         title: "Rebalance Lab | AI 投資組合助理",
-        metaDescription: "你的 AI 投資組合助理，由 AgentPortfolio 驅動。專為小範圍上線與真實工作流程設計。",
+        metaDescription: "你的 AI 投資組合助理，協助你完成資產配置、風險評估與再平衡決策。",
+        brandTitle: "Rebalance Lab",
         navSolutions: "解決方案",
-        navPlatform: "AI 平台",
-        navFutures: "期貨風險管理",
-        navCrypto: "Crypto Risk Copilot",
-        navContact: "聯絡我們",
-        topCtaPlatform: "進入金融配置平台",
-        topCtaFutures: "期貨風險管理",
-        topCtaCrypto: "Crypto Risk Copilot",
+        navHow: "方法",
+        navContact: "聯絡",
+        topCtaStart: "開始使用",
         heroEyebrow: "AI 投資組合助理",
         heroTitle: "Rebalance Lab",
-        heroLead: "你的 AI 投資組合助理，由 AgentPortfolio 驅動。",
-        heroPrimaryCta: "探索產品",
-        heroSecondaryCta: "了解 AgentPortfolio",
-        metric1Value: "多市場",
-        metric1Label: "跨境資產與貨幣風險一體化視角",
-        metric2Value: "個性化",
-        metric2Label: "以目標風險與現金流打造配置",
-        metric3Value: "AI 解析",
-        metric3Label: "量化信號 + 智能投顧支援決策",
-        panelTitle: "核心能力",
-        feature1Title: "跨境金融佈局",
-        feature1Desc: "整合多區域資產、稅務與貨幣結構，降低集中風險。",
-        feature2Title: "個性化優化資產配置",
-        feature2Desc: "以流動性、目標報酬與風險偏好建立配置模型。",
-        feature3Title: "AI 智能投顧分析",
-        feature3Desc: "即時策略回測、風險情境模擬與再平衡建議。",
-        chartCaption: "AI 配置儀表板即時呈現風險、收益與跨境曝險。",
-        footerContact: "聯絡我們：info@rebalancelab.example",
-        visualAria: "平台示意"
+        heroLead: "你的 AI 投資組合助理，協助你從資產配置到風險控管做出更清楚、更有紀律的投資決策。",
+        heroPrimaryCta: "進入金融配置",
+        heroSecondaryCta: "查看三大工具",
+        heroCardRebalanceTitle: "Rebalance Copilot",
+        heroCardRebalanceDesc: "投資組合試算、配置與再平衡建議，適合長期資產規劃。",
+        heroCardRebalanceCta: "前往金融配置",
+        heroCardFuturesTitle: "Futures Risk Copilot",
+        heroCardFuturesDesc: "針對保證金、槓桿與爆倉風險做快速壓力評估。",
+        heroCardFuturesCta: "前往期貨風控",
+        heroCardCryptoTitle: "Crypto Risk Copilot",
+        heroCardCryptoDesc: "用週期位置與風險溫度計，管理 BTC 倉位區間與回撤承受。",
+        heroCardCryptoCta: "前往 Crypto Risk",
+        productsTitle: "依你的目標選擇工具",
+        productsSubtitle: "無論你在做長期配置、期貨風控或加密資產管理，都能快速找到對應工具並立即開始。",
+        productRebalanceTitle: "金融配置",
+        productRebalanceDesc: "台股/美股組合試算、報酬風險預估、配置建議與分享。",
+        productRebalanceCta: "開啟 Rebalance Copilot",
+        productFuturesTitle: "期貨風險管理",
+        productFuturesDesc: "用保證金與部位參數推算風險區間與可能的壓力情境。",
+        productFuturesCta: "開啟 Futures Risk",
+        productCryptoTitle: "Crypto 風險管理",
+        productCryptoDesc: "不做價格預測，聚焦週期狀態、風險分數與倉位建議。",
+        productCryptoCta: "開啟 Crypto Risk",
+        howTitle: "使用方式",
+        howSubtitle: "用簡單三步驟建立你的投資節奏，降低情緒波動對決策的影響。",
+        howStep1: "先定義目標與限制條件：投資期限、風險承受度、最大回撤邊界。",
+        howStep2: "選擇對應工具快速評估，確認配置或槓桿是否在你可承受的風險區間。",
+        howStep3: "設定再平衡與風控紀律，定期檢查偏離幅度並做出調整。",
+        trustTitle: "為什麼選擇 Rebalance Lab",
+        trustSubtitle: "用清楚、可理解的方式呈現評估結果，幫助你在關鍵時刻做出穩定判斷。",
+        trustItem1: "跨市場工具：金融配置、期貨風控、Crypto 風險。",
+        trustItem2: "重點結果可快速檢視與分享，方便你和夥伴一起討論決策。",
+        trustItem3: "介面回饋即時、操作流程直覺，讓你專注在決策而不是操作成本。",
+        contactTitle: "準備開始？",
+        contactLead: "先從最貼近你目前任務的工具開始。若有企業導入需求，也可直接聯繫我們。",
+        contactCta: "開始使用平台",
+        footerCopy: "© 2026 Rebalance Lab. All rights reserved.",
+        mobileRouteRebalance: "金融配置",
+        mobileRouteFutures: "期貨風控",
+        mobileRouteCrypto: "Crypto Risk Copilot"
       },
       en: {
         htmlLang: "en",
         title: "Rebalance Lab | AI Portfolio Assistant",
-        metaDescription: "Your AI Portfolio Assistant, powered by AgentPortfolio. Designed for focused, real-world portfolio workflows in a limited rollout.",
+        metaDescription: "Your AI Portfolio Assistant, powered by AgentPortfolio. Designed for focused, real-world portfolio workflows.",
+        brandTitle: "Rebalance Lab",
         navSolutions: "Solutions",
-        navPlatform: "AI Platform",
-        navFutures: "Futures Risk",
-        navCrypto: "Crypto Risk Copilot",
+        navHow: "How",
         navContact: "Contact",
-        topCtaPlatform: "Open Portfolio Platform",
-        topCtaFutures: "Futures Risk Console",
-        topCtaCrypto: "Crypto Risk Copilot",
+        topCtaStart: "Start",
         heroEyebrow: "AI Portfolio Assistant",
         heroTitle: "Rebalance Lab",
-        heroLead: "Your AI Portfolio Assistant, powered by AgentPortfolio.",
-        heroPrimaryCta: "Explore the Product",
-        heroSecondaryCta: "Learn About AgentPortfolio",
-        metric1Value: "Multi-Market",
-        metric1Label: "Unified visibility across cross-border assets and currency risk.",
-        metric2Value: "Personalized",
-        metric2Label: "Allocation models shaped by risk targets and cash-flow needs.",
-        metric3Value: "AI Insights",
-        metric3Label: "Quant signals and assistant analysis for portfolio decisions.",
-        panelTitle: "Core Capabilities",
-        feature1Title: "Cross-Border Allocation",
-        feature1Desc: "Integrate regions, tax considerations, and currency structure to reduce concentration risk.",
-        feature2Title: "Personalized Portfolio Optimization",
-        feature2Desc: "Build allocation models by liquidity, target return, and risk preference.",
-        feature3Title: "AI Advisory Analysis",
-        feature3Desc: "Run scenario simulations, stress checks, and rebalance guidance in real time.",
-        chartCaption: "The AI dashboard highlights risk, return, and cross-border exposure in one view.",
-        footerContact: "Contact: info@rebalancelab.example",
-        visualAria: "Platform preview"
+        heroLead: "Your AI portfolio assistant powered by AgentPortfolio. Move from idea to executable allocation and risk controls with a clear workflow.",
+        heroPrimaryCta: "Open Portfolio Tool",
+        heroSecondaryCta: "See 3 Tools",
+        heroCardRebalanceTitle: "Rebalance Copilot",
+        heroCardRebalanceDesc: "Portfolio simulation, allocation guidance, and rebalance actions for long-term planning.",
+        heroCardRebalanceCta: "Open Rebalance",
+        heroCardFuturesTitle: "Futures Risk Copilot",
+        heroCardFuturesDesc: "Quick pressure checks for margin, leverage, and liquidation sensitivity.",
+        heroCardFuturesCta: "Open Futures Risk",
+        heroCardCryptoTitle: "Crypto Risk Copilot",
+        heroCardCryptoDesc: "Manage BTC cycle state, risk thermometer, and position ranges without price prediction.",
+        heroCardCryptoCta: "Open Crypto Risk",
+        productsTitle: "Choose the Right Tool for Your Goal",
+        productsSubtitle: "Whether you are planning long-term allocation, managing futures risk, or monitoring crypto exposure, you can start quickly with the right tool.",
+        productRebalanceTitle: "Portfolio Allocation",
+        productRebalanceDesc: "Model Taiwan/US equity mix, expected return-risk profile, and rebalance suggestions.",
+        productRebalanceCta: "Open Rebalance Copilot",
+        productFuturesTitle: "Futures Risk Management",
+        productFuturesDesc: "Estimate risk bands and stress paths from margin and position parameters.",
+        productFuturesCta: "Open Futures Risk",
+        productCryptoTitle: "Crypto Risk Management",
+        productCryptoDesc: "Focus on cycle state, risk scoring, and allocation range guidance.",
+        productCryptoCta: "Open Crypto Risk",
+        howTitle: "How It Works",
+        howSubtitle: "Build a steady investment rhythm in three simple steps.",
+        howStep1: "Define target and limits first: horizon, risk tolerance, and max drawdown boundary.",
+        howStep2: "Use the matching tool to check whether your allocation or leverage stays within your risk comfort zone.",
+        howStep3: "Set clear rebalance and risk-control rules, then review and adjust regularly.",
+        trustTitle: "Why Rebalance Lab",
+        trustSubtitle: "We present insights in a clear and understandable way, so you can make confident decisions when it matters.",
+        trustItem1: "Three integrated workflows: portfolio, futures risk, and crypto risk.",
+        trustItem2: "Key outputs are easy to review and share, making team discussion and alignment faster.",
+        trustItem3: "Fast feedback and intuitive flows keep you focused on decisions, not tool friction.",
+        contactTitle: "Ready to start?",
+        contactLead: "Begin with the tool that matches your immediate task. For enterprise rollout, contact us directly.",
+        contactCta: "Start with Platform",
+        footerCopy: "© 2026 Rebalance Lab. All rights reserved.",
+        mobileRouteRebalance: "Portfolio Tool",
+        mobileRouteFutures: "Futures Risk",
+        mobileRouteCrypto: "Crypto Risk Copilot"
       }
     };
 
-    const elements = {
+    const state = {
+      lang: "zh",
+      reducedMotion: false,
+      observer: null
+    };
+
+    const mapElements = () => ({
+      brandTitle: document.getElementById("brand-title"),
       navSolutions: document.getElementById("nav-solutions"),
-      navPlatform: document.getElementById("nav-platform"),
-      navFutures: document.getElementById("nav-futures"),
-      navCrypto: document.getElementById("nav-crypto"),
+      navHow: document.getElementById("nav-how"),
       navContact: document.getElementById("nav-contact"),
-      topCtaPlatform: document.getElementById("top-cta-platform"),
-      topCtaFutures: document.getElementById("top-cta-futures"),
-      topCtaCrypto: document.getElementById("top-cta-crypto"),
+      topCtaStart: document.getElementById("top-cta-start"),
       heroEyebrow: document.getElementById("hero-eyebrow"),
       heroTitle: document.getElementById("hero-title"),
       heroLead: document.getElementById("hero-lead"),
       heroPrimaryCta: document.getElementById("hero-primary-cta"),
       heroSecondaryCta: document.getElementById("hero-secondary-cta"),
-      metric1Value: document.getElementById("metric-1-value"),
-      metric1Label: document.getElementById("metric-1-label"),
-      metric2Value: document.getElementById("metric-2-value"),
-      metric2Label: document.getElementById("metric-2-label"),
-      metric3Value: document.getElementById("metric-3-value"),
-      metric3Label: document.getElementById("metric-3-label"),
-      panelTitle: document.getElementById("panel-title"),
-      feature1Title: document.getElementById("feature-1-title"),
-      feature1Desc: document.getElementById("feature-1-desc"),
-      feature2Title: document.getElementById("feature-2-title"),
-      feature2Desc: document.getElementById("feature-2-desc"),
-      feature3Title: document.getElementById("feature-3-title"),
-      feature3Desc: document.getElementById("feature-3-desc"),
-      chartCaption: document.getElementById("chart-caption"),
-      footerContact: document.getElementById("footer-contact"),
-      heroVisual: document.getElementById("hero-visual")
-    };
+      heroCardRebalanceTitle: document.getElementById("hero-card-rebalance-title"),
+      heroCardRebalanceDesc: document.getElementById("hero-card-rebalance-desc"),
+      heroCardRebalanceCta: document.getElementById("hero-card-rebalance-cta"),
+      heroCardFuturesTitle: document.getElementById("hero-card-futures-title"),
+      heroCardFuturesDesc: document.getElementById("hero-card-futures-desc"),
+      heroCardFuturesCta: document.getElementById("hero-card-futures-cta"),
+      heroCardCryptoTitle: document.getElementById("hero-card-crypto-title"),
+      heroCardCryptoDesc: document.getElementById("hero-card-crypto-desc"),
+      heroCardCryptoCta: document.getElementById("hero-card-crypto-cta"),
+      productsTitle: document.getElementById("products-title"),
+      productsSubtitle: document.getElementById("products-subtitle"),
+      productRebalanceTitle: document.getElementById("product-rebalance-title"),
+      productRebalanceDesc: document.getElementById("product-rebalance-desc"),
+      productRebalanceCta: document.getElementById("product-rebalance-cta"),
+      productFuturesTitle: document.getElementById("product-futures-title"),
+      productFuturesDesc: document.getElementById("product-futures-desc"),
+      productFuturesCta: document.getElementById("product-futures-cta"),
+      productCryptoTitle: document.getElementById("product-crypto-title"),
+      productCryptoDesc: document.getElementById("product-crypto-desc"),
+      productCryptoCta: document.getElementById("product-crypto-cta"),
+      howTitle: document.getElementById("how-title"),
+      howSubtitle: document.getElementById("how-subtitle"),
+      howStep1: document.getElementById("how-step-1"),
+      howStep2: document.getElementById("how-step-2"),
+      howStep3: document.getElementById("how-step-3"),
+      trustTitle: document.getElementById("trust-title"),
+      trustSubtitle: document.getElementById("trust-subtitle"),
+      trustItem1: document.getElementById("trust-item-1"),
+      trustItem2: document.getElementById("trust-item-2"),
+      trustItem3: document.getElementById("trust-item-3"),
+      contactTitle: document.getElementById("contact-title"),
+      contactLead: document.getElementById("contact-lead"),
+      contactCta: document.getElementById("contact-cta"),
+      footerCopy: document.getElementById("footer-copy"),
+      mNavSolutions: document.getElementById("m-nav-solutions"),
+      mNavHow: document.getElementById("m-nav-how"),
+      mNavContact: document.getElementById("m-nav-contact"),
+      mRouteRebalance: document.getElementById("m-route-rebalance"),
+      mRouteFutures: document.getElementById("m-route-futures"),
+      mRouteCrypto: document.getElementById("m-route-crypto")
+    });
 
-    const zhButton = document.getElementById("lang-zh");
-    const enButton = document.getElementById("lang-en");
-
-    function applyLanguage(lang) {
-      const copy = i18n[lang] || i18n.zh;
-      document.documentElement.lang = copy.htmlLang;
-      document.title = copy.title;
-      const metaDescription = document.querySelector('meta[name="description"]');
-      if (metaDescription) metaDescription.setAttribute("content", copy.metaDescription);
-
-      Object.keys(elements).forEach((key) => {
-        if (!elements[key]) return;
-        if (key === "heroVisual") {
-          elements.heroVisual.setAttribute("aria-label", copy.visualAria);
-          return;
-        }
-        elements[key].textContent = copy[key];
-      });
-
-      zhButton.classList.toggle("active", lang === "zh");
-      enButton.classList.toggle("active", lang === "en");
-      zhButton.setAttribute("aria-pressed", String(lang === "zh"));
-      enButton.setAttribute("aria-pressed", String(lang === "en"));
-      localStorage.setItem("rb-language", lang);
+    function t(key, lang) {
+      const active = i18n[lang] || i18n.zh;
+      if (Object.prototype.hasOwnProperty.call(active, key)) return active[key];
+      return i18n.zh[key] || "";
     }
 
-    zhButton.addEventListener("click", () => applyLanguage("zh"));
-    enButton.addEventListener("click", () => applyLanguage("en"));
+    function applyLanguage(lang) {
+      state.lang = i18n[lang] ? lang : "zh";
+      const ui = mapElements();
+      document.documentElement.lang = t("htmlLang", state.lang);
+      document.title = t("title", state.lang);
+      const meta = document.querySelector('meta[name="description"]');
+      if (meta) meta.setAttribute("content", t("metaDescription", state.lang));
 
-    const savedLanguage = localStorage.getItem("rb-language");
-    applyLanguage(savedLanguage === "en" ? "en" : "zh");
+      const textMap = {
+        brandTitle: "brandTitle",
+        navSolutions: "navSolutions",
+        navHow: "navHow",
+        navContact: "navContact",
+        topCtaStart: "topCtaStart",
+        heroEyebrow: "heroEyebrow",
+        heroTitle: "heroTitle",
+        heroLead: "heroLead",
+        heroPrimaryCta: "heroPrimaryCta",
+        heroSecondaryCta: "heroSecondaryCta",
+        heroCardRebalanceTitle: "heroCardRebalanceTitle",
+        heroCardRebalanceDesc: "heroCardRebalanceDesc",
+        heroCardRebalanceCta: "heroCardRebalanceCta",
+        heroCardFuturesTitle: "heroCardFuturesTitle",
+        heroCardFuturesDesc: "heroCardFuturesDesc",
+        heroCardFuturesCta: "heroCardFuturesCta",
+        heroCardCryptoTitle: "heroCardCryptoTitle",
+        heroCardCryptoDesc: "heroCardCryptoDesc",
+        heroCardCryptoCta: "heroCardCryptoCta",
+        productsTitle: "productsTitle",
+        productsSubtitle: "productsSubtitle",
+        productRebalanceTitle: "productRebalanceTitle",
+        productRebalanceDesc: "productRebalanceDesc",
+        productRebalanceCta: "productRebalanceCta",
+        productFuturesTitle: "productFuturesTitle",
+        productFuturesDesc: "productFuturesDesc",
+        productFuturesCta: "productFuturesCta",
+        productCryptoTitle: "productCryptoTitle",
+        productCryptoDesc: "productCryptoDesc",
+        productCryptoCta: "productCryptoCta",
+        howTitle: "howTitle",
+        howSubtitle: "howSubtitle",
+        howStep1: "howStep1",
+        howStep2: "howStep2",
+        howStep3: "howStep3",
+        trustTitle: "trustTitle",
+        trustSubtitle: "trustSubtitle",
+        trustItem1: "trustItem1",
+        trustItem2: "trustItem2",
+        trustItem3: "trustItem3",
+        contactTitle: "contactTitle",
+        contactLead: "contactLead",
+        contactCta: "contactCta",
+        footerCopy: "footerCopy",
+        mNavSolutions: "navSolutions",
+        mNavHow: "navHow",
+        mNavContact: "navContact",
+        mRouteRebalance: "mobileRouteRebalance",
+        mRouteFutures: "mobileRouteFutures",
+        mRouteCrypto: "mobileRouteCrypto"
+      };
+
+      Object.keys(textMap).forEach((key) => {
+        if (!ui[key]) return;
+        ui[key].textContent = t(textMap[key], state.lang);
+      });
+
+      const zhBtn = document.getElementById("lang-zh");
+      const enBtn = document.getElementById("lang-en");
+      zhBtn.classList.toggle("active", state.lang === "zh");
+      enBtn.classList.toggle("active", state.lang === "en");
+      zhBtn.setAttribute("aria-pressed", String(state.lang === "zh"));
+      enBtn.setAttribute("aria-pressed", String(state.lang === "en"));
+
+      localStorage.setItem("rb-language", state.lang);
+    }
+
+    function initI18n() {
+      document.getElementById("lang-zh").addEventListener("click", () => applyLanguage("zh"));
+      document.getElementById("lang-en").addEventListener("click", () => applyLanguage("en"));
+      const saved = localStorage.getItem("rb-language");
+      applyLanguage(saved === "en" ? "en" : "zh");
+    }
+
+    function initSmoothScroll() {
+      const drawer = document.getElementById("mobile-drawer");
+      const menuBtn = document.getElementById("menu-btn");
+      document.querySelectorAll("[data-scroll-link]").forEach((link) => {
+        link.addEventListener("click", (event) => {
+          const targetId = event.currentTarget.getAttribute("data-scroll-link");
+          const target = document.getElementById(targetId);
+          if (!target) return;
+          event.preventDefault();
+          target.scrollIntoView({ behavior: state.reducedMotion ? "auto" : "smooth", block: "start" });
+          if (drawer.classList.contains("open")) {
+            drawer.classList.remove("open");
+            drawer.setAttribute("aria-hidden", "true");
+            menuBtn.setAttribute("aria-expanded", "false");
+          }
+        });
+      });
+    }
+
+    function initActiveNavObserver() {
+      const sections = document.querySelectorAll("[data-section]");
+      const navLinks = document.querySelectorAll(".top-nav [data-scroll-link]");
+
+      const markActive = (id) => {
+        navLinks.forEach((link) => {
+          link.classList.toggle("is-active", link.getAttribute("data-scroll-link") === id);
+        });
+      };
+
+      if (state.observer) state.observer.disconnect();
+      state.observer = new IntersectionObserver((entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (!visible.length) return;
+        markActive(visible[0].target.id);
+      }, {
+        root: null,
+        threshold: [0.25, 0.5, 0.75],
+        rootMargin: "-30% 0px -45% 0px"
+      });
+
+      sections.forEach((section) => state.observer.observe(section));
+    }
+
+    function initMobileNav() {
+      const btn = document.getElementById("menu-btn");
+      const drawer = document.getElementById("mobile-drawer");
+      const toggle = (open) => {
+        drawer.classList.toggle("open", open);
+        drawer.setAttribute("aria-hidden", String(!open));
+        btn.setAttribute("aria-expanded", String(open));
+      };
+
+      btn.addEventListener("click", () => {
+        toggle(!drawer.classList.contains("open"));
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") toggle(false);
+      });
+
+      document.addEventListener("click", (event) => {
+        if (!drawer.classList.contains("open")) return;
+        if (drawer.contains(event.target) || btn.contains(event.target)) return;
+        toggle(false);
+      });
+    }
+
+    function initRouteTransitionFeedback() {
+      document.querySelectorAll("[data-route-link]").forEach((link) => {
+        link.addEventListener("click", () => {
+          const href = link.getAttribute("href");
+          if (href && !href.startsWith("#") && !href.startsWith("mailto:")) {
+            const target = new URL(href, window.location.href);
+            target.searchParams.set("lang", state.lang);
+            link.setAttribute("href", `${target.pathname}${target.search}${target.hash}`);
+          }
+          if (state.reducedMotion) return;
+          document.body.classList.add("is-leaving");
+          window.setTimeout(() => document.body.classList.remove("is-leaving"), 2200);
+        });
+      });
+    }
+
+    function initReducedMotionHandling() {
+      const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const apply = () => {
+        state.reducedMotion = mq.matches;
+      };
+      apply();
+      mq.addEventListener("change", apply);
+
+      if (state.reducedMotion) {
+        document.body.classList.remove("page-enter");
+      } else {
+        window.setTimeout(() => document.body.classList.remove("page-enter"), 420);
+      }
+    }
+
+    function initHeaderScrollState() {
+      const header = document.getElementById("top");
+      const onScroll = () => {
+        header.classList.toggle("scrolled", window.scrollY > 8);
+      };
+      onScroll();
+      window.addEventListener("scroll", onScroll, { passive: true });
+    }
+
+    function boot() {
+      initReducedMotionHandling();
+      initI18n();
+      initSmoothScroll();
+      initActiveNavObserver();
+      initMobileNav();
+      initRouteTransitionFeedback();
+      initHeaderScrollState();
+    }
+
+    boot();
   </script>
 </body>
 </html>
