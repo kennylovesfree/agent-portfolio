@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Optional
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -67,6 +67,17 @@ class CryptoNewsStore:
             return None
         return rows[0]
 
+    def get_latest_success(self, lang: str, max_age_hours: int = 48) -> Optional[dict[str, Any]]:
+        row = self.get_latest_digest(lang)
+        if not row:
+            return None
+        updated_at = _parse_utc(row.get("updated_at"))
+        if updated_at is None:
+            return None
+        if _utc_now() - updated_at > timedelta(hours=max(1, max_age_hours)):
+            return None
+        return row
+
     def upsert_digest(self, digest_date: date, lang: str, payload: dict[str, Any]) -> dict[str, Any]:
         endpoint = "/rest/v1/crypto_news_digest_cache?on_conflict=digest_date,lang"
         body = [{"digest_date": digest_date.isoformat(), "lang": lang, "payload": payload}]
@@ -117,3 +128,22 @@ class CryptoNewsStore:
             return json.loads(raw)
         except json.JSONDecodeError as exc:
             raise CryptoNewsStoreError("Supabase response is not valid JSON.") from exc
+
+
+def _utc_now() -> datetime:
+    return datetime.now(tz=timezone.utc)
+
+
+def _parse_utc(value: Any) -> Optional[datetime]:
+    if not value:
+        return None
+    text = str(value).strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)

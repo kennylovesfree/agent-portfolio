@@ -371,13 +371,7 @@ def _call_openai(payload: AdviceRequest, config: _AiConfig) -> AdviceResponse:
 
 
 def _build_gemini_text_payload(payload: AdviceRequest) -> str:
-    return (
-        "You are a cautious portfolio copilot. Output STRICT JSON only with keys: "
-        "summary, risk_level, actions, watchouts, disclaimer. "
-        "risk_level must be one of low/medium/high. actions max 3 items. "
-        "No guaranteed return language. Keep locale based on input locale.\n\n"
-        f"Input JSON:\n{payload.model_dump_json()}"
-    )
+    return f"Input JSON:\n{payload.model_dump_json()}"
 
 
 def _call_gemini(payload: AdviceRequest, config: _AiConfig) -> AdviceResponse:

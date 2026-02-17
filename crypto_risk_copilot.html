@@ -642,6 +642,7 @@
             <ul id="newsOverview" class="news-overview"></ul>
             <div id="newsList" class="news-list"></div>
             <div id="newsError" class="note"></div>
+            <div id="newsHealth" class="note"></div>
           </section>
         </div>
       </section>
@@ -708,7 +709,10 @@
         newsLoading: '正在更新今日新聞摘要...',
         newsNoItems: '目前沒有可顯示的新聞摘要。',
         newsError: '目前無法更新新聞，已顯示最近可用摘要（若有）。',
+        newsFallbackUsed: '來源異常回退',
+        newsFallbackHint: '目前來源異常，顯示最近可用摘要。',
         newsStalePrefix: '資料延遲',
+        newsSourceHealthLabel: '來源健康',
         newsImpactHigh: '高影響',
         newsImpactMedium: '中影響',
         newsImpactLow: '低影響',
@@ -771,7 +775,10 @@
         newsLoading: 'Refreshing today\\'s crypto news digest...',
         newsNoItems: 'No news digest available at the moment.',
         newsError: 'Unable to refresh now. Showing latest available digest if present.',
+        newsFallbackUsed: 'Fallback in use',
+        newsFallbackHint: 'Source error detected. Showing latest available digest.',
         newsStalePrefix: 'Stale data',
+        newsSourceHealthLabel: 'Source health',
         newsImpactHigh: 'High Impact',
         newsImpactMedium: 'Medium Impact',
         newsImpactLow: 'Low Impact',
@@ -1007,18 +1014,25 @@
       const overviewEl = document.getElementById('newsOverview');
       const listEl = document.getElementById('newsList');
       const errorEl = document.getElementById('newsError');
+      const healthEl = document.getElementById('newsHealth');
       const refreshBtn = document.getElementById('newsRefreshBtn');
 
       const payload = newsState.payload;
       const asOf = payload && payload.as_of ? formatNewsTime(payload.as_of) : '--';
-      const staleText = payload && payload.stale ? ` · ${t('newsStalePrefix')}` : '';
-      updatedEl.textContent = `${t('newsUpdatedAtLabel')}：${asOf}${staleText}`;
-      errorEl.textContent = newsState.error || '';
+      const staleAge = payload && typeof payload.stale_age_hours === 'number' ? payload.stale_age_hours : null;
+      const fallbackUsed = Boolean(payload && payload.fallback_used);
+      const stalePieces = [];
+      if (fallbackUsed) stalePieces.push(t('newsFallbackUsed'));
+      if (staleAge !== null) stalePieces.push(`${t('newsStalePrefix')} ${staleAge.toFixed(1)}h`);
+      const staleText = stalePieces.length ? ` · ${stalePieces.join(' · ')}` : '';
+      updatedEl.textContent = `${t('newsUpdatedAtLabel')}: ${asOf}${staleText}`;
+      errorEl.textContent = newsState.error || (fallbackUsed ? t('newsFallbackHint') : '');
       refreshBtn.disabled = newsState.loading;
 
       if (newsState.loading && !payload) {
         overviewEl.innerHTML = `<li>${t('newsLoading')}</li>`;
         listEl.innerHTML = '';
+        healthEl.textContent = '';
         return;
       }
 
@@ -1050,6 +1064,21 @@
           </article>
         `;
       }).join('');
+
+      const detail = payload && payload.source_health_detail && typeof payload.source_health_detail === 'object'
+        ? payload.source_health_detail
+        : null;
+      if (!detail) {
+        healthEl.textContent = '';
+        return;
+      }
+      const healthLine = Object.entries(detail)
+        .map(([name, value]) => {
+          const status = value && typeof value.status === 'string' ? value.status : 'unknown';
+          return `${name}:${status}`;
+        })
+        .join(' | ');
+      healthEl.textContent = healthLine ? `${t('newsSourceHealthLabel')}: ${healthLine}` : '';
     }
 
     async function fetchNewsDigest(forceRefresh) {
