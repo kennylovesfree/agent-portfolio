@@ -26,6 +26,7 @@ class HttpFetchRetryHeadersTests(unittest.TestCase):
         return service.CryptoNewsConfig(
             default_limit=6,
             cache_ttl_hours=12,
+            llm_max_items=3,
             connect_timeout_seconds=1,
             read_timeout_seconds=1,
             http_retries=2,

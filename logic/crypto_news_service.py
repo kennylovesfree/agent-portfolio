@@ -83,6 +83,7 @@ RETRYABLE_HTTP_CODES = {429, 500, 502, 503, 504}
 class CryptoNewsConfig:
     default_limit: int
     cache_ttl_hours: int
+    llm_max_items: int
     connect_timeout_seconds: float
     read_timeout_seconds: float
     http_retries: int
@@ -143,6 +144,7 @@ def _parse_optional_utc(text: str | None) -> Optional[datetime]:
 def _load_config() -> CryptoNewsConfig:
     default_limit = int(os.getenv("CRYPTO_NEWS_DEFAULT_LIMIT", "6"))
     cache_ttl_hours = int(os.getenv("CRYPTO_NEWS_CACHE_TTL_HOURS", "24"))
+    llm_max_items = int(os.getenv("CRYPTO_NEWS_LLM_MAX_ITEMS", "3"))
 
     connect_timeout = float(os.getenv("CRYPTO_NEWS_HTTP_CONNECT_TIMEOUT_SEC", "3"))
     read_timeout = float(
@@ -172,6 +174,7 @@ def _load_config() -> CryptoNewsConfig:
     return CryptoNewsConfig(
         default_limit=max(3, min(default_limit, 12)),
         cache_ttl_hours=max(1, cache_ttl_hours),
+        llm_max_items=max(0, min(llm_max_items, 6)),
         connect_timeout_seconds=max(1.0, connect_timeout),
         read_timeout_seconds=max(1.0, read_timeout),
         http_retries=max(0, min(http_retries, 5)),
@@ -768,13 +771,18 @@ def build_digest(lang: str, limit: int, config: CryptoNewsConfig) -> dict[str, A
 
     selected = scored[: max(3, limit)]
     items: list[dict[str, Any]] = []
-    for raw in selected:
-        try:
-            summary = summarize_with_llm(raw, lang, config)
-        except CryptoNewsConfigError:
-            summary = _fallback_summary(raw, lang)
-        except (CryptoNewsRateLimitError, CryptoNewsUpstreamError):
-            summary = _fallback_summary(raw, lang)
+    for idx, raw in enumerate(selected):
+        summary = _fallback_summary(raw, lang)
+        if idx < config.llm_max_items:
+            try:
+                summary = summarize_with_llm(raw, lang, config)
+            except CryptoNewsConfigError:
+                summary = _fallback_summary(raw, lang)
+            except (CryptoNewsRateLimitError, CryptoNewsUpstreamError):
+                summary = _fallback_summary(raw, lang)
+            except Exception:  # pragma: no cover - guard provider/schema drift
+                logger.exception("crypto_news_summarize_failed source=%s", raw.get("source"))
+                summary = _fallback_summary(raw, lang)
 
         item_id = hashlib.sha256(f"{raw['title']}|{raw['canonical_url']}".encode("utf-8")).hexdigest()[:16]
         items.append(
