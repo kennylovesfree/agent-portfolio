@@ -1,0 +1,1007 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crypto Risk Copilot | 週期位置 × 風險溫度計 × 倉位區間</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Manrope:wght@300;400;600;700&display=swap');
+
+    :root {
+      --bg-0: #0c0f14;
+      --bg-1: #101a25;
+      --bg-2: #0e2a2b;
+      --card: rgba(255, 255, 255, 0.06);
+      --card-strong: rgba(255, 255, 255, 0.12);
+      --line: rgba(255, 255, 255, 0.12);
+      --ink: #e8edf5;
+      --muted: rgba(232, 237, 245, 0.68);
+      --accent: #f0c86a;
+      --accent-2: #6ae7d0;
+      --accent-3: #7c9cff;
+      --shadow: 0 22px 70px rgba(6, 12, 20, 0.55);
+      --danger: #ff6b6b;
+      --ok: #6ae7d0;
+      --warn: #f0c86a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Manrope", "Avenir Next", system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 800px at 5% 5%, rgba(124, 156, 255, 0.18), transparent 60%),
+        radial-gradient(900px 700px at 90% 10%, rgba(106, 231, 208, 0.15), transparent 62%),
+        linear-gradient(160deg, var(--bg-0), var(--bg-1) 55%, var(--bg-2));
+      min-height: 100vh;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .page {
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 999px;
+      opacity: 0.6;
+      mix-blend-mode: screen;
+      animation: float 12s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .orb.one {
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle at 30% 30%, rgba(124, 156, 255, 0.7), transparent 70%);
+      top: -80px;
+      right: -40px;
+      animation-delay: -2s;
+    }
+
+    .orb.two {
+      width: 340px;
+      height: 340px;
+      background: radial-gradient(circle at 50% 40%, rgba(240, 200, 106, 0.5), transparent 70%);
+      bottom: -140px;
+      left: -80px;
+      animation-delay: -6s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) translateX(0); }
+      50% { transform: translateY(18px) translateX(-12px); }
+    }
+
+    header {
+      padding: 22px clamp(18px, 4vw, 60px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+    }
+
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(140deg, var(--accent), var(--accent-3));
+      display: grid;
+      place-items: center;
+      color: #0d1218;
+      font-weight: 800;
+      box-shadow: 0 12px 30px rgba(124, 156, 255, 0.35);
+    }
+
+    nav {
+      display: flex;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--muted);
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    nav a {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    nav a:hover { border-color: var(--line); color: var(--ink); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 18px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      background: linear-gradient(140deg, var(--accent), #f6dda1);
+      color: #1a1a1a;
+      box-shadow: 0 18px 36px rgba(240, 200, 106, 0.35);
+    }
+
+    .btn.secondary {
+      border-color: var(--line);
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .btn:hover { transform: translateY(-2px); }
+
+    .lang-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .lang-btn {
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .lang-btn.active {
+      background: rgba(240, 200, 106, 0.22);
+      color: var(--accent);
+    }
+
+    main {
+      padding: 10px clamp(18px, 4vw, 60px) 48px;
+      flex: 1;
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(240, 200, 106, 0.35);
+      color: var(--accent);
+      font-size: 13px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      width: fit-content;
+    }
+
+    h1 {
+      font-family: "Fraunces", serif;
+      font-size: clamp(28px, 3.4vw, 44px);
+      line-height: 1.12;
+      margin: 12px 0 10px;
+    }
+
+    .lead {
+      color: var(--muted);
+      line-height: 1.7;
+      margin: 0 0 14px;
+      max-width: 900px;
+    }
+
+    .bento {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stack { display: grid; gap: 18px; }
+
+    .card {
+      padding: 18px 20px;
+      border-radius: 18px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      letter-spacing: 0.2px;
+    }
+
+    .sub {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 0 6px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(10, 14, 20, 0.35);
+      color: var(--ink);
+      outline: none;
+    }
+
+    input:focus, select:focus { border-color: rgba(240, 200, 106, 0.45); }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .kpi {
+      padding: 14px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .kpi .value {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+    }
+
+    .kpi .label {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .bar {
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.10);
+      overflow: hidden;
+      margin-top: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+    }
+
+    .bar > div {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--ok), var(--warn), var(--danger));
+      transition: width 260ms ease;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      font-size: 12px;
+      color: var(--muted);
+      width: fit-content;
+    }
+
+    .badge strong { color: var(--ink); }
+
+    ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    footer {
+      padding: 18px clamp(18px, 4vw, 60px) 28px;
+      color: var(--muted);
+      font-size: 13px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    @media (max-width: 980px) {
+      .bento { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: 1fr; }
+      .row { grid-template-columns: 1fr; }
+      nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="orb one"></div>
+    <div class="orb two"></div>
+
+    <header>
+      <div class="brand">
+        <div class="brand-mark">R</div>
+        <div id="brandTitle">Rebalance Labs</div>
+      </div>
+      <nav>
+        <a id="navHome" href="index.html">首頁</a>
+        <a id="navRebalance" href="rebalance_copilot.html">金融配置</a>
+        <a id="navFutures" href="futures_risk_copilot.html">期貨風控</a>
+        <a id="navMethod" href="#about">方法論</a>
+      </nav>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <a id="backBtn" class="btn secondary" href="rebalance_copilot.html">回到金融配置</a>
+        <button class="btn primary" id="runBtn" type="button">更新評估</button>
+        <div class="lang-switch" role="group" aria-label="Language switch">
+          <button id="lang-zh" class="lang-btn active" type="button">中文</button>
+          <button id="lang-en" class="lang-btn" type="button">EN</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div id="eyebrow" class="eyebrow">Crypto Risk Copilot</div>
+      <h1 id="heroTitle">長期配置 / 風險區間導向 / 宏觀指標 / 簡易建議（BTC）</h1>
+      <p id="heroLead" class="lead">此頁面只做三件事：<strong>週期位置</strong>（偏過熱/偏便宜/中性）、<strong>風險溫度計</strong>（0–100，對應歷史回撤分布刻度）、<strong>倉位區間建議</strong>（由你可承受最大回撤驅動）。不做價格預測。</p>
+
+      <section class="bento">
+        <div class="stack">
+          <section class="card">
+            <h2 id="inputTitle">輸入</h2>
+            <p id="inputSub" class="sub">MVP 版本採「分檔輸入」：你可快速選擇當前市場狀態與宏觀風險偏好，系統輸出週期位置、風險溫度計與倉位區間。</p>
+
+            <div class="row">
+              <div class="field">
+                <label id="labelMdd">可承受最大回撤（MDD Limit）</label>
+                <select id="mddLimit">
+                  <option value="10">10%</option>
+                  <option value="20">20%</option>
+                  <option value="30" selected>30%</option>
+                  <option value="40">40%</option>
+                </select>
+              </div>
+              <div class="field">
+                <label id="labelCurrentWeight">目前加密倉位占比（你的總資產中）</label>
+                <input id="currentWeight" type="number" min="0" max="100" step="1" value="40" />
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:12px;">
+              <div class="field">
+                <label id="labelValuation">週期估值訊號（Valuation / Cycle）</label>
+                <select id="valuation">
+                  <option value="low">偏便宜（例如 MVRV 偏低）</option>
+                  <option value="mid" selected>中性</option>
+                  <option value="high">偏過熱（例如 MVRV 偏高）</option>
+                </select>
+              </div>
+              <div class="field">
+                <label id="labelLeverage">槓桿/情緒訊號（Leverage / Sentiment）</label>
+                <select id="leverage">
+                  <option value="low">低（資金費率/未平倉偏低）</option>
+                  <option value="mid" selected>中</option>
+                  <option value="high">高（資金費率/未平倉偏高）</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:12px;">
+              <div class="field">
+                <label id="labelTrend">趨勢結構（Trend）</label>
+                <select id="trend">
+                  <option value="down">弱（例如跌破長均線）</option>
+                  <option value="flat" selected>中性</option>
+                  <option value="up">強（例如站上長均線）</option>
+                </select>
+              </div>
+              <div class="field">
+                <label id="labelMacro">宏觀風險偏好（Macro Regime）</label>
+                <select id="macro">
+                  <option value="riskoff">Risk-Off（美元強/利率高/流動性緊）</option>
+                  <option value="neutral" selected>Neutral</option>
+                  <option value="riskon">Risk-On（流動性寬/風險偏好強）</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="btn secondary" id="demoBtn" type="button">套用 Demo：偏過熱</button>
+              <button class="btn secondary" id="shareBtn" type="button">複製分享連結</button>
+              <span id="pillText" class="pill">BTC proxy · 指標分檔 · 前端本地計算</span>
+            </div>
+
+            <div id="about" class="note">
+              <strong id="methodHead">方法論說明：</strong>
+              <span id="methodBody">本頁把「估值/週期、槓桿/情緒、趨勢、宏觀流動性代理」合成兩個分數：Cycle Score（週期位置）與 Risk Score（風險溫度計）。分數映射採保守的分段刻度，方便先落地；後續可接價格/鏈上/宏觀 API，把分段改成真實分位數。</span>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2 id="rangeTitle">倉位區間建議（由 MDD 驅動）</h2>
+            <p id="rangeSub" class="sub">輸出三檔基準區間（保守/中性/積極），再依 Risk Score 動態收斂為「你當下的建議區間」。</p>
+
+            <div class="kpi-grid">
+              <div class="kpi">
+                <div class="value" id="rangeConservative">--</div>
+                <div id="rangeConservativeLabel" class="label">保守區間</div>
+              </div>
+              <div class="kpi">
+                <div class="value" id="rangeNeutral">--</div>
+                <div id="rangeNeutralLabel" class="label">中性區間</div>
+              </div>
+              <div class="kpi">
+                <div class="value" id="rangeAggressive">--</div>
+                <div id="rangeAggressiveLabel" class="label">積極區間</div>
+              </div>
+            </div>
+
+            <div style="margin-top:14px; display:grid; gap:10px;">
+              <div class="badge" id="recommendedBadge">建議區間：<strong>--</strong></div>
+              <div class="badge" id="actionBadge">操作提示：<strong>--</strong></div>
+            </div>
+
+            <ul id="adviceList"></ul>
+
+            <div id="rangeNote" class="note">口徑：倉位以「加密資產占總資產比例」衡量。若你用槓桿或永續合約，建議先把槓桿曝險折算成等效現貨倉位再輸入。</div>
+          </section>
+        </div>
+
+        <div class="stack">
+          <section class="card">
+            <h2 id="cycleTitle">週期位置（Cycle Position）</h2>
+            <p id="cycleSub" class="sub">狀態輸出偏過熱 / 中性 / 偏便宜。分數越高代表越偏過熱。</p>
+            <div class="kpi-grid">
+              <div class="kpi">
+                <div class="value" id="cycleLabel">--</div>
+                <div id="cycleLabelText" class="label">週期狀態</div>
+              </div>
+              <div class="kpi">
+                <div class="value" id="cycleScore">--</div>
+                <div id="cycleScoreLabel" class="label">Cycle Score（0–100）</div>
+              </div>
+              <div class="kpi">
+                <div class="value" id="cycleDrivers">--</div>
+                <div id="cycleDriversLabel" class="label">主要驅動（Top 1）</div>
+              </div>
+            </div>
+            <div class="bar" aria-label="cycle bar"><div id="cycleBar"></div></div>
+            <ul id="cycleReasons"></ul>
+          </section>
+
+          <section class="card">
+            <h2 id="riskTitle">風險溫度計（Risk Thermometer）</h2>
+            <p id="riskSub" class="sub">分數越高代表「歷史回撤分布刻度」越偏向深回撤環境。此刻度用於風險控管，不用於價格預測。</p>
+            <div class="kpi-grid">
+              <div class="kpi">
+                <div class="value" id="riskScore">--</div>
+                <div id="riskScoreLabel" class="label">Risk Score（0–100）</div>
+              </div>
+              <div class="kpi">
+                <div class="value" id="riskRegime">--</div>
+                <div id="riskRegimeLabel" class="label">風險狀態</div>
+              </div>
+              <div class="kpi">
+                <div class="value" id="ddRef">--</div>
+                <div id="ddRefLabel" class="label">回撤刻度參考</div>
+              </div>
+            </div>
+            <div class="bar" aria-label="risk bar"><div id="riskBar"></div></div>
+            <ul id="riskNotes"></ul>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div id="footerLine1">Crypto Risk Copilot · BTC proxy · 本地規則引擎（MVP）</div>
+      <div>© 2026 Rebalance Labs.</div>
+    </footer>
+  </div>
+
+  <script>
+    const i18n = {
+      zh: {
+        htmlLang: 'zh-Hant',
+        title: 'Crypto Risk Copilot | 週期位置 × 風險溫度計 × 倉位區間',
+        navHome: '首頁',
+        navRebalance: '金融配置',
+        navFutures: '期貨風控',
+        navMethod: '方法論',
+        backBtn: '回到金融配置',
+        runBtn: '更新評估',
+        eyebrow: 'Crypto Risk Copilot',
+        heroTitle: '長期配置 / 風險區間導向 / 宏觀指標 / 簡易建議（BTC）',
+        heroLead: '此頁面只做三件事：<strong>週期位置</strong>（偏過熱/偏便宜/中性）、<strong>風險溫度計</strong>（0–100，對應歷史回撤分布刻度）、<strong>倉位區間建議</strong>（由你可承受最大回撤驅動）。不做價格預測。',
+        inputTitle: '輸入',
+        inputSub: 'MVP 版本採「分檔輸入」：你可快速選擇當前市場狀態與宏觀風險偏好，系統輸出週期位置、風險溫度計與倉位區間。',
+        labelMdd: '可承受最大回撤（MDD Limit）',
+        labelCurrentWeight: '目前加密倉位占比（你的總資產中）',
+        labelValuation: '週期估值訊號（Valuation / Cycle）',
+        labelLeverage: '槓桿/情緒訊號（Leverage / Sentiment）',
+        labelTrend: '趨勢結構（Trend）',
+        labelMacro: '宏觀風險偏好（Macro Regime）',
+        valuationOptions: ['偏便宜（例如 MVRV 偏低）', '中性', '偏過熱（例如 MVRV 偏高）'],
+        leverageOptions: ['低（資金費率/未平倉偏低）', '中', '高（資金費率/未平倉偏高）'],
+        trendOptions: ['弱（例如跌破長均線）', '中性', '強（例如站上長均線）'],
+        macroOptions: ['Risk-Off（美元強/利率高/流動性緊）', 'Neutral', 'Risk-On（流動性寬/風險偏好強）'],
+        demoBtn: '套用 Demo：偏過熱',
+        shareBtn: '複製分享連結',
+        shareBtnCopied: '已複製',
+        pillText: 'BTC proxy · 指標分檔 · 前端本地計算',
+        methodHead: '方法論說明：',
+        methodBody: '本頁把「估值/週期、槓桿/情緒、趨勢、宏觀流動性代理」合成兩個分數：Cycle Score（週期位置）與 Risk Score（風險溫度計）。分數映射採保守的分段刻度，方便先落地；後續可接價格/鏈上/宏觀 API，把分段改成真實分位數。',
+        rangeTitle: '倉位區間建議（由 MDD 驅動）',
+        rangeSub: '輸出三檔基準區間（保守/中性/積極），再依 Risk Score 動態收斂為「你當下的建議區間」。',
+        rangeConservativeLabel: '保守區間',
+        rangeNeutralLabel: '中性區間',
+        rangeAggressiveLabel: '積極區間',
+        rangeNote: '口徑：倉位以「加密資產占總資產比例」衡量。若你用槓桿或永續合約，建議先把槓桿曝險折算成等效現貨倉位再輸入。',
+        cycleTitle: '週期位置（Cycle Position）',
+        cycleSub: '狀態輸出偏過熱 / 中性 / 偏便宜。分數越高代表越偏過熱。',
+        cycleLabelText: '週期狀態',
+        cycleScoreLabel: 'Cycle Score（0–100）',
+        cycleDriversLabel: '主要驅動（Top 1）',
+        riskTitle: '風險溫度計（Risk Thermometer）',
+        riskSub: '分數越高代表「歷史回撤分布刻度」越偏向深回撤環境。此刻度用於風險控管，不用於價格預測。',
+        riskScoreLabel: 'Risk Score（0–100）',
+        riskRegimeLabel: '風險狀態',
+        ddRefLabel: '回撤刻度參考',
+        footerLine1: 'Crypto Risk Copilot · BTC proxy · 本地規則引擎（MVP）',
+        bucketConservative: '保守',
+        bucketNeutral: '中性',
+        bucketAggressive: '積極'
+      },
+      en: {
+        htmlLang: 'en',
+        title: 'Crypto Risk Copilot | Cycle Position × Risk Thermometer × Position Range',
+        navHome: 'Home',
+        navRebalance: 'Portfolio',
+        navFutures: 'Futures Risk',
+        navMethod: 'Methodology',
+        backBtn: 'Back to Portfolio',
+        runBtn: 'Update Assessment',
+        eyebrow: 'Crypto Risk Copilot',
+        heroTitle: 'Long-term Allocation / Risk-Range Driven / Macro Signals / Lightweight Guidance (BTC)',
+        heroLead: 'This page focuses on three outputs only: <strong>Cycle Position</strong> (overheated / cheap / neutral), <strong>Risk Thermometer</strong> (0-100 mapped to historical drawdown scale), and <strong>Position Range Guidance</strong> (driven by your max tolerable drawdown). No price prediction.',
+        inputTitle: 'Inputs',
+        inputSub: 'This MVP uses bucketed inputs. Select current market state and macro risk preference, then the engine outputs cycle position, risk thermometer, and position range.',
+        labelMdd: 'Max Tolerable Drawdown (MDD Limit)',
+        labelCurrentWeight: 'Current Crypto Weight (% of total assets)',
+        labelValuation: 'Valuation / Cycle Signal',
+        labelLeverage: 'Leverage / Sentiment Signal',
+        labelTrend: 'Trend Structure',
+        labelMacro: 'Macro Regime',
+        valuationOptions: ['Cheap (e.g., low MVRV)', 'Neutral', 'Overheated (e.g., high MVRV)'],
+        leverageOptions: ['Low (lower funding/OI)', 'Medium', 'High (elevated funding/OI)'],
+        trendOptions: ['Weak (e.g., below long MA)', 'Neutral', 'Strong (e.g., above long MA)'],
+        macroOptions: ['Risk-Off (strong USD/high rates/tight liquidity)', 'Neutral', 'Risk-On (looser liquidity/risk appetite)'],
+        demoBtn: 'Apply Demo: Overheated',
+        shareBtn: 'Copy Share Link',
+        shareBtnCopied: 'Copied',
+        pillText: 'BTC proxy · bucketed indicators · local front-end engine',
+        methodHead: 'Method:',
+        methodBody: 'This page combines valuation/cycle, leverage/sentiment, trend, and macro liquidity proxies into two scores: Cycle Score and Risk Score. Mapping is conservative and bucket-based for fast implementation. APIs can later upgrade this into percentile-based scoring.',
+        rangeTitle: 'Position Range Guidance (MDD-driven)',
+        rangeSub: 'It first outputs three base buckets (Conservative/Neutral/Aggressive), then converges to your current suggested range based on Risk Score.',
+        rangeConservativeLabel: 'Conservative Range',
+        rangeNeutralLabel: 'Neutral Range',
+        rangeAggressiveLabel: 'Aggressive Range',
+        rangeNote: 'Definition: position is measured as crypto exposure over total assets. If you use leverage/perpetuals, convert to spot-equivalent exposure first.',
+        cycleTitle: 'Cycle Position',
+        cycleSub: 'State is overheated / neutral / cheap. Higher score means more overheated.',
+        cycleLabelText: 'Cycle State',
+        cycleScoreLabel: 'Cycle Score (0-100)',
+        cycleDriversLabel: 'Top Driver',
+        riskTitle: 'Risk Thermometer',
+        riskSub: 'Higher score means deeper historical drawdown regime likelihood. This scale is for risk control, not price prediction.',
+        riskScoreLabel: 'Risk Score (0-100)',
+        riskRegimeLabel: 'Risk State',
+        ddRefLabel: 'Drawdown Scale',
+        footerLine1: 'Crypto Risk Copilot · BTC proxy · local rule engine (MVP)',
+        bucketConservative: 'Conservative',
+        bucketNeutral: 'Neutral',
+        bucketAggressive: 'Aggressive'
+      }
+    };
+
+    let currentLang = localStorage.getItem('crypto-risk-lang') === 'en' ? 'en' : 'zh';
+
+    function t(key) {
+      return i18n[currentLang][key];
+    }
+
+    function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
+    function pct(n, digits=0) { return `${n.toFixed(digits)}%`; }
+
+    function score3Level(v) {
+      if (v === 'low' || v === 'down' || v === 'riskoff') return 0;
+      if (v === 'mid' || v === 'flat' || v === 'neutral') return 12;
+      return 25;
+    }
+
+    function cycleLabelFromScore(s) {
+      if (currentLang === 'en') {
+        if (s <= 30) return 'Cheap';
+        if (s <= 70) return 'Neutral';
+        return 'Overheated';
+      }
+      if (s <= 30) return '偏便宜';
+      if (s <= 70) return '中性';
+      return '偏過熱';
+    }
+
+    function riskLabelFromScore(s) {
+      if (currentLang === 'en') {
+        if (s <= 20) return 'Low';
+        if (s <= 60) return 'Moderate';
+        if (s <= 80) return 'High';
+        return 'Very High';
+      }
+      if (s <= 20) return '低風險';
+      if (s <= 60) return '一般風險';
+      if (s <= 80) return '高風險';
+      return '極高風險';
+    }
+
+    function ddReferenceFromRisk(r) {
+      if (currentLang === 'en') {
+        if (r <= 20) return 'Typical 5-15% · Extreme ~25%';
+        if (r <= 60) return 'Typical 15-35% · Extreme ~50%';
+        if (r <= 80) return 'Typical 30-55% · Extreme ~70%';
+        return 'Typical 50-80% · Extreme ~85%+';
+      }
+      if (r <= 20) return '典型 5–15% · 極端 ~25%';
+      if (r <= 60) return '典型 15–35% · 極端 ~50%';
+      if (r <= 80) return '典型 30–55% · 極端 ~70%';
+      return '典型 50–80% · 極端 ~85%+';
+    }
+
+    function riskCapacityFromMdd(mdd) {
+      if (mdd <= 10) return 0.4;
+      if (mdd <= 20) return 0.6;
+      if (mdd <= 30) return 0.8;
+      return 1.0;
+    }
+
+    function computeScores(inputs) {
+      const { valuation, leverage, trend, macro } = inputs;
+      const cycle = score3Level(valuation) + score3Level(leverage) + score3Level(trend) + score3Level(macro);
+      const risk = Math.round(
+        0.15 * score3Level(valuation) +
+        0.35 * score3Level(leverage) +
+        0.30 * score3Level(trend) +
+        0.20 * score3Level(macro)
+      );
+      return { cycle, risk: clamp(risk, 0, 100) };
+    }
+
+    function baseRanges() {
+      return {
+        conservative: [10, 30],
+        neutral: [30, 60],
+        aggressive: [60, 90],
+      };
+    }
+
+    function computeRecommendedRange({ riskScore, mddLimit }) {
+      const cap = riskCapacityFromMdd(mddLimit);
+      const riskDiscount = 1 - Math.pow(riskScore / 100, 1.2);
+      const baseAggMax = 90;
+      const maxW = clamp(baseAggMax * cap * (0.6 + 0.4 * riskDiscount), 5, 90);
+      const minW = clamp(maxW * 0.55, 3, maxW);
+      return { minW, maxW };
+    }
+
+    function pickBucket(riskScore) {
+      if (riskScore <= 30) return currentLang === 'en' ? t('bucketAggressive') : t('bucketAggressive');
+      if (riskScore <= 65) return currentLang === 'en' ? t('bucketNeutral') : t('bucketNeutral');
+      return currentLang === 'en' ? t('bucketConservative') : t('bucketConservative');
+    }
+
+    function bucketRangeKey(bucket) {
+      const isConservative = bucket === t('bucketConservative');
+      const isNeutral = bucket === t('bucketNeutral');
+      if (isConservative) return 'conservative';
+      if (isNeutral) return 'neutral';
+      return 'aggressive';
+    }
+
+    function applyLanguage(lang) {
+      currentLang = lang === 'en' ? 'en' : 'zh';
+      localStorage.setItem('crypto-risk-lang', currentLang);
+      document.documentElement.lang = t('htmlLang');
+      document.title = t('title');
+
+      const textMap = {
+        navHome: 'navHome',
+        navRebalance: 'navRebalance',
+        navFutures: 'navFutures',
+        navMethod: 'navMethod',
+        backBtn: 'backBtn',
+        runBtn: 'runBtn',
+        eyebrow: 'eyebrow',
+        inputTitle: 'inputTitle',
+        inputSub: 'inputSub',
+        labelMdd: 'labelMdd',
+        labelCurrentWeight: 'labelCurrentWeight',
+        labelValuation: 'labelValuation',
+        labelLeverage: 'labelLeverage',
+        labelTrend: 'labelTrend',
+        labelMacro: 'labelMacro',
+        demoBtn: 'demoBtn',
+        shareBtn: 'shareBtn',
+        pillText: 'pillText',
+        methodHead: 'methodHead',
+        rangeTitle: 'rangeTitle',
+        rangeSub: 'rangeSub',
+        rangeConservativeLabel: 'rangeConservativeLabel',
+        rangeNeutralLabel: 'rangeNeutralLabel',
+        rangeAggressiveLabel: 'rangeAggressiveLabel',
+        rangeNote: 'rangeNote',
+        cycleTitle: 'cycleTitle',
+        cycleSub: 'cycleSub',
+        cycleLabelText: 'cycleLabelText',
+        cycleScoreLabel: 'cycleScoreLabel',
+        cycleDriversLabel: 'cycleDriversLabel',
+        riskTitle: 'riskTitle',
+        riskSub: 'riskSub',
+        riskScoreLabel: 'riskScoreLabel',
+        riskRegimeLabel: 'riskRegimeLabel',
+        ddRefLabel: 'ddRefLabel',
+        footerLine1: 'footerLine1'
+      };
+
+      Object.keys(textMap).forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = t(textMap[id]);
+      });
+
+      document.getElementById('heroTitle').textContent = t('heroTitle');
+      document.getElementById('heroLead').innerHTML = t('heroLead');
+      document.getElementById('methodBody').textContent = t('methodBody');
+
+      const valuation = document.getElementById('valuation').options;
+      const leverage = document.getElementById('leverage').options;
+      const trend = document.getElementById('trend').options;
+      const macro = document.getElementById('macro').options;
+      t('valuationOptions').forEach((txt, i) => valuation[i].textContent = txt);
+      t('leverageOptions').forEach((txt, i) => leverage[i].textContent = txt);
+      t('trendOptions').forEach((txt, i) => trend[i].textContent = txt);
+      t('macroOptions').forEach((txt, i) => macro[i].textContent = txt);
+
+      document.getElementById('lang-zh').classList.toggle('active', currentLang === 'zh');
+      document.getElementById('lang-en').classList.toggle('active', currentLang === 'en');
+
+      render();
+    }
+
+    function render() {
+      const mddLimit = Number(document.getElementById('mddLimit').value);
+      const currentWeight = clamp(Number(document.getElementById('currentWeight').value || 0), 0, 100);
+      const valuation = document.getElementById('valuation').value;
+      const leverage = document.getElementById('leverage').value;
+      const trend = document.getElementById('trend').value;
+      const macro = document.getElementById('macro').value;
+
+      const { cycle, risk } = computeScores({ valuation, leverage, trend, macro });
+
+      document.getElementById('cycleScore').textContent = String(cycle);
+      document.getElementById('cycleLabel').textContent = cycleLabelFromScore(cycle);
+      document.getElementById('cycleBar').style.width = `${clamp(cycle, 0, 100)}%`;
+
+      const driver = (() => {
+        const map = [
+          { k: currentLang === 'en' ? 'Valuation/Cycle' : '估值/週期', v: score3Level(valuation) },
+          { k: currentLang === 'en' ? 'Leverage/Sentiment' : '槓桿/情緒', v: score3Level(leverage) },
+          { k: currentLang === 'en' ? 'Trend' : '趨勢', v: score3Level(trend) },
+          { k: currentLang === 'en' ? 'Macro' : '宏觀', v: score3Level(macro) },
+        ].sort((a,b) => b.v - a.v);
+        return map[0];
+      })();
+      document.getElementById('cycleDrivers').textContent = `${driver.k}`;
+
+      const cycleReasons = [];
+      if (currentLang === 'en') {
+        cycleReasons.push(`Valuation/Cycle: ${valuation === 'high' ? 'Overheated' : (valuation === 'low' ? 'Cheap' : 'Neutral')}`);
+        cycleReasons.push(`Leverage/Sentiment: ${leverage === 'high' ? 'Elevated (higher drawdown amplification risk)' : (leverage === 'low' ? 'Low (lighter risk pressure)' : 'Neutral')}`);
+        cycleReasons.push(`Trend Structure: ${trend === 'up' ? 'Strong' : (trend === 'down' ? 'Weak' : 'Neutral')}`);
+        cycleReasons.push(`Macro Regime: ${macro === 'riskon' ? 'Risk-On' : (macro === 'riskoff' ? 'Risk-Off' : 'Neutral')}`);
+      } else {
+        cycleReasons.push(`估值/週期訊號：${valuation === 'high' ? '偏過熱' : (valuation === 'low' ? '偏便宜' : '中性')}`);
+        cycleReasons.push(`槓桿/情緒：${leverage === 'high' ? '偏高（回撤放大可能性上升）' : (leverage === 'low' ? '偏低（風險壓力較小）' : '中性')}`);
+        cycleReasons.push(`趨勢結構：${trend === 'up' ? '偏強' : (trend === 'down' ? '偏弱' : '中性')}`);
+        cycleReasons.push(`宏觀風險偏好：${macro === 'riskon' ? 'Risk-On' : (macro === 'riskoff' ? 'Risk-Off' : 'Neutral')}`);
+      }
+      document.getElementById('cycleReasons').innerHTML = cycleReasons.map(s => `<li>${s}</li>`).join('');
+
+      document.getElementById('riskScore').textContent = String(risk);
+      document.getElementById('riskRegime').textContent = riskLabelFromScore(risk);
+      document.getElementById('ddRef').textContent = ddReferenceFromRisk(risk);
+      document.getElementById('riskBar').style.width = `${clamp(risk, 0, 100)}%`;
+
+      const riskNotes = [];
+      if (currentLang === 'en') {
+        riskNotes.push('This risk scale aligns position range with your drawdown tolerance.');
+        if (risk >= 80) riskNotes.push('Risk is elevated. Consider reducing position and increasing buffer to avoid oversized drawdown in high-leverage sentiment periods.');
+        else if (risk >= 60) riskNotes.push('Risk is high. Keep position around lower-neutral range until conditions cool.');
+        else if (risk <= 20) riskNotes.push('Risk is low. This is generally more compatible with long-term DCA accumulation.');
+        else riskNotes.push('Risk is neutral. Manage position within ranges based on MDD limit and cash-flow plan.');
+      } else {
+        riskNotes.push('此風險刻度用於「倉位區間」與「回撤承受度」對齊。');
+        if (risk >= 80) riskNotes.push('風險溫度偏高，建議降低倉位、提高緩衝，避免在高槓桿情緒期承擔過大回撤。');
+        else if (risk >= 60) riskNotes.push('風險偏高，倉位宜維持在中性偏下區間，等待風險降溫。');
+        else if (risk <= 20) riskNotes.push('風險偏低，較符合長期定投/分批累積環境。');
+        else riskNotes.push('風險中性，倉位可依你的 MDD 上限與現金流安排做區間化管理。');
+      }
+      document.getElementById('riskNotes').innerHTML = riskNotes.map(s => `<li>${s}</li>`).join('');
+
+      const ranges = baseRanges();
+      document.getElementById('rangeConservative').textContent = `${ranges.conservative[0]}–${ranges.conservative[1]}%`;
+      document.getElementById('rangeNeutral').textContent = `${ranges.neutral[0]}–${ranges.neutral[1]}%`;
+      document.getElementById('rangeAggressive').textContent = `${ranges.aggressive[0]}–${ranges.aggressive[1]}%`;
+
+      const rec = computeRecommendedRange({ riskScore: risk, mddLimit });
+      const bucket = pickBucket(risk);
+      const bucketRange = ranges[bucketRangeKey(bucket)];
+      const recMin = clamp(rec.minW, bucketRange[0], bucketRange[1]);
+      const recMax = clamp(rec.maxW, recMin, bucketRange[1]);
+      const recMid = (recMin + recMax) / 2;
+
+      if (currentLang === 'en') {
+        document.getElementById('recommendedBadge').innerHTML = `Suggested range: <strong>${pct(recMin,0)}–${pct(recMax,0)} (${bucket})</strong>`;
+      } else {
+        document.getElementById('recommendedBadge').innerHTML = `建議區間：<strong>${pct(recMin,0)}–${pct(recMax,0)}（${bucket}）</strong>`;
+      }
+
+      const deltaToMid = recMid - currentWeight;
+      let action;
+      if (currentLang === 'en') {
+        if (currentWeight < recMin) action = `Underweight: consider scaling in toward range (distance to midpoint ~ ${pct(Math.abs(deltaToMid),0)})`;
+        else if (currentWeight > recMax) action = `Overweight: consider scaling down toward range (distance to midpoint ~ ${pct(Math.abs(deltaToMid),0)})`;
+        else action = `Within range: maintain with rebalance rules (distance to midpoint ~ ${pct(Math.abs(deltaToMid),0)})`;
+        document.getElementById('actionBadge').innerHTML = `Action: <strong>${action}</strong>`;
+      } else {
+        if (currentWeight < recMin) action = `偏低：可分批提高到區間內（距中位數約 ${pct(Math.abs(deltaToMid),0)}）`;
+        else if (currentWeight > recMax) action = `偏高：可分批降到區間內（距中位數約 ${pct(Math.abs(deltaToMid),0)}）`;
+        else action = `區間內：可用再平衡規則維持（距中位數約 ${pct(Math.abs(deltaToMid),0)}）`;
+        document.getElementById('actionBadge').innerHTML = `操作提示：<strong>${action}</strong>`;
+      }
+
+      const advice = [];
+      if (currentLang === 'en') {
+        advice.push(`Your MDD limit is ${mddLimit}%, implied risk capacity is ${riskCapacityFromMdd(mddLimit).toFixed(2)}.`);
+        advice.push(`Current Risk Score is ${risk}. Use a ${bucket} framework and keep crypto exposure around ${pct(recMin,0)}–${pct(recMax,0)}.`);
+        if (cycle >= 71) advice.push('When cycle is overheated, prioritize drawdown control: reduce chase frequency and keep larger buffers.');
+        if (cycle <= 30) advice.push('When cycle is cheap, favor gradual accumulation while respecting your position cap.');
+        advice.push('Fix your rebalance rule: monthly or when deviation from midpoint reaches +/-10% of your crypto sleeve.');
+      } else {
+        advice.push(`你設定的 MDD 上限為 ${mddLimit}%，風險承受係數約 ${riskCapacityFromMdd(mddLimit).toFixed(2)}。`);
+        advice.push(`目前 Risk Score ${risk}，建議採 ${bucket} 倉位框架，並把倉位控制在 ${pct(recMin,0)}–${pct(recMax,0)}。`);
+        if (cycle >= 71) advice.push('週期偏過熱時，優先管理回撤：降低加碼頻率、提高緩衝，避免追高擴張槓桿。');
+        if (cycle <= 30) advice.push('週期偏便宜時，策略偏向「分批累積 + 控制回撤」；持續遵守倉位上限。');
+        advice.push('建議把再平衡規則固定化：每月一次或偏離中位數 ±10%（相對於你的加密倉位）觸發調整。');
+      }
+      document.getElementById('adviceList').innerHTML = advice.map(s => `<li>${s}</li>`).join('');
+
+      const state = { mddLimit, currentWeight, valuation, leverage, trend, macro, lang: currentLang };
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+      const url = new URL(window.location.href);
+      url.searchParams.set('s', encoded);
+      window.history.replaceState({}, '', url);
+    }
+
+    function loadFromUrl() {
+      const url = new URL(window.location.href);
+      const s = url.searchParams.get('s');
+      if (!s) return;
+      try {
+        const decoded = JSON.parse(decodeURIComponent(escape(atob(s))));
+        if (decoded.mddLimit) document.getElementById('mddLimit').value = String(decoded.mddLimit);
+        if (decoded.currentWeight !== undefined) document.getElementById('currentWeight').value = String(decoded.currentWeight);
+        if (decoded.valuation) document.getElementById('valuation').value = decoded.valuation;
+        if (decoded.leverage) document.getElementById('leverage').value = decoded.leverage;
+        if (decoded.trend) document.getElementById('trend').value = decoded.trend;
+        if (decoded.macro) document.getElementById('macro').value = decoded.macro;
+        if (decoded.lang) currentLang = decoded.lang === 'en' ? 'en' : 'zh';
+      } catch (_) {}
+    }
+
+    function copyShareUrl() {
+      const url = window.location.href;
+      navigator.clipboard.writeText(url).then(() => {
+        const btn = document.getElementById('shareBtn');
+        const old = btn.textContent;
+        btn.textContent = t('shareBtnCopied');
+        setTimeout(() => (btn.textContent = old), 900);
+      });
+    }
+
+    function applyDemoHot() {
+      document.getElementById('mddLimit').value = '30';
+      document.getElementById('currentWeight').value = '65';
+      document.getElementById('valuation').value = 'high';
+      document.getElementById('leverage').value = 'high';
+      document.getElementById('trend').value = 'up';
+      document.getElementById('macro').value = 'riskon';
+      render();
+    }
+
+    document.getElementById('runBtn').addEventListener('click', render);
+    document.getElementById('shareBtn').addEventListener('click', copyShareUrl);
+    document.getElementById('demoBtn').addEventListener('click', applyDemoHot);
+    document.getElementById('lang-zh').addEventListener('click', () => applyLanguage('zh'));
+    document.getElementById('lang-en').addEventListener('click', () => applyLanguage('en'));
+    ['mddLimit','currentWeight','valuation','leverage','trend','macro'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => render());
+      document.getElementById(id).addEventListener('change', () => render());
+    });
+
+    loadFromUrl();
+    applyLanguage(currentLang);
+  </script>
+</body>
+</html>
