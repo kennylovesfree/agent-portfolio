@@ -99,6 +99,33 @@ class _AiConfig:
     cache_ttl_seconds: int
 
 
+_RISK_LEVEL_MAP = {
+    "low": "low",
+    "medium": "medium",
+    "mid": "medium",
+    "high": "high",
+    "low risk": "low",
+    "medium risk": "medium",
+    "high risk": "high",
+    "低": "low",
+    "中": "medium",
+    "高": "high",
+    "低風險": "low",
+    "中風險": "medium",
+    "高風險": "high",
+}
+
+_PRIORITY_MAP = {
+    "low": "low",
+    "medium": "medium",
+    "mid": "medium",
+    "high": "high",
+    "低": "low",
+    "中": "medium",
+    "高": "high",
+}
+
+
 def _utcnow() -> datetime:
     return datetime.utcnow()
 
@@ -194,16 +221,105 @@ def _extract_json_payload(content: str) -> dict[str, Any]:
             lines = lines[:-1]
         stripped = "\n".join(lines).strip()
     try:
-        return json.loads(stripped)
+        payload = json.loads(stripped)
     except json.JSONDecodeError:
         start = stripped.find("{")
         end = stripped.rfind("}")
         if start == -1 or end == -1 or end <= start:
             raise AdviceUpstreamError("Model content is not valid JSON.")
         try:
-            return json.loads(stripped[start : end + 1])
+            payload = json.loads(stripped[start : end + 1])
         except json.JSONDecodeError as exc:
             raise AdviceUpstreamError("Model content is not valid JSON.") from exc
+    if not isinstance(payload, dict):
+        raise AdviceUpstreamError("Model content is not a JSON object.")
+    return payload
+
+
+def _norm_text(value: Any, default: str = "") -> str:
+    if value is None:
+        return default
+    text = str(value).strip()
+    return text or default
+
+
+def _norm_risk_level(value: Any) -> str:
+    key = _norm_text(value, "medium").lower()
+    return _RISK_LEVEL_MAP.get(key, "medium")
+
+
+def _norm_priority(value: Any) -> str:
+    key = _norm_text(value, "medium").lower()
+    return _PRIORITY_MAP.get(key, "medium")
+
+
+def _default_disclaimer(locale: str) -> str:
+    if locale.lower().startswith("zh"):
+        return "本建議僅供參考，不構成投資建議。"
+    return "For reference only. This is not investment advice."
+
+
+def _normalize_advice_payload(
+    advice_payload: dict[str, Any],
+    *,
+    provider: str,
+    model: str,
+    latency_ms: int,
+    locale: str,
+) -> dict[str, Any]:
+    summary = _norm_text(advice_payload.get("summary"), "No summary provided.")
+    risk_level = _norm_risk_level(advice_payload.get("risk_level"))
+
+    raw_actions = advice_payload.get("actions")
+    if isinstance(raw_actions, dict):
+        raw_actions = [raw_actions]
+    if not isinstance(raw_actions, list):
+        raw_actions = [raw_actions] if raw_actions else []
+
+    actions: list[dict[str, str]] = []
+    for raw in raw_actions[:3]:
+        if isinstance(raw, dict):
+            title = _norm_text(raw.get("title"), "Review portfolio risk")
+            reason = _norm_text(raw.get("reason"), "Validate allocation and risk controls.")
+            priority = _norm_priority(raw.get("priority"))
+        else:
+            title = _norm_text(raw, "Review portfolio risk")
+            reason = "Validate allocation and risk controls."
+            priority = "medium"
+        actions.append({"title": title, "reason": reason, "priority": priority})
+    if not actions:
+        actions = [
+            {
+                "title": "Review portfolio risk",
+                "reason": "Validate allocation and risk controls.",
+                "priority": "medium",
+            }
+        ]
+
+    raw_watchouts = advice_payload.get("watchouts")
+    if isinstance(raw_watchouts, list):
+        watchouts = [_norm_text(item) for item in raw_watchouts if _norm_text(item)]
+    elif raw_watchouts:
+        watchouts = [_norm_text(raw_watchouts)]
+    else:
+        watchouts = []
+    if not watchouts:
+        watchouts = ["Monitor volatility and rebalance discipline."]
+
+    disclaimer = _norm_text(advice_payload.get("disclaimer"), _default_disclaimer(locale))
+
+    return {
+        "summary": summary,
+        "risk_level": risk_level,
+        "actions": actions,
+        "watchouts": watchouts[:5],
+        "disclaimer": disclaimer,
+        "model_meta": {
+            "provider": provider,
+            "model": model,
+            "latency_ms": max(0, int(latency_ms)),
+        },
+    }
 
 
 def _call_openai(payload: AdviceRequest, config: _AiConfig) -> AdviceResponse:
@@ -239,16 +355,17 @@ def _call_openai(payload: AdviceRequest, config: _AiConfig) -> AdviceResponse:
         raise AdviceUpstreamError("OpenAI returned malformed JSON.") from exc
 
     content = _extract_openai_content(parsed)
-    advice_payload = _extract_json_payload(content)
-
     latency_ms = max(0, int((_utcnow() - started).total_seconds() * 1000))
-    advice_payload["model_meta"] = {
-        "provider": "openai",
-        "model": config.model,
-        "latency_ms": latency_ms,
-    }
+    advice_payload = _extract_json_payload(content)
+    normalized_payload = _normalize_advice_payload(
+        advice_payload,
+        provider="openai",
+        model=config.model,
+        latency_ms=latency_ms,
+        locale=payload.locale,
+    )
     try:
-        return AdviceResponse.model_validate(advice_payload)
+        return AdviceResponse.model_validate(normalized_payload)
     except ValidationError as exc:
         raise AdviceUpstreamError("OpenAI response schema mismatch.") from exc
 
@@ -304,15 +421,17 @@ def _call_gemini(payload: AdviceRequest, config: _AiConfig) -> AdviceResponse:
         raise AdviceUpstreamError("Gemini returned malformed JSON.") from exc
 
     content = _extract_gemini_content(parsed)
-    advice_payload = _extract_json_payload(content)
     latency_ms = max(0, int((_utcnow() - started).total_seconds() * 1000))
-    advice_payload["model_meta"] = {
-        "provider": "gemini",
-        "model": config.model,
-        "latency_ms": latency_ms,
-    }
+    advice_payload = _extract_json_payload(content)
+    normalized_payload = _normalize_advice_payload(
+        advice_payload,
+        provider="gemini",
+        model=config.model,
+        latency_ms=latency_ms,
+        locale=payload.locale,
+    )
     try:
-        return AdviceResponse.model_validate(advice_payload)
+        return AdviceResponse.model_validate(normalized_payload)
     except ValidationError as exc:
         raise AdviceUpstreamError("Gemini response schema mismatch.") from exc
 

@@ -3,7 +3,13 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from logic.advice_service import AdviceConfigError, AdviceRequest, AdviceResponse, generate_advice
+from logic.advice_service import (
+    AdviceConfigError,
+    AdviceRequest,
+    AdviceResponse,
+    _normalize_advice_payload,
+    generate_advice,
+)
 
 
 def _sample_payload() -> AdviceRequest:
@@ -53,6 +59,26 @@ class AdviceServiceTests(unittest.TestCase):
         with patch.dict("os.environ", {"AI_PROVIDER": "gemini", "GEMINI_API_KEY": ""}, clear=False):
             with self.assertRaises(AdviceConfigError):
                 generate_advice(payload)
+
+    def test_normalize_advice_payload_handles_schema_drift(self) -> None:
+        raw = {
+            "summary": {"text": "市場波動升高"},
+            "risk_level": "高風險",
+            "actions": ["降低單一資產集中", {"title": "提高現金比重"}],
+            "watchouts": "注意流動性風險",
+            "disclaimer": None,
+        }
+        normalized = _normalize_advice_payload(
+            raw,
+            provider="gemini",
+            model="gemini-3-flash-preview",
+            latency_ms=25,
+            locale="zh-TW",
+        )
+        self.assertEqual(normalized["risk_level"], "high")
+        self.assertTrue(len(normalized["actions"]) >= 1)
+        self.assertIsInstance(normalized["watchouts"], list)
+        self.assertIn("model_meta", normalized)
 
 
 if __name__ == "__main__":
