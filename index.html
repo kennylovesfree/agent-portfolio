@@ -113,13 +113,50 @@
       overflow: hidden;
       pointer-events: none;
       z-index: 1;
-      opacity: 0.5;
+      opacity: 0.72;
     }
 
     #particle-canvas {
       width: 100%;
       height: 100%;
       display: block;
+    }
+
+    .particle-core {
+      position: absolute;
+      left: 50%;
+      top: 42%;
+      width: min(42vw, 520px);
+      aspect-ratio: 1;
+      transform: translate(-50%, -50%);
+      border-radius: 999px;
+      background:
+        radial-gradient(circle at center, rgba(255, 255, 255, 0.22) 0 8%, rgba(124, 156, 255, 0.24) 18%, rgba(106, 231, 208, 0.16) 34%, rgba(12, 18, 30, 0) 70%),
+        conic-gradient(from 45deg, rgba(124, 156, 255, 0.22), rgba(106, 231, 208, 0.2), rgba(124, 156, 255, 0.18), rgba(106, 231, 208, 0.2), rgba(124, 156, 255, 0.22));
+      filter: blur(0.3px) saturate(120%);
+      opacity: 0.78;
+      animation: warp-core 8.5s linear infinite;
+    }
+
+    .particle-core::before {
+      content: "";
+      position: absolute;
+      inset: 18%;
+      border-radius: inherit;
+      border: 1px solid rgba(124, 156, 255, 0.34);
+      box-shadow: 0 0 46px rgba(124, 156, 255, 0.32);
+      animation: warp-ring 4.8s ease-in-out infinite;
+    }
+
+    @keyframes warp-core {
+      0% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+      50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.035); }
+      100% { transform: translate(-50%, -50%) rotate(360deg) scale(1); }
+    }
+
+    @keyframes warp-ring {
+      0%, 100% { opacity: 0.46; transform: scale(0.92); }
+      50% { opacity: 0.8; transform: scale(1.02); }
     }
 
     .shell {
@@ -506,7 +543,8 @@
     }
 
     @media (max-width: 960px) {
-      .particle-layer { opacity: 0.34; }
+      .particle-layer { opacity: 0.46; }
+      .particle-core { width: min(74vw, 420px); top: 38%; }
       .top-nav,
       .top-actions .btn.primary { display: none; }
       .menu-btn { display: inline-flex; align-items: center; justify-content: center; }
@@ -557,6 +595,7 @@
     <div class="orb one"></div>
     <div class="orb two"></div>
     <div class="particle-layer" aria-hidden="true">
+      <div class="particle-core"></div>
       <canvas id="particle-canvas"></canvas>
     </div>
 
@@ -828,7 +867,7 @@
       particleRafId: 0,
       particleItems: [],
       particlePointer: { x: 0, y: 0, active: false },
-      particleMeta: { width: 0, height: 0, dpr: 1, lineDistance: 110, radius: 130, lowPower: false },
+      particleMeta: { width: 0, height: 0, dpr: 1, lineDistance: 130, radius: 155, lowPower: false, centerX: 0, centerY: 0, time: 0 },
       particleHandlers: null
     };
 
@@ -1011,22 +1050,35 @@
       state.particleMeta.lowPower = lowPower;
       state.particleEnabled = true;
 
-      const createParticle = (width, height) => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.32,
-        vy: (Math.random() - 0.5) * 0.32,
-        size: 0.65 + Math.random() * 1.25,
-        tone: Math.random() > 0.45 ? "blue" : "cyan"
-      });
+      const createParticle = (width, height) => {
+        const cx = width * 0.52;
+        const cy = height * 0.42;
+        const ring = Math.random() * 0.8 + 0.2;
+        const orbit = Math.min(width, height) * (0.16 + ring * 0.48);
+        const angle = Math.random() * Math.PI * 2;
+        return {
+          x: cx + Math.cos(angle) * orbit,
+          y: cy + Math.sin(angle) * orbit * 0.72,
+          angle,
+          orbit,
+          spin: (Math.random() - 0.5) * (lowPower ? 0.0026 : 0.0046),
+          drift: 0.28 + Math.random() * 0.72,
+          size: 0.8 + Math.random() * 1.4,
+          energy: 0.2 + Math.random() * 0.8,
+          pulse: Math.random() * Math.PI * 2,
+          tone: Math.random() > 0.35 ? "blue" : "cyan",
+          warpX: 0,
+          warpY: 0
+        };
+      };
 
       const computeCount = (width, height) => {
         const area = width * height;
-        const density = isMobile ? 0.00004 : 0.00005;
-        const min = isMobile ? 24 : 70;
-        const max = isMobile ? 45 : 120;
+        const density = isMobile ? 0.000048 : 0.000072;
+        const min = isMobile ? 28 : 88;
+        const max = isMobile ? 56 : 156;
         let count = Math.round(area * density);
-        if (lowPower) count = Math.round(count * 0.65);
+        if (lowPower) count = Math.round(count * 0.62);
         return Math.max(min, Math.min(max, count));
       };
 
@@ -1041,8 +1093,10 @@
         state.particleMeta.width = width;
         state.particleMeta.height = height;
         state.particleMeta.dpr = dpr;
-        state.particleMeta.lineDistance = Math.max(90, Math.min(130, Math.floor(Math.min(width, height) * 0.12)));
-        state.particleMeta.radius = isMobile ? 110 : 136;
+        state.particleMeta.centerX = width * 0.52;
+        state.particleMeta.centerY = height * 0.42;
+        state.particleMeta.lineDistance = Math.max(96, Math.min(158, Math.floor(Math.min(width, height) * 0.16)));
+        state.particleMeta.radius = isMobile ? 122 : 168;
         const targetCount = computeCount(width, height);
         if (state.particleItems.length > targetCount) {
           state.particleItems.length = targetCount;
@@ -1054,36 +1108,51 @@
 
       const animate = () => {
         if (!state.particleEnabled || document.hidden) return;
-        const { width, height, lineDistance, radius } = state.particleMeta;
+        const { width, height, lineDistance, radius, centerX, centerY } = state.particleMeta;
+        state.particleMeta.time += 0.011;
+        const time = state.particleMeta.time;
         ctx.clearRect(0, 0, width, height);
+
+        const coreGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.min(width, height) * 0.45);
+        coreGlow.addColorStop(0, "rgba(124, 156, 255, 0.12)");
+        coreGlow.addColorStop(0.46, "rgba(106, 231, 208, 0.08)");
+        coreGlow.addColorStop(1, "rgba(12, 18, 30, 0)");
+        ctx.fillStyle = coreGlow;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, Math.min(width, height) * 0.45, 0, Math.PI * 2);
+        ctx.fill();
 
         for (let i = 0; i < state.particleItems.length; i += 1) {
           const p = state.particleItems[i];
+          p.angle += p.spin;
+          p.pulse += 0.03 + p.energy * 0.004;
+          const orbitalBreath = Math.sin(time * (0.8 + p.energy) + p.pulse) * (2.4 + p.energy * 6);
+          const targetOrbit = p.orbit + orbitalBreath;
+          const baseX = centerX + Math.cos(p.angle + time * 0.35) * targetOrbit;
+          const baseY = centerY + Math.sin(p.angle * 1.08 - time * 0.28) * targetOrbit * 0.62;
+
+          let warpX = 0;
+          let warpY = 0;
           if (state.particlePointer.active) {
-            const dx = p.x - state.particlePointer.x;
-            const dy = p.y - state.particlePointer.y;
-            const distSq = dx * dx + dy * dy;
+            const pdx = baseX - state.particlePointer.x;
+            const pdy = baseY - state.particlePointer.y;
+            const distSq = pdx * pdx + pdy * pdy;
             const rSq = radius * radius;
             if (distSq > 0 && distSq < rSq) {
               const dist = Math.sqrt(distSq);
-              const influence = (1 - dist / radius) * (state.particleMeta.lowPower ? 0.012 : 0.018);
-              p.vx += (dx / dist) * influence;
-              p.vy += (dy / dist) * influence;
+              const influence = (1 - dist / radius);
+              const tangentX = -pdy / dist;
+              const tangentY = pdx / dist;
+              const pull = influence * (state.particleMeta.lowPower ? 6 : 10);
+              warpX += tangentX * pull + (pdx / dist) * influence * 4;
+              warpY += tangentY * pull + (pdy / dist) * influence * 4;
             }
           }
 
-          p.vx *= 0.988;
-          p.vy *= 0.988;
-          const speedCap = 0.85;
-          p.vx = Math.max(-speedCap, Math.min(speedCap, p.vx));
-          p.vy = Math.max(-speedCap, Math.min(speedCap, p.vy));
-          p.x += p.vx;
-          p.y += p.vy;
-
-          if (p.x < -6) p.x = width + 6;
-          if (p.x > width + 6) p.x = -6;
-          if (p.y < -6) p.y = height + 6;
-          if (p.y > height + 6) p.y = -6;
+          p.warpX = p.warpX * 0.86 + warpX * 0.14;
+          p.warpY = p.warpY * 0.86 + warpY * 0.14;
+          p.x = baseX + p.warpX;
+          p.y = baseY + p.warpY;
         }
 
         for (let i = 0; i < state.particleItems.length; i += 1) {
@@ -1094,7 +1163,7 @@
             const dy = a.y - b.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist > lineDistance) continue;
-            const alpha = (1 - dist / lineDistance) * 0.18;
+            const alpha = (1 - dist / lineDistance) * 0.26;
             const hue = a.tone === "blue" || b.tone === "blue" ? "124, 156, 255" : "106, 231, 208";
             ctx.strokeStyle = `rgba(${hue}, ${alpha.toFixed(4)})`;
             ctx.lineWidth = 1;
@@ -1108,9 +1177,29 @@
         for (let i = 0; i < state.particleItems.length; i += 1) {
           const p = state.particleItems[i];
           const color = p.tone === "blue" ? "124, 156, 255" : "106, 231, 208";
-          ctx.fillStyle = `rgba(${color}, 0.62)`;
+          const pulseAlpha = 0.45 + ((Math.sin(p.pulse + time * 2.2) + 1) * 0.25);
+          const radiusBoost = 0.9 + ((Math.sin(p.pulse + time) + 1) * 0.18);
+          ctx.fillStyle = `rgba(${color}, ${Math.min(0.92, pulseAlpha).toFixed(4)})`;
           ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, p.size * radiusBoost, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        if (state.particlePointer.active) {
+          const pointerGlow = ctx.createRadialGradient(
+            state.particlePointer.x,
+            state.particlePointer.y,
+            0,
+            state.particlePointer.x,
+            state.particlePointer.y,
+            radius
+          );
+          pointerGlow.addColorStop(0, "rgba(124, 156, 255, 0.18)");
+          pointerGlow.addColorStop(0.65, "rgba(106, 231, 208, 0.06)");
+          pointerGlow.addColorStop(1, "rgba(12, 18, 30, 0)");
+          ctx.fillStyle = pointerGlow;
+          ctx.beginPath();
+          ctx.arc(state.particlePointer.x, state.particlePointer.y, radius, 0, Math.PI * 2);
           ctx.fill();
         }
 
