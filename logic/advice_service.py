@@ -172,7 +172,9 @@ def _build_messages(payload: AdviceRequest) -> list[dict[str, str]]:
                 "You are a cautious portfolio copilot. Output STRICT JSON only with keys: "
                 "summary, risk_level, actions, watchouts, disclaimer. "
                 "risk_level must be one of low/medium/high. actions max 3 items. "
-                "No guaranteed return language. Keep locale based on input locale."
+                "Each action must include title, reason, priority, and priority must be one of low/medium/high. "
+                "No guaranteed return language. Keep locale based on input locale. "
+                "When locale starts with zh, summary/actions/watchouts/disclaimer must be in Traditional Chinese."
             ),
         },
         {
@@ -253,8 +255,36 @@ def _norm_priority(value: Any) -> str:
     return _PRIORITY_MAP.get(key, "medium")
 
 
+def _is_zh_locale(locale: str) -> bool:
+    return locale.lower().startswith("zh")
+
+
+def _default_summary(locale: str) -> str:
+    if _is_zh_locale(locale):
+        return "未提供摘要。"
+    return "No summary provided."
+
+
+def _default_action_title(locale: str) -> str:
+    if _is_zh_locale(locale):
+        return "檢視投資組合風險"
+    return "Review portfolio risk"
+
+
+def _default_action_reason(locale: str) -> str:
+    if _is_zh_locale(locale):
+        return "請檢視目前配置與風險控管是否符合目標。"
+    return "Validate allocation and risk controls."
+
+
+def _default_watchout(locale: str) -> str:
+    if _is_zh_locale(locale):
+        return "請持續關注波動並維持再平衡紀律。"
+    return "Monitor volatility and rebalance discipline."
+
+
 def _default_disclaimer(locale: str) -> str:
-    if locale.lower().startswith("zh"):
+    if _is_zh_locale(locale):
         return "本建議僅供參考，不構成投資建議。"
     return "For reference only. This is not investment advice."
 
@@ -267,7 +297,7 @@ def _normalize_advice_payload(
     latency_ms: int,
     locale: str,
 ) -> dict[str, Any]:
-    summary = _norm_text(advice_payload.get("summary"), "No summary provided.")
+    summary = _norm_text(advice_payload.get("summary"), _default_summary(locale))
     risk_level = _norm_risk_level(advice_payload.get("risk_level"))
 
     raw_actions = advice_payload.get("actions")
@@ -279,19 +309,19 @@ def _normalize_advice_payload(
     actions: list[dict[str, str]] = []
     for raw in raw_actions[:3]:
         if isinstance(raw, dict):
-            title = _norm_text(raw.get("title"), "Review portfolio risk")
-            reason = _norm_text(raw.get("reason"), "Validate allocation and risk controls.")
+            title = _norm_text(raw.get("title"), _default_action_title(locale))
+            reason = _norm_text(raw.get("reason"), _default_action_reason(locale))
             priority = _norm_priority(raw.get("priority"))
         else:
-            title = _norm_text(raw, "Review portfolio risk")
-            reason = "Validate allocation and risk controls."
+            title = _norm_text(raw, _default_action_title(locale))
+            reason = _default_action_reason(locale)
             priority = "medium"
         actions.append({"title": title, "reason": reason, "priority": priority})
     if not actions:
         actions = [
             {
-                "title": "Review portfolio risk",
-                "reason": "Validate allocation and risk controls.",
+                "title": _default_action_title(locale),
+                "reason": _default_action_reason(locale),
                 "priority": "medium",
             }
         ]
@@ -304,7 +334,7 @@ def _normalize_advice_payload(
     else:
         watchouts = []
     if not watchouts:
-        watchouts = ["Monitor volatility and rebalance discipline."]
+        watchouts = [_default_watchout(locale)]
 
     disclaimer = _norm_text(advice_payload.get("disclaimer"), _default_disclaimer(locale))
 

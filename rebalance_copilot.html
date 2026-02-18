@@ -373,14 +373,23 @@
     .ticker-cell {
       display: grid;
       gap: 4px;
-      align-content: start;
+      align-content: center;
     }
 
     .ticker-error {
-      min-height: 16px;
+      display: none;
       font-size: 12px;
       color: #ff8b8b;
       line-height: 1.2;
+    }
+
+    .ticker-cell.has-error {
+      align-content: start;
+    }
+
+    .ticker-cell.has-error .ticker-error {
+      display: block;
+      min-height: 16px;
     }
 
     .expert-card {
@@ -958,7 +967,11 @@
         aiUnavailable: 'AI 服務暫時不可用，請稍後再試。',
         aiCooldown: 'AI 建議冷卻中，請稍後再試。',
         aiNeedsRefresh: '輸入已變更，請按「查看 AI 建議」重新生成。',
-        aiUpdatedHint: '已更新試算；按「查看 AI 建議」產生 AI 建議。'
+        aiUpdatedHint: '已更新試算；按「查看 AI 建議」產生 AI 建議。',
+        priorityHigh: '高優先',
+        priorityMedium: '中優先',
+        priorityLow: '低優先',
+        adviceFallbackReason: '請檢視目前配置與風險控管是否符合目標。'
       },
       en: {
         htmlLang: 'en',
@@ -1070,7 +1083,11 @@
         aiUnavailable: 'AI service is temporarily unavailable. Please try again later.',
         aiCooldown: 'AI advice is cooling down. Please try again shortly.',
         aiNeedsRefresh: 'Inputs changed. Click "View AI Advice" to regenerate.',
-        aiUpdatedHint: 'Calculation updated. Click "View AI Advice" to generate AI guidance.'
+        aiUpdatedHint: 'Calculation updated. Click "View AI Advice" to generate AI guidance.',
+        priorityHigh: 'High Priority',
+        priorityMedium: 'Medium Priority',
+        priorityLow: 'Low Priority',
+        adviceFallbackReason: 'Validate allocation and risk controls.'
       }
     };
 
@@ -1495,7 +1512,10 @@
     }
 
     function setTickerError(rowEl, message = '') {
+      const cellEl = rowEl.querySelector('.ticker-cell');
       const errorEl = rowEl.querySelector('.ticker-error');
+      const hasError = Boolean(message);
+      if (cellEl) cellEl.classList.toggle('has-error', hasError);
       if (errorEl) errorEl.textContent = message || '';
     }
 
@@ -1973,6 +1993,22 @@
     }
 
     function renderExpertAdvice(advice, fallbackUsed, fallbackMessage = '', metadata = {}) {
+      const formatPriorityLabel = (priority) => {
+        const level = String(priority || 'medium').trim().toLowerCase();
+        if (level === 'high') return t('priorityHigh');
+        if (level === 'low') return t('priorityLow');
+        return t('priorityMedium');
+      };
+      const formatReason = (reason) => {
+        const raw = String(reason || '').trim();
+        if (!raw) return t('adviceFallbackReason');
+        if (currentLanguage === 'zh' && raw.toLowerCase() === 'validate allocation and risk controls.') {
+          return t('adviceFallbackReason');
+        }
+        return raw;
+      };
+      const defaultActionTitle = currentLanguage === 'en' ? 'Review portfolio risk' : '檢視投資組合風險';
+
       expertSummaryEl.textContent = advice.summary || '--';
       const items = [];
       if (fallbackUsed) items.push(`<li>${currentLanguage === 'en' ? 'AI is unavailable. Switched to rule-based guidance.' : 'AI 暫時不可用，已切換規則建議。'}</li>`);
@@ -1980,7 +2016,10 @@
       if (!fallbackUsed && metadata.cacheHit) items.push(`<li>${currentLanguage === 'en' ? 'Inputs unchanged. Reused previous AI response.' : '輸入未變更，已復用上次 AI 建議。'}</li>`);
       if (!fallbackUsed && metadata.generatedAt) items.push(`<li>${currentLanguage === 'en' ? 'Generated at' : '建議生成時間'}: ${formatTimestamp(metadata.generatedAt)}</li>`);
       (advice.actions || []).slice(0, 3).forEach(action => {
-        items.push(`<li>【${action.priority || 'medium'}】${action.title}：${action.reason}</li>`);
+        const priorityLabel = formatPriorityLabel(action?.priority);
+        const title = String(action?.title || defaultActionTitle).trim() || defaultActionTitle;
+        const reason = formatReason(action?.reason);
+        items.push(`<li>【${priorityLabel}】${title}：${reason}</li>`);
       });
       (advice.watchouts || []).forEach(msg => items.push(`<li>${msg}</li>`));
       if (advice.disclaimer) items.push(`<li>${advice.disclaimer}</li>`);

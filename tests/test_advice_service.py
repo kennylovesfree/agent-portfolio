@@ -80,6 +80,65 @@ class AdviceServiceTests(unittest.TestCase):
         self.assertIsInstance(normalized["watchouts"], list)
         self.assertIn("model_meta", normalized)
 
+    def test_normalize_advice_payload_zh_defaults_for_missing_action_fields(self) -> None:
+        raw = {
+            "summary": None,
+            "risk_level": "中風險",
+            "actions": [{}],
+            "watchouts": [],
+            "disclaimer": None,
+        }
+        normalized = _normalize_advice_payload(
+            raw,
+            provider="openai",
+            model="gpt-4o-mini",
+            latency_ms=10,
+            locale="zh-TW",
+        )
+        self.assertEqual(normalized["summary"], "未提供摘要。")
+        self.assertEqual(normalized["actions"][0]["title"], "檢視投資組合風險")
+        self.assertEqual(normalized["actions"][0]["reason"], "請檢視目前配置與風險控管是否符合目標。")
+        self.assertEqual(normalized["watchouts"][0], "請持續關注波動並維持再平衡紀律。")
+
+    def test_normalize_advice_payload_zh_schema_drift_uses_zh_reason_default(self) -> None:
+        raw = {
+            "summary": "測試",
+            "risk_level": "medium",
+            "actions": ["降低單一資產集中", {"title": "提高現金比重"}],
+            "watchouts": [],
+            "disclaimer": None,
+        }
+        normalized = _normalize_advice_payload(
+            raw,
+            provider="gemini",
+            model="gemini-2.0-flash",
+            latency_ms=15,
+            locale="zh-TW",
+        )
+        reasons = [item["reason"] for item in normalized["actions"]]
+        self.assertTrue(all(reason == "請檢視目前配置與風險控管是否符合目標。" for reason in reasons))
+        self.assertNotIn("Validate allocation and risk controls.", reasons)
+
+    def test_normalize_advice_payload_en_defaults_unchanged(self) -> None:
+        raw = {
+            "summary": None,
+            "risk_level": None,
+            "actions": [{}],
+            "watchouts": [],
+            "disclaimer": None,
+        }
+        normalized = _normalize_advice_payload(
+            raw,
+            provider="openai",
+            model="gpt-4o-mini",
+            latency_ms=10,
+            locale="en-US",
+        )
+        self.assertEqual(normalized["summary"], "No summary provided.")
+        self.assertEqual(normalized["actions"][0]["title"], "Review portfolio risk")
+        self.assertEqual(normalized["actions"][0]["reason"], "Validate allocation and risk controls.")
+        self.assertEqual(normalized["watchouts"][0], "Monitor volatility and rebalance discipline.")
+
 
 if __name__ == "__main__":
     unittest.main()
