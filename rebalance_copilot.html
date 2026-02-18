@@ -1986,13 +1986,80 @@
     function syncYearsFromRange() { yearsNumberEl.value = yearsEl.value; }
     function syncYearsFromNumber() { let val = Number(yearsNumberEl.value || 1); if (val < 1) val = 1; if (val > 30) val = 30; yearsNumberEl.value = val; yearsEl.value = val; }
 
-    function drawChart(values) {
-      const width = canvas.clientWidth; const height = canvas.clientHeight; canvas.width = width; canvas.height = height; ctx.clearRect(0, 0, width, height);
-      const padding = 36; const maxVal = Math.max(...values); const minVal = Math.min(...values); const range = maxVal - minVal || 1;
-      ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(padding,padding); ctx.lineTo(padding,height-padding); ctx.lineTo(width-padding,height-padding); ctx.stroke();
-      const points = values.map((val, index) => ({ x: padding + (index / (values.length - 1 || 1)) * (width - padding * 2), y: height - padding - ((val - minVal) / range) * (height - padding * 2), val }));
-      ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y); points.slice(1).forEach(p => ctx.lineTo(p.x, p.y)); ctx.strokeStyle = '#f0c86a'; ctx.lineWidth = 2.5; ctx.stroke();
-      ctx.lineTo(points[points.length - 1].x, height - padding); ctx.lineTo(points[0].x, height - padding); ctx.closePath(); ctx.fillStyle = 'rgba(240,200,106,0.12)'; ctx.fill();
+    function drawChart(payload) {
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      canvas.width = width;
+      canvas.height = height;
+      ctx.clearRect(0, 0, width, height);
+
+      const series = Array.isArray(payload) ? { main: payload } : (payload || {});
+      const mainValues = Array.isArray(series.main) && series.main.length ? series.main : [0, 1];
+      const lowerValues = Array.isArray(series.lower) && series.lower.length === mainValues.length ? series.lower : null;
+      const upperValues = Array.isArray(series.upper) && series.upper.length === mainValues.length ? series.upper : null;
+
+      const allValues = mainValues
+        .concat(lowerValues || [])
+        .concat(upperValues || [])
+        .filter(v => Number.isFinite(v));
+
+      const padding = 36;
+      const maxVal = allValues.length ? Math.max(...allValues) : 1;
+      const minVal = allValues.length ? Math.min(...allValues) : 0;
+      const range = maxVal - minVal || 1;
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding, padding);
+      ctx.lineTo(padding, height - padding);
+      ctx.lineTo(width - padding, height - padding);
+      ctx.stroke();
+
+      const toPoints = (values) => values.map((val, index) => ({
+        x: padding + (index / (values.length - 1 || 1)) * (width - padding * 2),
+        y: height - padding - ((val - minVal) / range) * (height - padding * 2),
+        val
+      }));
+
+      const mainPoints = toPoints(mainValues);
+      const lowerPoints = lowerValues ? toPoints(lowerValues) : null;
+      const upperPoints = upperValues ? toPoints(upperValues) : null;
+
+      if (lowerPoints && upperPoints) {
+        ctx.beginPath();
+        ctx.moveTo(upperPoints[0].x, upperPoints[0].y);
+        upperPoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        lowerPoints.slice().reverse().forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(135,169,255,0.14)';
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(135,169,255,0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(upperPoints[0].x, upperPoints[0].y);
+        upperPoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(lowerPoints[0].x, lowerPoints[0].y);
+        lowerPoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(mainPoints[0].x, mainPoints[0].y);
+      mainPoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.strokeStyle = '#f0c86a';
+      ctx.lineWidth = 2.6;
+      ctx.stroke();
+
+      ctx.lineTo(mainPoints[mainPoints.length - 1].x, height - padding);
+      ctx.lineTo(mainPoints[0].x, height - padding);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(240,200,106,0.10)';
+      ctx.fill();
     }
 
     function randnWithRng(rng) { let u = 0, v = 0; while (u === 0) u = rng(); while (v === 0) v = rng(); return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v); }
@@ -2021,6 +2088,27 @@
         drawdowns.push(maxDrawdown(path));
       }
       return percentile(drawdowns, 0.6);
+    }
+
+    function buildProjectionCone(initial, years, mu, sigma) {
+      const steps = Math.max(12, years * 12);
+      const main = [];
+      const lower = [];
+      const upper = [];
+      const z = 0.84;
+      const safeMu = Number.isFinite(mu) ? mu : 0;
+      const safeSigma = Math.max(0, Number.isFinite(sigma) ? sigma : 0);
+      for (let i = 0; i <= steps; i += 1) {
+        const t = (i / steps) * years;
+        const base = initial * Math.pow(1 + safeMu, t);
+        const volTerm = safeSigma * Math.sqrt(t);
+        const floor = Math.max(0, base * Math.exp(-z * volTerm));
+        const ceil = base * Math.exp(z * volTerm);
+        main.push(base);
+        lower.push(floor);
+        upper.push(ceil);
+      }
+      return { main, lower, upper };
     }
 
     function computeSuggestedTargets(profile) {
@@ -2364,12 +2452,16 @@
 
       const overrideState = { enabled: overrideToggleEl.checked, value: Number(overrideEl.value) };
       const seed = seedFromScenario(profile, rows, years, displayCurrency, overrideState);
-      const path = simulatePath(totalUsd, years, portfolioReturn, portfolioVol, seed);
       const dd = estimateDrawdownBySimulation(totalUsd, years, portfolioReturn, portfolioVol, seed);
+      const projection = buildProjectionCone(totalUsd, years, portfolioReturn, portfolioVol);
       outputDDEl.textContent = `${(dd * 100).toFixed(2)}%`;
       outputTotalEl.textContent = formatCurrency(finalUsd / fxOut, displayCurrency);
       outputGainEl.textContent = formatCurrency(gainUsd / fxOut, displayCurrency);
-      requestAnimationFrame(() => drawChart(path.map(v => v / fxOut)));
+      requestAnimationFrame(() => drawChart({
+        main: projection.main.map(v => v / fxOut),
+        lower: projection.lower.map(v => v / fxOut),
+        upper: projection.upper.map(v => v / fxOut)
+      }));
 
       const suggestions = suggestAllocation(details, profile);
       renderAllocation(suggestions);
