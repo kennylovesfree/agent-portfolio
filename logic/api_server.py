@@ -1,4 +1,4 @@
-"""HTTP API for annual return, portfolio health, stress testing, and AI advice."""
+"""HTTP API for annual return, expected return, risk checks, and AI advice."""
 from __future__ import annotations
 
 import logging
@@ -24,6 +24,10 @@ try:
     from .portfolio_health_service import (
         PortfolioInputError as HealthPortfolioInputError,
         evaluate_portfolio_health,
+    )
+    from .expected_return_service import (
+        ExpectedReturnInputError,
+        estimate_expected_return,
     )
     from .stress_test_service import (
         PortfolioInputError as StressPortfolioInputError,
@@ -60,6 +64,10 @@ except ImportError:  # pragma: no cover - support direct script-style imports
     from portfolio_health_service import (
         PortfolioInputError as HealthPortfolioInputError,
         evaluate_portfolio_health,
+    )
+    from expected_return_service import (
+        ExpectedReturnInputError,
+        estimate_expected_return,
     )
     from stress_test_service import (
         PortfolioInputError as StressPortfolioInputError,
@@ -116,6 +124,20 @@ class PortfolioHealthCheckRequest(BaseModel):
     profile: PortfolioProfile
     positions: list[PortfolioPosition]
     portfolio: PortfolioMetrics
+
+
+class ExpectedReturnPosition(BaseModel):
+    ticker: str = ""
+    market: str = "TW"
+    weight: float = Field(ge=0, le=1)
+    expectedReturn: float
+    isCash: bool = False
+
+
+class PortfolioExpectedReturnRequest(BaseModel):
+    profile: PortfolioProfile
+    positions: list[ExpectedReturnPosition]
+    coverage: float = Field(default=1.0, ge=0, le=1)
 
 
 class StressScenarioRequest(BaseModel):
@@ -281,6 +303,33 @@ def post_portfolio_health_check(payload: PortfolioHealthCheckRequest) -> dict:
         "flags": result.flags,
         "explanations": result.explanations,
     }
+
+
+@app.post("/api/v1/portfolio/expected-return")
+def post_portfolio_expected_return(payload: PortfolioExpectedReturnRequest) -> dict:
+    try:
+        result = estimate_expected_return(
+            profile=payload.profile.model_dump(),
+            positions=[position.model_dump() for position in payload.positions],
+            coverage=payload.coverage,
+        )
+    except ExpectedReturnInputError as exc:
+        raise ApiError(
+            status_code=422,
+            error_code="EXPECTED_RETURN_INVALID_INPUT",
+            message=str(exc),
+            details=None,
+        ) from exc
+    except Exception as exc:  # pragma: no cover - defensive error mapping
+        logger.exception("portfolio_expected_return_failed")
+        raise ApiError(
+            status_code=500,
+            error_code="EXPECTED_RETURN_ENGINE_ERROR",
+            message="長期收益估算引擎暫時無法使用。",
+            details=None,
+        ) from exc
+
+    return result
 
 
 @app.post("/api/v1/portfolio/stress-test")

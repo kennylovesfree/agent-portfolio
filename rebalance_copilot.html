@@ -319,6 +319,18 @@
       margin-top: 12px;
     }
 
+    .model-breakdown {
+      margin-top: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .model-breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
     .table {
       display: grid;
       gap: 10px;
@@ -539,6 +551,7 @@
       .table-head, .table-row { grid-template-columns: 1fr; }
       .table-row button { width: 100%; }
       .health-components,
+      .model-breakdown-grid,
       .data-quality-grid,
       .stress-table .table-head,
       .stress-table .table-row { grid-template-columns: 1fr; }
@@ -686,6 +699,14 @@
           </div>
         </div>
         <div class="note" id="assumptionNote"></div>
+        <div class="model-breakdown">
+          <div class="model-breakdown-grid">
+            <div class="mini-stat"><span id="modelHistWeightLabel">歷史訊號權重</span><strong id="modelHistWeight">--</strong></div>
+            <div class="mini-stat"><span id="modelAnchorLabel">Anchor 貢獻</span><strong id="modelAnchor">--</strong></div>
+            <div class="mini-stat"><span id="modelDragLabel">扣費與懲罰</span><strong id="modelDrag">--</strong></div>
+          </div>
+          <div class="note" id="modelMethodNote">模型：--</div>
+        </div>
       </section>
 
       <section class="card allocation-table">
@@ -755,7 +776,7 @@
     </main>
 
     <footer id="footerText">
-      年化報酬率來源：台股使用 FinMind API；美股使用 Stooq 日線資料。
+      長期收益估算：CMA 收斂模型（名目扣費），歷史訊號僅做小比例修正；行情來源：台股 FinMind、美股 Stooq。
     </footer>
   </div>
 
@@ -770,10 +791,12 @@
     })();
     const FX_RATES = { USD: 1, TWD: 0.032, HKD: 0.128, JPY: 0.0068, CNY: 0.14, EUR: 1.08 };
     const RISK_MODELS = {
-      conservative: { returnBias: -0.01, volScale: 0.78, stockTarget: 0.45, bondTarget: 0.4, cashTarget: 0.15 },
-      balanced: { returnBias: 0, volScale: 0.9, stockTarget: 0.65, bondTarget: 0.25, cashTarget: 0.1 },
-      aggressive: { returnBias: 0.015, volScale: 1.05, stockTarget: 0.8, bondTarget: 0.15, cashTarget: 0.05 }
+      conservative: { volScale: 0.78, stockTarget: 0.45, bondTarget: 0.4, cashTarget: 0.15 },
+      balanced: { volScale: 0.9, stockTarget: 0.65, bondTarget: 0.25, cashTarget: 0.1 },
+      aggressive: { volScale: 1.05, stockTarget: 0.8, bondTarget: 0.15, cashTarget: 0.05 }
     };
+    const RETURN_MODEL_CAP = 0.12;
+    const RETURN_MODEL_FLOOR = -0.02;
 
     const rowsEl = document.getElementById('rows');
     const yearsEl = document.getElementById('years');
@@ -793,6 +816,10 @@
     const outputTotalEl = document.getElementById('outputTotal');
     const outputGainEl = document.getElementById('outputGain');
     const assumptionNoteEl = document.getElementById('assumptionNote');
+    const modelHistWeightEl = document.getElementById('modelHistWeight');
+    const modelAnchorEl = document.getElementById('modelAnchor');
+    const modelDragEl = document.getElementById('modelDrag');
+    const modelMethodNoteEl = document.getElementById('modelMethodNote');
     const expertSummaryEl = document.getElementById('expertSummary');
     const expertListEl = document.getElementById('expertList');
     const aiBtnEl = document.getElementById('aiBtn');
@@ -827,7 +854,7 @@
         metaDescription: 'AI 投資組合配置與風險試算工具，支援中英文切換、壓力測試與快照分享。',
         universeLabel: 'Universe: Taiwan + US stocks (API)',
         heroTitle: '輸入台股或美股代碼，快速預估年化收益、波動率與資產成長曲線。',
-        heroSubtitle: '此頁面會即時呼叫市場資料 API 取得近一年報酬。回測與未來績效皆非保證，請勿視為投資建議。',
+        heroSubtitle: '此頁面以 CMA 長期假設為主，搭配歷史訊號收斂與成本懲罰估算長期年化。回測與未來績效皆非保證，請勿視為投資建議。',
         inputCardTitle: '投資條件輸入',
         tableHeadMarket: '市場',
         tableHeadTicker: '代碼',
@@ -868,6 +895,12 @@
         statLabelDd: '最大回撤（模擬）',
         statLabelTotal: '期末資產總額',
         statLabelGain: '累積收益',
+        modelHistWeightLabel: '歷史訊號權重',
+        modelAnchorLabel: 'Anchor 貢獻',
+        modelDragLabel: '扣費與懲罰',
+        modelMethodPrefix: '模型',
+        modelFallbackHint: '後端模型不可用，已切換本地收斂估算。',
+        modelManualOverride: '已啟用手動年化覆寫',
         allocationTitle: '配置優化建議',
         allocationHeadBucket: '資產類別',
         allocationHeadCurrent: '目前占比',
@@ -889,11 +922,11 @@
         qualityLabelLatest: '最新價格日期',
         qualityLabelBase: '基準價格日期',
         qualityLabelCoverage: '資料覆蓋率',
-        qualitySource: '資料來源：台股 FinMind、美股 Stooq。',
+        qualitySource: '行情來源：台股 FinMind、美股 Stooq。',
         snapshotTitle: '決策快照與分享',
         snapshotDescription: '可儲存當下輸入與輸出，並匯出手機友善分享圖片。',
         snapshotEmpty: '尚未儲存快照。',
-        footerText: '年化報酬率來源：台股使用 FinMind API；美股使用 Stooq 日線資料。',
+        footerText: '長期收益估算：CMA 收斂模型（名目扣費），歷史訊號僅做小比例修正；行情來源：台股 FinMind、美股 Stooq。',
         remove: '移除',
         tickerPlaceholderUs: '例：AAPL 或 MSFT',
         tickerPlaceholderTw: '例：2330 或 台積電',
@@ -933,7 +966,7 @@
         metaDescription: 'AI portfolio allocation and risk simulator with bilingual UI, stress testing, and snapshot sharing.',
         universeLabel: 'Universe: Taiwan + US stocks (API)',
         heroTitle: 'Enter Taiwan or US tickers to quickly project annual return, volatility, and growth path.',
-        heroSubtitle: 'This page calls market data APIs in real time for one-year return signals. Backtests and future performance are not guaranteed and are not investment advice.',
+        heroSubtitle: 'This page estimates long-run annual return with a CMA-convergent model, historical-signal shrinkage, and cost penalties. Backtests and future performance are not guaranteed and are not investment advice.',
         inputCardTitle: 'Portfolio Input Settings',
         tableHeadMarket: 'Market',
         tableHeadTicker: 'Ticker',
@@ -974,6 +1007,12 @@
         statLabelDd: 'Max Drawdown (Simulated)',
         statLabelTotal: 'Ending Portfolio Value',
         statLabelGain: 'Cumulative Gain',
+        modelHistWeightLabel: 'Historical Signal Weight',
+        modelAnchorLabel: 'Anchor Contribution',
+        modelDragLabel: 'Fees & Penalties',
+        modelMethodPrefix: 'Model',
+        modelFallbackHint: 'Backend model unavailable. Switched to local convergent estimate.',
+        modelManualOverride: 'Manual annual override is active',
         allocationTitle: 'Allocation Optimization',
         allocationHeadBucket: 'Asset Class',
         allocationHeadCurrent: 'Current Weight',
@@ -995,11 +1034,11 @@
         qualityLabelLatest: 'Latest Price Date',
         qualityLabelBase: 'Base Price Date',
         qualityLabelCoverage: 'Data Coverage',
-        qualitySource: 'Sources: FinMind (TW) and Stooq (US).',
+        qualitySource: 'Market data sources: FinMind (TW) and Stooq (US).',
         snapshotTitle: 'Decision Snapshot & Sharing',
         snapshotDescription: 'Save current inputs and outputs, then export a mobile-friendly share image.',
         snapshotEmpty: 'No snapshot saved yet.',
-        footerText: 'Annual return data source: FinMind API for TW stocks, Stooq daily data for US stocks.',
+        footerText: 'Long-run return model: CMA-convergent (nominal net of fees) with limited historical adjustment; market data sources: FinMind (TW) and Stooq (US).',
         remove: 'Remove',
         tickerPlaceholderUs: 'e.g., AAPL or MSFT',
         tickerPlaceholderTw: 'e.g., 2330 or TSMC',
@@ -1091,6 +1130,9 @@
         statLabelDd: 'statLabelDd',
         statLabelTotal: 'statLabelTotal',
         statLabelGain: 'statLabelGain',
+        modelHistWeightLabel: 'modelHistWeightLabel',
+        modelAnchorLabel: 'modelAnchorLabel',
+        modelDragLabel: 'modelDragLabel',
         allocationTitle: 'allocationTitle',
         allocationHeadBucket: 'allocationHeadBucket',
         allocationHeadCurrent: 'allocationHeadCurrent',
@@ -1123,6 +1165,9 @@
       const currentQualityText = qualityNoteEl.textContent || '';
       if (currentQualityText === i18n.zh.qualitySource || currentQualityText === i18n.en.qualitySource) {
         qualityNoteEl.textContent = t('qualitySource');
+      }
+      if (!modelMethodNoteEl.textContent || modelMethodNoteEl.textContent.includes('--')) {
+        modelMethodNoteEl.textContent = `${t('modelMethodPrefix')}: --`;
       }
       if (!snapshotResultEl.textContent || snapshotResultEl.textContent === i18n.zh.snapshotEmpty || snapshotResultEl.textContent === i18n.en.snapshotEmpty) {
         snapshotResultEl.textContent = t('snapshotEmpty');
@@ -1186,6 +1231,89 @@
       const baseline = 0.14;
       const scaled = Math.abs(expectedReturn) * 1.8;
       return Math.max(0.1, Math.min(0.45, baseline + scaled));
+    }
+
+    function clampNumber(value, lo, hi) {
+      return Math.min(hi, Math.max(lo, value));
+    }
+
+    function classifyAssetClassLocal(detail) {
+      const ticker = String(detail.normalizedTicker || '').trim().toUpperCase();
+      if (!ticker || detail.isCash || ['CASH', 'USD', 'USDT', 'USDC'].includes(ticker)) return 'cash';
+      if (['BND', 'AGG', 'TLT', 'IEF', 'LQD', 'SHY', 'HYG', 'TIP', 'MUB', '00679B', '00865B'].includes(ticker)) return 'bond';
+      return 'equity';
+    }
+
+    function computeHistoricalWeightLocal(years) {
+      const raw = 0.55 * Math.exp(-(years - 1) / 8);
+      return clampNumber(raw, 0.05, 0.55);
+    }
+
+    function computeExpectedReturnFallback(profile, details, coverage) {
+      const histWeight = computeHistoricalWeightLocal(profile.horizonYears);
+      const safeCoverage = clampNumber(Number(coverage || 0), 0, 1);
+
+      let anchorReturn = 0;
+      let historicalSignalReturn = 0;
+      let grossReturn = 0;
+      let maxWeight = 0;
+
+      details.forEach((item) => {
+        const w = Number(item.weight || 0);
+        maxWeight = Math.max(maxWeight, w);
+        const assetClass = classifyAssetClassLocal(item);
+
+        let anchor = 0.07;
+        if (assetClass === 'cash') anchor = 0.015;
+        else if (assetClass === 'bond') anchor = 0.03;
+        else if ((item.market || '').toUpperCase() === 'US') anchor = 0.065;
+
+        let lo = -0.2;
+        let hi = 0.25;
+        if (assetClass === 'bond') { lo = -0.05; hi = 0.08; }
+        if (assetClass === 'cash') { lo = 0; hi = 0.03; }
+        const hist = clampNumber(Number(item.expectedReturn || 0), lo, hi);
+        const blended = (1 - histWeight) * anchor + histWeight * hist;
+
+        anchorReturn += w * anchor;
+        historicalSignalReturn += w * hist;
+        grossReturn += w * blended;
+      });
+
+      const feeDrag = 0.008;
+      const concentrationPenalty = clampNumber((maxWeight - 0.35) * 0.04, 0, 0.012);
+      const coveragePenalty = safeCoverage < 0.8 ? (0.8 - safeCoverage) * 0.02 : 0;
+      const totalDrag = feeDrag + concentrationPenalty + coveragePenalty;
+      const expectedReturn = clampNumber(grossReturn - totalDrag, RETURN_MODEL_FLOOR, RETURN_MODEL_CAP);
+
+      return {
+        expected_return: expectedReturn,
+        components: {
+          anchor_return: anchorReturn,
+          historical_signal_return: historicalSignalReturn,
+          historical_weight: histWeight,
+          fee_drag: feeDrag,
+          concentration_penalty: concentrationPenalty,
+          coverage_penalty: coveragePenalty,
+          total_drag: totalDrag
+        },
+        method: 'cma_convergent_fallback_v1'
+      };
+    }
+
+    function renderExpectedReturnBreakdown(model) {
+      const components = model?.components || {};
+      modelHistWeightEl.textContent = `${((components.historical_weight || 0) * 100).toFixed(1)}%`;
+      modelAnchorEl.textContent = `${((components.anchor_return || 0) * 100).toFixed(2)}%`;
+      modelDragEl.textContent = `-${((components.total_drag || 0) * 100).toFixed(2)}%`;
+      modelMethodNoteEl.textContent = `${t('modelMethodPrefix')}: ${model?.method || '--'}`;
+    }
+
+    function clearExpectedReturnBreakdown() {
+      modelHistWeightEl.textContent = '--';
+      modelAnchorEl.textContent = '--';
+      modelDragEl.textContent = '--';
+      modelMethodNoteEl.textContent = `${t('modelMethodPrefix')}: --`;
     }
 
     function getTickerPlaceholder(market) {
@@ -1263,6 +1391,24 @@
       }
       annualReturnCache.set(cacheKey, { payload, expiresAt: Date.now() + RETURN_CACHE_TTL_MS });
       return payload;
+    }
+
+    async function fetchExpectedReturn(payload, signal) {
+      const response = await fetch(`${API_BASE_URL}/api/v1/portfolio/expected-return`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal
+      });
+      let parsed = null;
+      try { parsed = await response.json(); } catch (_) { parsed = null; }
+      if (!response.ok) {
+        const err = new Error(parsed?.message || 'Expected return model failed.');
+        err.status = response.status;
+        err.payload = parsed;
+        throw err;
+      }
+      return parsed;
     }
 
     async function fetchAiAdvice(payload, signal) {
@@ -1445,6 +1591,7 @@
       qualityNoteEl.textContent = nonCash.length
         ? t('coveredAssets')(priced.length, nonCash.length)
         : t('cashOnlyCoverage');
+      return coverage;
     }
 
     function buildRiskPositions(details) {
@@ -1918,6 +2065,7 @@
       if (!rows.length) {
         outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
         drawChart([0, 1]); assumptionNoteEl.textContent = t('emptyRows'); expertSummaryEl.textContent = '--'; expertListEl.innerHTML = ''; allocationRowsEl.innerHTML = '';
+        clearExpectedReturnBreakdown();
         clearHealthCheck(t('invalidPosition'));
         clearStressTest(t('invalidPosition'));
         clearDataQuality(t('invalidDataQuery'));
@@ -1989,6 +2137,7 @@
       if (invalidRows.length) {
         outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
         drawChart([0, 1]);
+        clearExpectedReturnBreakdown();
         expertSummaryEl.textContent = '--';
         expertListEl.innerHTML = '';
         allocationRowsEl.innerHTML = '';
@@ -2003,6 +2152,7 @@
       if (totalUsd === 0) {
         outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
         drawChart([0, 1]); assumptionNoteEl.textContent = t('amountPositive'); expertSummaryEl.textContent = '--'; expertListEl.innerHTML = ''; allocationRowsEl.innerHTML = '';
+        clearExpectedReturnBreakdown();
         clearHealthCheck(t('amountPositive'));
         clearStressTest(t('amountPositive'));
         clearDataQuality(t('amountPositive'));
@@ -2011,13 +2161,49 @@
       }
 
       details.forEach(item => { item.weight = item.amountUsd / totalUsd; });
-      let weightedReturn = 0, weightedVar = 0;
-      details.forEach(item => { weightedReturn += item.weight * item.expectedReturn; weightedVar += Math.pow(item.weight * item.volatility, 2); });
-
-      let portfolioReturn = weightedReturn + risk.returnBias;
-      if (overrideToggleEl.checked) portfolioReturn = Math.max(-0.95, Math.min(0.5, Number(overrideEl.value) / 100));
-      portfolioReturn = Math.max(-0.95, Math.min(0.5, portfolioReturn));
+      let weightedVar = 0;
+      details.forEach(item => { weightedVar += Math.pow(item.weight * item.volatility, 2); });
       const portfolioVol = Math.sqrt(weightedVar) * risk.volScale;
+      const coverage = renderDataQuality(details);
+
+      const expectedReturnPayload = {
+        profile: {
+          age: profile.age,
+          riskLevel: profile.riskLevel,
+          taxRegion: profile.taxRegion,
+          horizonYears: profile.horizonYears
+        },
+        positions: details.map(item => ({
+          ticker: item.normalizedTicker || '',
+          market: item.market || 'TW',
+          weight: item.weight,
+          expectedReturn: item.expectedReturn,
+          isCash: Boolean(item.isCash)
+        })),
+        coverage
+      };
+
+      let expectedReturnModel = computeExpectedReturnFallback(profile, details, coverage);
+      let expectedReturnModelFallback = true;
+      try {
+        expectedReturnModel = await fetchExpectedReturn(expectedReturnPayload, activeReturnController.signal);
+        expectedReturnModelFallback = false;
+      } catch (err) {
+        if (err?.name === 'AbortError') return;
+      }
+      if (runId !== latestCalcRun || activeReturnController.signal.aborted) return;
+
+      renderExpectedReturnBreakdown(expectedReturnModel);
+      if (expectedReturnModelFallback) {
+        modelMethodNoteEl.textContent = `${modelMethodNoteEl.textContent} · ${t('modelFallbackHint')}`;
+      }
+
+      let portfolioReturn = Number(expectedReturnModel?.expected_return || 0);
+      portfolioReturn = clampNumber(portfolioReturn, RETURN_MODEL_FLOOR, RETURN_MODEL_CAP);
+      if (overrideToggleEl.checked) {
+        portfolioReturn = Math.max(-0.95, Math.min(0.5, Number(overrideEl.value) / 100));
+        modelMethodNoteEl.textContent = `${modelMethodNoteEl.textContent} · ${t('modelManualOverride')}`;
+      }
 
       const finalUsd = totalUsd * Math.pow(1 + portfolioReturn, years);
       const gainUsd = finalUsd - totalUsd;
@@ -2036,7 +2222,6 @@
 
       const suggestions = suggestAllocation(details, profile);
       renderAllocation(suggestions);
-      renderDataQuality(details);
 
       const healthPayload = buildHealthPayload(profile, details, portfolioReturn, portfolioVol, dd);
       const stressPayload = buildStressPayload(details);
@@ -2116,8 +2301,20 @@
 
       scenarioIdEl.textContent = `Scenario: ${seed}`;
       const resolved = details.filter(d => d.resolvedStockName).map(d => `${d.normalizedTicker} ${d.resolvedStockName}`);
-      const resolvedNote = resolved.length ? `已解析：${resolved.join('、')}` : '無股票代碼輸入。';
-      assumptionNoteEl.textContent = `估算依據：台股(FinMind) / 美股(Stooq) 近一年報酬 + ${profile.riskLevel}風險模型 + ${profile.taxRegion}稅務地區假設 + 靜態匯率；${resolvedNote}`;
+      const components = expectedReturnModel?.components || {};
+      const resolvedNote = currentLanguage === 'en'
+        ? (resolved.length ? `Resolved: ${resolved.join(', ')}` : 'No stock ticker input.')
+        : (resolved.length ? `已解析：${resolved.join('、')}` : '無股票代碼輸入。');
+      if (currentLanguage === 'en') {
+        assumptionNoteEl.textContent =
+          `Method ${expectedReturnModel?.method || '--'} · hist-weight ${(components.historical_weight * 100 || 0).toFixed(1)}% · ` +
+          `anchor ${(components.anchor_return * 100 || 0).toFixed(2)}% · total drag ${((components.total_drag || 0) * 100).toFixed(2)}%. ` +
+          `${resolvedNote}`;
+      } else {
+        assumptionNoteEl.textContent =
+          `估算口徑：${expectedReturnModel?.method || '--'}（CMA 收斂）· 歷史權重 ${(components.historical_weight * 100 || 0).toFixed(1)}% · ` +
+          `anchor ${(components.anchor_return * 100 || 0).toFixed(2)}% · 扣費與懲罰 ${((components.total_drag || 0) * 100).toFixed(2)}%；${resolvedNote}`;
+      }
 
       latestSnapshotDraft = {
         scenario_seed: seed,
@@ -2169,6 +2366,7 @@
       clearHealthCheck(t('waitResult'));
       clearStressTest(t('waitResult'));
       clearDataQuality(t('qualitySource'));
+      clearExpectedReturnBreakdown();
       const existingSnapshots = readSnapshots();
       snapshotResultEl.textContent = existingSnapshots.length
         ? t('loadedSnapshots')(existingSnapshots.length)

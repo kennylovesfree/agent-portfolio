@@ -11,7 +11,7 @@ from logic import us_stock_return_service as us_service_module
 
 try:
     from fastapi.testclient import TestClient
-    from logic.api_server import AdviceConfigError, app
+    from logic.api_server import AdviceConfigError, ExpectedReturnInputError, app
 
     HAS_FASTAPI = True
 except ModuleNotFoundError:
@@ -205,6 +205,16 @@ class ApiServerTests(unittest.TestCase):
             "portfolio": {"expectedReturn": 0.1, "volatility": 0.24, "maxDrawdown": 0.31},
         }
 
+    def _expected_return_payload(self) -> dict:
+        return {
+            "profile": {"age": 35, "riskLevel": "balanced", "taxRegion": "TW", "horizonYears": 10},
+            "positions": [
+                {"ticker": "AAPL", "market": "US", "weight": 0.7, "expectedReturn": 0.14, "isCash": False},
+                {"ticker": "BND", "market": "US", "weight": 0.3, "expectedReturn": 0.03, "isCash": False},
+            ],
+            "coverage": 1.0,
+        }
+
     def test_api_portfolio_health_check_success(self) -> None:
         response = self.client.post("/api/v1/portfolio/health-check", json=self._portfolio_payload())
         self.assertEqual(response.status_code, 200)
@@ -228,6 +238,45 @@ class ApiServerTests(unittest.TestCase):
         self.assertEqual(response.status_code, 500)
         body = response.json()
         self.assertEqual(body["error_code"], "RISK_ENGINE_ERROR")
+
+    def test_api_portfolio_expected_return_success(self) -> None:
+        fake_result = {
+            "expected_return": 0.071,
+            "components": {
+                "anchor_return": 0.06,
+                "historical_signal_return": 0.08,
+                "historical_weight": 0.3,
+                "fee_drag": 0.008,
+                "concentration_penalty": 0.0,
+                "coverage_penalty": 0.0,
+                "total_drag": 0.008,
+            },
+            "per_position": [],
+            "method": "cma_convergent_v1",
+        }
+        with patch("logic.api_server.estimate_expected_return", return_value=fake_result):
+            response = self.client.post("/api/v1/portfolio/expected-return", json=self._expected_return_payload())
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["method"], "cma_convergent_v1")
+        self.assertIn("expected_return", body)
+
+    def test_api_portfolio_expected_return_invalid_input_returns_422(self) -> None:
+        with patch(
+            "logic.api_server.estimate_expected_return",
+            side_effect=ExpectedReturnInputError("invalid payload"),
+        ):
+            response = self.client.post("/api/v1/portfolio/expected-return", json=self._expected_return_payload())
+        self.assertEqual(response.status_code, 422)
+        body = response.json()
+        self.assertEqual(body["error_code"], "EXPECTED_RETURN_INVALID_INPUT")
+
+    def test_api_portfolio_expected_return_engine_error_returns_500(self) -> None:
+        with patch("logic.api_server.estimate_expected_return", side_effect=RuntimeError("boom")):
+            response = self.client.post("/api/v1/portfolio/expected-return", json=self._expected_return_payload())
+        self.assertEqual(response.status_code, 500)
+        body = response.json()
+        self.assertEqual(body["error_code"], "EXPECTED_RETURN_ENGINE_ERROR")
 
     def test_api_portfolio_stress_test_success(self) -> None:
         payload = {
