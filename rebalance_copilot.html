@@ -922,6 +922,7 @@
         compLabelDiversification: '分散分數',
         compLabelVolatility: '波動分數',
         compLabelDrawdown: '回撤分數',
+        healthBandPrefix: '風險等級',
         stressTitle: '標準壓力情境測試',
         stressHeadScenario: '情境',
         stressHeadPnl: '組合損益 (USD)',
@@ -947,7 +948,13 @@
         invalidDataQuery: '請先完成有效行情查詢。',
         amountPositive: '投資金額需大於 0。',
         waitResult: '等待試算結果。',
-        stressMetaEmpty: 'worst-case: --；survival days: --',
+        stressMetaEmpty: '最差情境：--；存活天數：--',
+        stressMetaWorstCase: '最差情境',
+        stressMetaSurvivalDays: '存活天數',
+        riskLabelLow: '低',
+        riskLabelMedium: '中',
+        riskLabelHigh: '高',
+        riskLabelExtreme: '極高',
         noRiskFlags: '目前無顯著風險旗標。',
         noScenario: '無情境資料',
         coveredAssets: (priced, nonCash) => `已覆蓋 ${priced}/${nonCash} 檔非現金標的。`,
@@ -1038,6 +1045,7 @@
         compLabelDiversification: 'Diversification Score',
         compLabelVolatility: 'Volatility Score',
         compLabelDrawdown: 'Drawdown Score',
+        healthBandPrefix: 'Risk Level',
         stressTitle: 'Standard Stress Scenarios',
         stressHeadScenario: 'Scenario',
         stressHeadPnl: 'Portfolio PnL (USD)',
@@ -1063,7 +1071,13 @@
         invalidDataQuery: 'Please complete valid market data queries first.',
         amountPositive: 'Investment amount must be greater than 0.',
         waitResult: 'Waiting for calculation results.',
-        stressMetaEmpty: 'worst-case: --; survival days: --',
+        stressMetaEmpty: 'Worst case: --; Survival days: --',
+        stressMetaWorstCase: 'Worst case',
+        stressMetaSurvivalDays: 'Survival days',
+        riskLabelLow: 'Low',
+        riskLabelMedium: 'Medium',
+        riskLabelHigh: 'High',
+        riskLabelExtreme: 'Extreme',
         noRiskFlags: 'No significant risk flags detected.',
         noScenario: 'No scenario data',
         coveredAssets: (priced, nonCash) => `Covered ${priced}/${nonCash} non-cash assets.`,
@@ -1566,6 +1580,17 @@
       stressMetaEl.textContent = t('stressMetaEmpty');
     }
 
+    function formatStressRiskLabel(label) {
+      const raw = String(label || '').trim();
+      if (!raw) return '--';
+      const normalized = raw.toLowerCase();
+      if (normalized === 'low' || normalized === '低') return t('riskLabelLow');
+      if (normalized === 'medium' || normalized === 'med' || normalized === '中') return t('riskLabelMedium');
+      if (normalized === 'high' || normalized === '高') return t('riskLabelHigh');
+      if (normalized === 'extreme' || normalized === 'very high' || normalized === '極高') return t('riskLabelExtreme');
+      return raw;
+    }
+
     function clearDataQuality(message = t('qualitySource')) {
       qualityLatestEl.textContent = '--';
       qualityBaseEl.textContent = '--';
@@ -1576,7 +1601,7 @@
     function renderHealthCheck(payload) {
       healthScoreEl.textContent = String(payload.health_score ?? '--');
       const band = payload.risk_band || '--';
-      healthBandEl.textContent = `risk: ${band}`;
+      healthBandEl.textContent = `${t('healthBandPrefix')}: ${formatStressRiskLabel(band)}`;
       compConcentrationEl.textContent = payload?.components?.concentration_score ?? '--';
       compDiversificationEl.textContent = payload?.components?.diversification_score ?? '--';
       compVolatilityEl.textContent = payload?.components?.volatility_score ?? '--';
@@ -1590,11 +1615,11 @@
     function renderStressTest(payload) {
       const rows = payload?.scenario_results || [];
       stressRowsEl.innerHTML = rows.length
-        ? rows.map(row => `<div class="table-row"><div>${row.scenario_id}</div><div>${formatCurrency(row.portfolio_pnl_usd || 0, 'USD')}</div><div>${((row.drawdown_est || 0) * 100).toFixed(2)}%</div><div>${row.risk_label || '--'}</div></div>`).join('')
+        ? rows.map(row => `<div class="table-row"><div>${row.scenario_id}</div><div>${formatCurrency(row.portfolio_pnl_usd || 0, 'USD')}</div><div>${((row.drawdown_est || 0) * 100).toFixed(2)}%</div><div>${formatStressRiskLabel(row.risk_label)}</div></div>`).join('')
         : `<div class="table-row"><div>${t('noScenario')}</div><div>--</div><div>--</div><div>--</div></div>`;
       const worst = payload?.worst_case;
       stressMetaEl.textContent = worst
-        ? `worst-case: ${worst.scenario_id} (${formatCurrency(worst.portfolio_pnl_usd || 0, 'USD')})${currentLanguage === 'en' ? ';' : '；'} survival days: ${payload?.survival_days_est ?? '--'}`
+        ? `${t('stressMetaWorstCase')}: ${worst.scenario_id} (${formatCurrency(worst.portfolio_pnl_usd || 0, 'USD')})${currentLanguage === 'en' ? ';' : '；'} ${t('stressMetaSurvivalDays')}: ${payload?.survival_days_est ?? '--'}`
         : t('stressMetaEmpty');
     }
 

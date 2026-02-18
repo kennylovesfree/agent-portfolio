@@ -77,7 +77,7 @@
     .orb {
       position: absolute;
       border-radius: 999px;
-      opacity: 0.55;
+      opacity: 0.4;
       mix-blend-mode: screen;
       animation: float 12s ease-in-out infinite;
       pointer-events: none;
@@ -107,9 +107,24 @@
       50% { transform: translateY(18px) translateX(-12px); }
     }
 
+    .particle-layer {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.5;
+    }
+
+    #particle-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
     .shell {
       position: relative;
-      z-index: 1;
+      z-index: 2;
     }
 
     header {
@@ -491,6 +506,7 @@
     }
 
     @media (max-width: 960px) {
+      .particle-layer { opacity: 0.34; }
       .top-nav,
       .top-actions .btn.primary { display: none; }
       .menu-btn { display: inline-flex; align-items: center; justify-content: center; }
@@ -521,7 +537,9 @@
 
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
+      .particle-layer { display: none; }
       .orb,
+      .particle-layer,
       body.page-enter main,
       .btn,
       .top-nav a,
@@ -538,6 +556,9 @@
   <div class="page">
     <div class="orb one"></div>
     <div class="orb two"></div>
+    <div class="particle-layer" aria-hidden="true">
+      <canvas id="particle-canvas"></canvas>
+    </div>
 
     <div class="shell">
       <header id="top" aria-label="Main navigation">
@@ -800,7 +821,15 @@
     const state = {
       lang: "zh",
       reducedMotion: false,
-      observer: null
+      observer: null,
+      particleEnabled: false,
+      particleCanvas: null,
+      particleCtx: null,
+      particleRafId: 0,
+      particleItems: [],
+      particlePointer: { x: 0, y: 0, active: false },
+      particleMeta: { width: 0, height: 0, dpr: 1, lineDistance: 110, radius: 130, lowPower: false },
+      particleHandlers: null
     };
 
     const mapElements = () => ({
@@ -945,6 +974,185 @@
       applyLanguage(saved === "en" ? "en" : "zh");
     }
 
+    function destroyParticleField() {
+      if (state.particleRafId) {
+        cancelAnimationFrame(state.particleRafId);
+        state.particleRafId = 0;
+      }
+      if (state.particleHandlers) {
+        window.removeEventListener("resize", state.particleHandlers.onResize);
+        window.removeEventListener("mousemove", state.particleHandlers.onMouseMove);
+        window.removeEventListener("mouseleave", state.particleHandlers.onMouseLeave);
+        document.removeEventListener("visibilitychange", state.particleHandlers.onVisibility);
+        state.particleHandlers = null;
+      }
+      if (state.particleCtx) {
+        state.particleCtx.clearRect(0, 0, state.particleMeta.width, state.particleMeta.height);
+      }
+      state.particleEnabled = false;
+      state.particleItems = [];
+      state.particlePointer.active = false;
+    }
+
+    function initParticleField() {
+      if (state.reducedMotion || state.particleEnabled) return;
+      const canvas = document.getElementById("particle-canvas");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const isMobile = window.matchMedia("(max-width: 960px)").matches;
+      const cpu = Number(navigator.hardwareConcurrency || 8);
+      const memory = Number(navigator.deviceMemory || 8);
+      const lowPower = cpu <= 4 || memory <= 4;
+
+      state.particleCanvas = canvas;
+      state.particleCtx = ctx;
+      state.particleMeta.lowPower = lowPower;
+      state.particleEnabled = true;
+
+      const createParticle = (width, height) => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.32,
+        vy: (Math.random() - 0.5) * 0.32,
+        size: 0.65 + Math.random() * 1.25,
+        tone: Math.random() > 0.45 ? "blue" : "cyan"
+      });
+
+      const computeCount = (width, height) => {
+        const area = width * height;
+        const density = isMobile ? 0.00004 : 0.00005;
+        const min = isMobile ? 24 : 70;
+        const max = isMobile ? 45 : 120;
+        let count = Math.round(area * density);
+        if (lowPower) count = Math.round(count * 0.65);
+        return Math.max(min, Math.min(max, count));
+      };
+
+      const setupCanvas = () => {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const width = Math.max(window.innerWidth, 320);
+        const height = Math.max(window.innerHeight, 420);
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+        state.particleMeta.width = width;
+        state.particleMeta.height = height;
+        state.particleMeta.dpr = dpr;
+        state.particleMeta.lineDistance = Math.max(90, Math.min(130, Math.floor(Math.min(width, height) * 0.12)));
+        state.particleMeta.radius = isMobile ? 110 : 136;
+        const targetCount = computeCount(width, height);
+        if (state.particleItems.length > targetCount) {
+          state.particleItems.length = targetCount;
+        }
+        while (state.particleItems.length < targetCount) {
+          state.particleItems.push(createParticle(width, height));
+        }
+      };
+
+      const animate = () => {
+        if (!state.particleEnabled || document.hidden) return;
+        const { width, height, lineDistance, radius } = state.particleMeta;
+        ctx.clearRect(0, 0, width, height);
+
+        for (let i = 0; i < state.particleItems.length; i += 1) {
+          const p = state.particleItems[i];
+          if (state.particlePointer.active) {
+            const dx = p.x - state.particlePointer.x;
+            const dy = p.y - state.particlePointer.y;
+            const distSq = dx * dx + dy * dy;
+            const rSq = radius * radius;
+            if (distSq > 0 && distSq < rSq) {
+              const dist = Math.sqrt(distSq);
+              const influence = (1 - dist / radius) * (state.particleMeta.lowPower ? 0.012 : 0.018);
+              p.vx += (dx / dist) * influence;
+              p.vy += (dy / dist) * influence;
+            }
+          }
+
+          p.vx *= 0.988;
+          p.vy *= 0.988;
+          const speedCap = 0.85;
+          p.vx = Math.max(-speedCap, Math.min(speedCap, p.vx));
+          p.vy = Math.max(-speedCap, Math.min(speedCap, p.vy));
+          p.x += p.vx;
+          p.y += p.vy;
+
+          if (p.x < -6) p.x = width + 6;
+          if (p.x > width + 6) p.x = -6;
+          if (p.y < -6) p.y = height + 6;
+          if (p.y > height + 6) p.y = -6;
+        }
+
+        for (let i = 0; i < state.particleItems.length; i += 1) {
+          const a = state.particleItems[i];
+          for (let j = i + 1; j < state.particleItems.length; j += 1) {
+            const b = state.particleItems[j];
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > lineDistance) continue;
+            const alpha = (1 - dist / lineDistance) * 0.18;
+            const hue = a.tone === "blue" || b.tone === "blue" ? "124, 156, 255" : "106, 231, 208";
+            ctx.strokeStyle = `rgba(${hue}, ${alpha.toFixed(4)})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+          }
+        }
+
+        for (let i = 0; i < state.particleItems.length; i += 1) {
+          const p = state.particleItems[i];
+          const color = p.tone === "blue" ? "124, 156, 255" : "106, 231, 208";
+          ctx.fillStyle = `rgba(${color}, 0.62)`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        state.particleRafId = requestAnimationFrame(animate);
+      };
+
+      const onResize = () => {
+        setupCanvas();
+      };
+      const onMouseMove = (event) => {
+        const rect = canvas.getBoundingClientRect();
+        state.particlePointer.x = event.clientX - rect.left;
+        state.particlePointer.y = event.clientY - rect.top;
+        state.particlePointer.active = true;
+      };
+      const onMouseLeave = () => {
+        state.particlePointer.active = false;
+      };
+      const onVisibility = () => {
+        if (!state.particleEnabled) return;
+        if (document.hidden) {
+          if (state.particleRafId) {
+            cancelAnimationFrame(state.particleRafId);
+            state.particleRafId = 0;
+          }
+          return;
+        }
+        if (!state.particleRafId) {
+          state.particleRafId = requestAnimationFrame(animate);
+        }
+      };
+
+      state.particleHandlers = { onResize, onMouseMove, onMouseLeave, onVisibility };
+      window.addEventListener("resize", onResize, { passive: true });
+      window.addEventListener("mousemove", onMouseMove, { passive: true });
+      window.addEventListener("mouseleave", onMouseLeave, { passive: true });
+      document.addEventListener("visibilitychange", onVisibility);
+
+      setupCanvas();
+      state.particleRafId = requestAnimationFrame(animate);
+    }
+
     function initSmoothScroll() {
       const drawer = document.getElementById("mobile-drawer");
       const menuBtn = document.getElementById("menu-btn");
@@ -1032,8 +1240,15 @@
 
     function initReducedMotionHandling() {
       const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+      let initialized = false;
       const apply = () => {
+        const previous = state.reducedMotion;
         state.reducedMotion = mq.matches;
+        if (initialized && previous !== state.reducedMotion) {
+          if (state.reducedMotion) destroyParticleField();
+          else initParticleField();
+        }
+        initialized = true;
       };
       apply();
       mq.addEventListener("change", apply);
@@ -1056,6 +1271,7 @@
 
     function boot() {
       initReducedMotionHandling();
+      initParticleField();
       initI18n();
       initSmoothScroll();
       initActiveNavObserver();
