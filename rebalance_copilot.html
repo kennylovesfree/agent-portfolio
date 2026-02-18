@@ -1258,10 +1258,41 @@
       return normalized;
     }
 
-    function estimateVolFromReturn(expectedReturn) {
-      const baseline = 0.14;
-      const scaled = Math.abs(expectedReturn) * 1.8;
-      return Math.max(0.1, Math.min(0.45, baseline + scaled));
+    function classifyAssetClassForRisk(ticker, market = 'TW', isCash = false) {
+      const normalizedTicker = String(ticker || '').trim().toUpperCase();
+      if (isCash || !normalizedTicker || ['CASH', 'USD', 'USDT', 'USDC'].includes(normalizedTicker)) return 'cash';
+      if (['BND', 'AGG', 'TLT', 'IEF', 'LQD', 'SHY', 'HYG', 'TIP', 'MUB', '00679B', '00865B'].includes(normalizedTicker)) return 'bond';
+      return 'equity';
+    }
+
+    function estimateAssetVolatility({ market = 'TW', ticker = '', expectedReturn = 0, isCash = false }) {
+      const assetClass = classifyAssetClassForRisk(ticker, market, isCash);
+      const normalizedMarket = String(market || 'TW').toUpperCase();
+
+      let anchorVol = 0.2;
+      let anchorReturn = normalizedMarket === 'US' ? 0.065 : 0.07;
+      let minVol = 0.12;
+      let maxVol = 0.35;
+
+      if (assetClass === 'bond') {
+        anchorVol = 0.07;
+        anchorReturn = 0.03;
+        minVol = 0.04;
+        maxVol = 0.12;
+      } else if (assetClass === 'cash') {
+        anchorVol = 0.012;
+        anchorReturn = 0.015;
+        minVol = 0.005;
+        maxVol = 0.03;
+      } else if (normalizedMarket === 'TW') {
+        anchorVol = 0.22;
+      } else if (normalizedMarket === 'US') {
+        anchorVol = 0.18;
+      }
+
+      const rawSignal = (Number(expectedReturn || 0) - anchorReturn) * 0.35;
+      const boundedSignal = clampNumber(rawSignal, -0.04, 0.04);
+      return clampNumber(anchorVol + boundedSignal, minVol, maxVol);
     }
 
     function clampNumber(value, lo, hi) {
@@ -1591,6 +1622,37 @@
       return raw;
     }
 
+    function formatScenarioIdLabel(scenarioId) {
+      const raw = String(scenarioId || '').trim();
+      if (!raw) return '--';
+      const normalized = raw.toUpperCase();
+      const map = {
+        'GLOBAL_EQUITY_-15': {
+          zh: '全球股市 -15%',
+          en: 'Global Equity -15%'
+        },
+        'RATE_SHOCK_BOND_-8': {
+          zh: '利率衝擊（債券 -8%）',
+          en: 'Rate Shock (Bond -8%)'
+        }
+      };
+      if (map[normalized]) return map[normalized][currentLanguage] || map[normalized].zh;
+
+      const equityMatch = normalized.match(/^GLOBAL_EQUITY_(-?\d+(?:\.\d+)?)$/);
+      if (equityMatch) {
+        const pct = equityMatch[1];
+        return currentLanguage === 'en' ? `Global Equity ${pct}%` : `全球股市 ${pct}%`;
+      }
+
+      const bondMatch = normalized.match(/^RATE_SHOCK_BOND_(-?\d+(?:\.\d+)?)$/);
+      if (bondMatch) {
+        const pct = bondMatch[1];
+        return currentLanguage === 'en' ? `Rate Shock (Bond ${pct}%)` : `利率衝擊（債券 ${pct}%）`;
+      }
+
+      return raw.replaceAll('_', ' ');
+    }
+
     function clearDataQuality(message = t('qualitySource')) {
       qualityLatestEl.textContent = '--';
       qualityBaseEl.textContent = '--';
@@ -1615,11 +1677,11 @@
     function renderStressTest(payload) {
       const rows = payload?.scenario_results || [];
       stressRowsEl.innerHTML = rows.length
-        ? rows.map(row => `<div class="table-row"><div>${row.scenario_id}</div><div>${formatCurrency(row.portfolio_pnl_usd || 0, 'USD')}</div><div>${((row.drawdown_est || 0) * 100).toFixed(2)}%</div><div>${formatStressRiskLabel(row.risk_label)}</div></div>`).join('')
+        ? rows.map(row => `<div class="table-row"><div>${formatScenarioIdLabel(row.scenario_id)}</div><div>${formatCurrency(row.portfolio_pnl_usd || 0, 'USD')}</div><div>${((row.drawdown_est || 0) * 100).toFixed(2)}%</div><div>${formatStressRiskLabel(row.risk_label)}</div></div>`).join('')
         : `<div class="table-row"><div>${t('noScenario')}</div><div>--</div><div>--</div><div>--</div></div>`;
       const worst = payload?.worst_case;
       stressMetaEl.textContent = worst
-        ? `${t('stressMetaWorstCase')}: ${worst.scenario_id} (${formatCurrency(worst.portfolio_pnl_usd || 0, 'USD')})${currentLanguage === 'en' ? ';' : '；'} ${t('stressMetaSurvivalDays')}: ${payload?.survival_days_est ?? '--'}`
+        ? `${t('stressMetaWorstCase')}: ${formatScenarioIdLabel(worst.scenario_id)} (${formatCurrency(worst.portfolio_pnl_usd || 0, 'USD')})${currentLanguage === 'en' ? ';' : '；'} ${t('stressMetaSurvivalDays')}: ${payload?.survival_days_est ?? '--'}`
         : t('stressMetaEmpty');
     }
 
@@ -1941,6 +2003,26 @@
     }
     function maxDrawdown(series) { let peak = series[0]; let maxDD = 0; series.forEach(val => { if (val > peak) peak = val; const dd = peak ? (peak - val) / peak : 0; if (dd > maxDD) maxDD = dd; }); return maxDD; }
 
+    function percentile(values, q) {
+      if (!values.length) return 0;
+      const sorted = values.slice().sort((a, b) => a - b);
+      const idx = (sorted.length - 1) * clampNumber(q, 0, 1);
+      const lo = Math.floor(idx);
+      const hi = Math.ceil(idx);
+      if (lo === hi) return sorted[lo];
+      const ratio = idx - lo;
+      return sorted[lo] * (1 - ratio) + sorted[hi] * ratio;
+    }
+
+    function estimateDrawdownBySimulation(initial, years, mu, sigma, seed, paths = 120) {
+      const drawdowns = [];
+      for (let i = 0; i < paths; i += 1) {
+        const path = simulatePath(initial, years, mu, sigma, seed + i * 17);
+        drawdowns.push(maxDrawdown(path));
+      }
+      return percentile(drawdowns, 0.6);
+    }
+
     function computeSuggestedTargets(profile) {
       const base = RISK_MODELS[profile.riskLevel] || RISK_MODELS.balanced;
       const ageAdj = profile.age >= 55 ? -0.08 : profile.age <= 30 ? 0.05 : 0;
@@ -2171,7 +2253,12 @@
             normalizedTicker: apiData.resolved_stock_id,
             resolvedStockName: apiData.resolved_stock_name,
             expectedReturn,
-            volatility: estimateVolFromReturn(expectedReturn),
+            volatility: estimateAssetVolatility({
+              market: row.market,
+              ticker: apiData.resolved_stock_id,
+              expectedReturn,
+              isCash: false
+            }),
             isCash: false,
             priceDateLatest: apiData.price_date_latest || null,
             priceDateBase: apiData.price_date_base || null
@@ -2278,7 +2365,7 @@
       const overrideState = { enabled: overrideToggleEl.checked, value: Number(overrideEl.value) };
       const seed = seedFromScenario(profile, rows, years, displayCurrency, overrideState);
       const path = simulatePath(totalUsd, years, portfolioReturn, portfolioVol, seed);
-      const dd = maxDrawdown(path);
+      const dd = estimateDrawdownBySimulation(totalUsd, years, portfolioReturn, portfolioVol, seed);
       outputDDEl.textContent = `${(dd * 100).toFixed(2)}%`;
       outputTotalEl.textContent = formatCurrency(finalUsd / fxOut, displayCurrency);
       outputGainEl.textContent = formatCurrency(gainUsd / fxOut, displayCurrency);
