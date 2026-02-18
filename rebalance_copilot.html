@@ -307,6 +307,125 @@
       overflow: hidden;
     }
 
+    .chart-meta {
+      margin-top: 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .legend-dot.optimistic { background: #63dfbf; }
+    .legend-dot.base { background: #f0c86a; }
+    .legend-dot.pessimistic { background: #ff9a7a; }
+
+    .chart-end {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chart-end-title {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .chart-end-pills {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .end-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .end-pill strong {
+      color: var(--ink);
+      font-size: 12px;
+      letter-spacing: 0.2px;
+    }
+
+    .chart-tooltip {
+      position: absolute;
+      pointer-events: none;
+      min-width: 190px;
+      max-width: 240px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(7, 12, 20, 0.9);
+      padding: 10px 12px;
+      color: var(--ink);
+      box-shadow: 0 14px 36px rgba(5, 10, 16, 0.5);
+      font-size: 12px;
+      line-height: 1.45;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 140ms ease, transform 140ms ease;
+      z-index: 2;
+    }
+
+    .chart-tooltip.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .chart-tooltip .time {
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+
+    .chart-tooltip .line {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 2px 0;
+    }
+
+    .chart-tooltip .line .key {
+      color: var(--muted);
+    }
+
+    .chart-tooltip .line .val {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
     canvas {
       width: 100%;
       height: 100%;
@@ -703,8 +822,24 @@
           </div>
         </div>
         <div style="margin-top:16px;">
+          <div class="chart-meta">
+            <div class="chart-legend">
+              <span class="legend-item"><span class="legend-dot optimistic"></span><span id="chartLegendOptimistic">樂觀（P80）</span></span>
+              <span class="legend-item"><span class="legend-dot base"></span><span id="chartLegendBase">基準（P50）</span></span>
+              <span class="legend-item"><span class="legend-dot pessimistic"></span><span id="chartLegendPessimistic">悲觀（P20）</span></span>
+            </div>
+            <div class="chart-end">
+              <div id="chartEndLabel" class="chart-end-title">期末情境</div>
+              <div class="chart-end-pills">
+                <span class="end-pill"><span id="chartP80">P80</span><strong id="chartEndOptimistic">--</strong></span>
+                <span class="end-pill"><span id="chartP50">P50</span><strong id="chartEndBase">--</strong></span>
+                <span class="end-pill"><span id="chartP20">P20</span><strong id="chartEndPessimistic">--</strong></span>
+              </div>
+            </div>
+          </div>
           <div class="chart">
             <canvas id="trend"></canvas>
+            <div id="chartTooltip" class="chart-tooltip" aria-hidden="true"></div>
           </div>
         </div>
         <div class="note" id="assumptionNote"></div>
@@ -851,9 +986,15 @@
     const compareSnapshotsBtnEl = document.getElementById('compareSnapshotsBtn');
     const zhButton = document.getElementById('lang-zh');
     const enButton = document.getElementById('lang-en');
+    const chartEndOptimisticEl = document.getElementById('chartEndOptimistic');
+    const chartEndBaseEl = document.getElementById('chartEndBase');
+    const chartEndPessimisticEl = document.getElementById('chartEndPessimistic');
+    const chartTooltipEl = document.getElementById('chartTooltip');
 
     const canvas = document.getElementById('trend');
     const ctx = canvas.getContext('2d');
+    let latestChartSeries = null;
+    let chartTooltipCleanup = null;
     let currentLanguage = localStorage.getItem('rb-language') === 'en' ? 'en' : 'zh';
 
     const i18n = {
@@ -904,6 +1045,16 @@
         statLabelDd: '最大回撤（模擬）',
         statLabelTotal: '期末資產總額',
         statLabelGain: '累積收益',
+        chartLegendOptimistic: '樂觀（P80）',
+        chartLegendBase: '基準（P50）',
+        chartLegendPessimistic: '悲觀（P20）',
+        chartP80: 'P80',
+        chartP50: 'P50',
+        chartP20: 'P20',
+        chartEndLabel: '期末情境',
+        chartTooltipYear: '年',
+        chartTooltipValue: '金額',
+        chartTooltipReturn: '報酬',
         modelHistWeightLabel: '歷史訊號權重',
         modelAnchorLabel: 'Anchor 貢獻',
         modelDragLabel: '扣費與懲罰',
@@ -1027,6 +1178,16 @@
         statLabelDd: 'Max Drawdown (Simulated)',
         statLabelTotal: 'Ending Portfolio Value',
         statLabelGain: 'Cumulative Gain',
+        chartLegendOptimistic: 'Optimistic (P80)',
+        chartLegendBase: 'Base (P50)',
+        chartLegendPessimistic: 'Pessimistic (P20)',
+        chartP80: 'P80',
+        chartP50: 'P50',
+        chartP20: 'P20',
+        chartEndLabel: 'End Scenarios',
+        chartTooltipYear: 'Year',
+        chartTooltipValue: 'Value',
+        chartTooltipReturn: 'Return',
         modelHistWeightLabel: 'Historical Signal Weight',
         modelAnchorLabel: 'Anchor Contribution',
         modelDragLabel: 'Fees & Penalties',
@@ -1161,6 +1322,13 @@
         statLabelDd: 'statLabelDd',
         statLabelTotal: 'statLabelTotal',
         statLabelGain: 'statLabelGain',
+        chartLegendOptimistic: 'chartLegendOptimistic',
+        chartLegendBase: 'chartLegendBase',
+        chartLegendPessimistic: 'chartLegendPessimistic',
+        chartP80: 'chartP80',
+        chartP50: 'chartP50',
+        chartP20: 'chartP20',
+        chartEndLabel: 'chartEndLabel',
         modelHistWeightLabel: 'modelHistWeightLabel',
         modelAnchorLabel: 'modelAnchorLabel',
         modelDragLabel: 'modelDragLabel',
@@ -1223,6 +1391,8 @@
       enButton.classList.toggle('active', currentLanguage === 'en');
       zhButton.setAttribute('aria-pressed', String(currentLanguage === 'zh'));
       enButton.setAttribute('aria-pressed', String(currentLanguage === 'en'));
+      renderChartLegendAndEndLabels(latestChartSeries, displayCurrencyEl.value);
+      bindChartTooltip(latestChartSeries, displayCurrencyEl.value, Number(yearsEl.value || 1));
     }
 
     function formatCurrency(value, currency) {
@@ -1993,14 +2163,22 @@
       canvas.height = height;
       ctx.clearRect(0, 0, width, height);
 
-      const series = Array.isArray(payload) ? { main: payload } : (payload || {});
-      const mainValues = Array.isArray(series.main) && series.main.length ? series.main : [0, 1];
-      const lowerValues = Array.isArray(series.lower) && series.lower.length === mainValues.length ? series.lower : null;
-      const upperValues = Array.isArray(series.upper) && series.upper.length === mainValues.length ? series.upper : null;
+      const fallbackValues = Array.isArray(payload) ? payload : [0, 1];
+      const series = Array.isArray(payload) ? {
+        points: fallbackValues.map((_, i) => i),
+        base: fallbackValues,
+        optimistic: null,
+        pessimistic: null
+      } : (payload || {});
 
-      const allValues = mainValues
-        .concat(lowerValues || [])
-        .concat(upperValues || [])
+      const points = Array.isArray(series.points) && series.points.length ? series.points : fallbackValues.map((_, i) => i);
+      const baseValues = Array.isArray(series.base) && series.base.length ? series.base : fallbackValues;
+      const optimisticValues = Array.isArray(series.optimistic) && series.optimistic.length === baseValues.length ? series.optimistic : null;
+      const pessimisticValues = Array.isArray(series.pessimistic) && series.pessimistic.length === baseValues.length ? series.pessimistic : null;
+
+      const allValues = baseValues
+        .concat(optimisticValues || [])
+        .concat(pessimisticValues || [])
         .filter(v => Number.isFinite(v));
 
       const padding = 36;
@@ -2019,47 +2197,63 @@
       const toPoints = (values) => values.map((val, index) => ({
         x: padding + (index / (values.length - 1 || 1)) * (width - padding * 2),
         y: height - padding - ((val - minVal) / range) * (height - padding * 2),
-        val
+        value: val,
+        t: points[index] ?? index
       }));
 
-      const mainPoints = toPoints(mainValues);
-      const lowerPoints = lowerValues ? toPoints(lowerValues) : null;
-      const upperPoints = upperValues ? toPoints(upperValues) : null;
+      const basePoints = toPoints(baseValues);
+      const optimisticPoints = optimisticValues ? toPoints(optimisticValues) : null;
+      const pessimisticPoints = pessimisticValues ? toPoints(pessimisticValues) : null;
 
-      if (lowerPoints && upperPoints) {
+      if (optimisticPoints && pessimisticPoints) {
         ctx.beginPath();
-        ctx.moveTo(upperPoints[0].x, upperPoints[0].y);
-        upperPoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
-        lowerPoints.slice().reverse().forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.moveTo(optimisticPoints[0].x, optimisticPoints[0].y);
+        optimisticPoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        pessimisticPoints.slice().reverse().forEach(p => ctx.lineTo(p.x, p.y));
         ctx.closePath();
-        ctx.fillStyle = 'rgba(135,169,255,0.14)';
+        ctx.fillStyle = 'rgba(124,156,255,0.14)';
         ctx.fill();
 
-        ctx.strokeStyle = 'rgba(135,169,255,0.35)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(99,223,191,0.55)';
+        ctx.lineWidth = 1.25;
         ctx.beginPath();
-        ctx.moveTo(upperPoints[0].x, upperPoints[0].y);
-        upperPoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.moveTo(optimisticPoints[0].x, optimisticPoints[0].y);
+        optimisticPoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
         ctx.stroke();
 
+        ctx.strokeStyle = 'rgba(255,154,122,0.58)';
         ctx.beginPath();
-        ctx.moveTo(lowerPoints[0].x, lowerPoints[0].y);
-        lowerPoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.moveTo(pessimisticPoints[0].x, pessimisticPoints[0].y);
+        pessimisticPoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
         ctx.stroke();
       }
 
       ctx.beginPath();
-      ctx.moveTo(mainPoints[0].x, mainPoints[0].y);
-      mainPoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.moveTo(basePoints[0].x, basePoints[0].y);
+      basePoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
       ctx.strokeStyle = '#f0c86a';
-      ctx.lineWidth = 2.6;
+      ctx.lineWidth = 2.8;
       ctx.stroke();
 
-      ctx.lineTo(mainPoints[mainPoints.length - 1].x, height - padding);
-      ctx.lineTo(mainPoints[0].x, height - padding);
+      ctx.lineTo(basePoints[basePoints.length - 1].x, height - padding);
+      ctx.lineTo(basePoints[0].x, height - padding);
       ctx.closePath();
-      ctx.fillStyle = 'rgba(240,200,106,0.10)';
+      ctx.fillStyle = 'rgba(240,200,106,0.08)';
       ctx.fill();
+
+      if (optimisticPoints && pessimisticPoints) {
+        const endPts = [
+          { pt: optimisticPoints[optimisticPoints.length - 1], color: '#63dfbf' },
+          { pt: basePoints[basePoints.length - 1], color: '#f0c86a' },
+          { pt: pessimisticPoints[pessimisticPoints.length - 1], color: '#ff9a7a' }
+        ];
+        endPts.forEach(({ pt, color }) => {
+          ctx.beginPath();
+          ctx.fillStyle = color;
+          ctx.arc(pt.x, pt.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
     }
 
     function randnWithRng(rng) { let u = 0, v = 0; while (u === 0) u = rng(); while (v === 0) v = rng(); return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v); }
@@ -2090,25 +2284,113 @@
       return percentile(drawdowns, 0.6);
     }
 
-    function buildProjectionCone(initial, years, mu, sigma) {
+    function buildScenarioCurvesP20P50P80(initial, years, mu, sigma) {
       const steps = Math.max(12, years * 12);
-      const main = [];
-      const lower = [];
-      const upper = [];
-      const z = 0.84;
+      const points = [];
+      const base = [];
+      const optimistic = [];
+      const pessimistic = [];
+      const z80 = 0.8416;
+      const z20 = -0.8416;
       const safeMu = Number.isFinite(mu) ? mu : 0;
       const safeSigma = Math.max(0, Number.isFinite(sigma) ? sigma : 0);
       for (let i = 0; i <= steps; i += 1) {
         const t = (i / steps) * years;
-        const base = initial * Math.pow(1 + safeMu, t);
+        const baseVal = initial * Math.pow(1 + safeMu, t);
         const volTerm = safeSigma * Math.sqrt(t);
-        const floor = Math.max(0, base * Math.exp(-z * volTerm));
-        const ceil = base * Math.exp(z * volTerm);
-        main.push(base);
-        lower.push(floor);
-        upper.push(ceil);
+        points.push(t);
+        base.push(baseVal);
+        pessimistic.push(Math.max(0, baseVal * Math.exp(z20 * volTerm)));
+        optimistic.push(baseVal * Math.exp(z80 * volTerm));
       }
-      return { main, lower, upper };
+      return { points, base, optimistic, pessimistic };
+    }
+
+    function renderChartLegendAndEndLabels(series, currency) {
+      if (!series || !Array.isArray(series.base) || !series.base.length) {
+        chartEndOptimisticEl.textContent = '--';
+        chartEndBaseEl.textContent = '--';
+        chartEndPessimisticEl.textContent = '--';
+        return;
+      }
+      const lastIndex = series.base.length - 1;
+      chartEndOptimisticEl.textContent = formatCurrency(series.optimistic[lastIndex] || 0, currency);
+      chartEndBaseEl.textContent = formatCurrency(series.base[lastIndex] || 0, currency);
+      chartEndPessimisticEl.textContent = formatCurrency(series.pessimistic[lastIndex] || 0, currency);
+    }
+
+    function hideChartTooltip() {
+      chartTooltipEl.classList.remove('show');
+      chartTooltipEl.setAttribute('aria-hidden', 'true');
+      chartTooltipEl.innerHTML = '';
+    }
+
+    function bindChartTooltip(series, currency, years) {
+      if (chartTooltipCleanup) {
+        chartTooltipCleanup();
+        chartTooltipCleanup = null;
+      }
+      hideChartTooltip();
+      if (!series || !Array.isArray(series.points) || series.points.length < 2) return;
+
+      const linesCount = series.points.length;
+      const clampIdx = (idx) => Math.max(0, Math.min(linesCount - 1, idx));
+      const base0 = Math.max(1e-9, series.base[0] || 1);
+
+      const renderAt = (clientX, clientY) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+        const ratio = rect.width ? x / rect.width : 0;
+        const idx = clampIdx(Math.round(ratio * (linesCount - 1)));
+        const year = Number(series.points[idx] || 0);
+
+        const valOptimistic = series.optimistic[idx] || 0;
+        const valBase = series.base[idx] || 0;
+        const valPessimistic = series.pessimistic[idx] || 0;
+        const retBase = ((valBase / base0) - 1) * 100;
+
+        chartTooltipEl.innerHTML = `
+          <div class="time">${t('chartTooltipYear')}: ${year.toFixed(1)} / ${years}</div>
+          <div class="line"><span class="key">${t('chartLegendOptimistic')} ${t('chartTooltipValue')}</span><span class="val">${formatCurrency(valOptimistic, currency)}</span></div>
+          <div class="line"><span class="key">${t('chartLegendBase')} ${t('chartTooltipValue')}</span><span class="val">${formatCurrency(valBase, currency)}</span></div>
+          <div class="line"><span class="key">${t('chartLegendPessimistic')} ${t('chartTooltipValue')}</span><span class="val">${formatCurrency(valPessimistic, currency)}</span></div>
+          <div class="line"><span class="key">${t('chartTooltipReturn')} (${t('chartLegendBase')})</span><span class="val">${retBase.toFixed(1)}%</span></div>
+        `;
+
+        const offsetX = 14;
+        const offsetY = 14;
+        const maxLeft = rect.width - chartTooltipEl.offsetWidth - 6;
+        const maxTop = rect.height - chartTooltipEl.offsetHeight - 6;
+        const left = Math.max(6, Math.min(maxLeft, x + offsetX));
+        const top = Math.max(6, Math.min(maxTop, (clientY - rect.top) + offsetY));
+        chartTooltipEl.style.left = `${left}px`;
+        chartTooltipEl.style.top = `${top}px`;
+        chartTooltipEl.classList.add('show');
+        chartTooltipEl.setAttribute('aria-hidden', 'false');
+      };
+
+      const onMouseMove = (event) => renderAt(event.clientX, event.clientY);
+      const onMouseLeave = () => hideChartTooltip();
+      const onTouchMove = (event) => {
+        const touch = event.touches && event.touches[0];
+        if (!touch) return;
+        renderAt(touch.clientX, touch.clientY);
+      };
+      const onTouchEnd = () => hideChartTooltip();
+
+      canvas.addEventListener('mousemove', onMouseMove);
+      canvas.addEventListener('mouseleave', onMouseLeave);
+      canvas.addEventListener('touchstart', onTouchMove, { passive: true });
+      canvas.addEventListener('touchmove', onTouchMove, { passive: true });
+      canvas.addEventListener('touchend', onTouchEnd, { passive: true });
+
+      chartTooltipCleanup = () => {
+        canvas.removeEventListener('mousemove', onMouseMove);
+        canvas.removeEventListener('mouseleave', onMouseLeave);
+        canvas.removeEventListener('touchstart', onTouchMove);
+        canvas.removeEventListener('touchmove', onTouchMove);
+        canvas.removeEventListener('touchend', onTouchEnd);
+      };
     }
 
     function computeSuggestedTargets(profile) {
@@ -2299,6 +2581,9 @@
       if (!rows.length) {
         outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
         drawChart([0, 1]); assumptionNoteEl.textContent = t('emptyRows'); expertSummaryEl.textContent = '--'; expertListEl.innerHTML = ''; allocationRowsEl.innerHTML = '';
+        latestChartSeries = null;
+        renderChartLegendAndEndLabels(null, displayCurrencyEl.value);
+        bindChartTooltip(null, displayCurrencyEl.value, years);
         clearExpectedReturnBreakdown();
         clearHealthCheck(t('invalidPosition'));
         clearStressTest(t('invalidPosition'));
@@ -2376,6 +2661,9 @@
       if (invalidRows.length) {
         outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
         drawChart([0, 1]);
+        latestChartSeries = null;
+        renderChartLegendAndEndLabels(null, displayCurrencyEl.value);
+        bindChartTooltip(null, displayCurrencyEl.value, years);
         clearExpectedReturnBreakdown();
         expertSummaryEl.textContent = '--';
         expertListEl.innerHTML = '';
@@ -2391,6 +2679,9 @@
       if (totalUsd === 0) {
         outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
         drawChart([0, 1]); assumptionNoteEl.textContent = t('amountPositive'); expertSummaryEl.textContent = '--'; expertListEl.innerHTML = ''; allocationRowsEl.innerHTML = '';
+        latestChartSeries = null;
+        renderChartLegendAndEndLabels(null, displayCurrencyEl.value);
+        bindChartTooltip(null, displayCurrencyEl.value, years);
         clearExpectedReturnBreakdown();
         clearHealthCheck(t('amountPositive'));
         clearStressTest(t('amountPositive'));
@@ -2453,15 +2744,19 @@
       const overrideState = { enabled: overrideToggleEl.checked, value: Number(overrideEl.value) };
       const seed = seedFromScenario(profile, rows, years, displayCurrency, overrideState);
       const dd = estimateDrawdownBySimulation(totalUsd, years, portfolioReturn, portfolioVol, seed);
-      const projection = buildProjectionCone(totalUsd, years, portfolioReturn, portfolioVol);
+      const projection = buildScenarioCurvesP20P50P80(totalUsd, years, portfolioReturn, portfolioVol);
       outputDDEl.textContent = `${(dd * 100).toFixed(2)}%`;
       outputTotalEl.textContent = formatCurrency(finalUsd / fxOut, displayCurrency);
       outputGainEl.textContent = formatCurrency(gainUsd / fxOut, displayCurrency);
-      requestAnimationFrame(() => drawChart({
-        main: projection.main.map(v => v / fxOut),
-        lower: projection.lower.map(v => v / fxOut),
-        upper: projection.upper.map(v => v / fxOut)
-      }));
+      latestChartSeries = {
+        points: projection.points,
+        base: projection.base.map(v => v / fxOut),
+        optimistic: projection.optimistic.map(v => v / fxOut),
+        pessimistic: projection.pessimistic.map(v => v / fxOut)
+      };
+      renderChartLegendAndEndLabels(latestChartSeries, displayCurrency);
+      bindChartTooltip(latestChartSeries, displayCurrency, years);
+      requestAnimationFrame(() => drawChart(latestChartSeries));
 
       const suggestions = suggestAllocation(details, profile);
       renderAllocation(suggestions);
