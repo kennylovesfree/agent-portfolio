@@ -301,6 +301,8 @@
               <select id="symbol">
                 <option value="TX">台指期</option>
                 <option value="MTX">小台指</option>
+                <option value="SXF">標普 500 期貨 (SXF)</option>
+                <option value="MES">Micro E-mini S&P 500 (MES)</option>
                 <option value="NASDAQ">NASDAQ 期貨</option>
                 <option value="GOLD">黃金期貨</option>
                 <option value="OIL">原油期貨</option>
@@ -433,6 +435,8 @@
         labelSymbol: "期貨品種",
         symbolTx: "台指期",
         symbolMtx: "小台指",
+        symbolSxf: "標普 500 期貨 (SXF)",
+        symbolMes: "Micro E-mini S&P 500 (MES)",
         symbolNasdaq: "NASDAQ 期貨",
         symbolGold: "黃金期貨",
         symbolOil: "原油期貨",
@@ -494,6 +498,8 @@
         labelSymbol: "Futures Symbol",
         symbolTx: "TAIEX Futures",
         symbolMtx: "Mini TAIEX",
+        symbolSxf: "S&P 500 Futures (SXF)",
+        symbolMes: "Micro E-mini S&P 500 (MES)",
         symbolNasdaq: "NASDAQ Futures",
         symbolGold: "Gold Futures",
         symbolOil: "Crude Oil Futures",
@@ -608,9 +614,11 @@
 
       symbolSelect.options[0].textContent = copy.symbolTx;
       symbolSelect.options[1].textContent = copy.symbolMtx;
-      symbolSelect.options[2].textContent = copy.symbolNasdaq;
-      symbolSelect.options[3].textContent = copy.symbolGold;
-      symbolSelect.options[4].textContent = copy.symbolOil;
+      symbolSelect.options[2].textContent = copy.symbolSxf;
+      symbolSelect.options[3].textContent = copy.symbolMes;
+      symbolSelect.options[4].textContent = copy.symbolNasdaq;
+      symbolSelect.options[5].textContent = copy.symbolGold;
+      symbolSelect.options[6].textContent = copy.symbolOil;
       notesInput.placeholder = copy.notesPlaceholder;
 
       zhButton.classList.toggle("active", currentLanguage === "zh");
