@@ -189,6 +189,7 @@
     }
 
     textarea { min-height: 92px; resize: vertical; }
+    .field-note { margin-top: 6px; color: var(--muted); font-size: 12px; }
 
     .actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
@@ -307,6 +308,7 @@
                 <option value="GOLD">黃金期貨</option>
                 <option value="OIL">原油期貨</option>
               </select>
+              <div class="field-note" id="symbolCurrencyHint">計價幣別：TWD</div>
             </div>
             <div>
               <label id="labelDirection" for="direction">方向</label>
@@ -449,6 +451,9 @@
         labelContractMultiplier: "每點價值（乘數）",
         labelInitialMargin: "初始保證金（每口）",
         labelMaintenanceMargin: "維持保證金（每口）",
+        labelContractMultiplierCurrency: (currency, unitPoints) => `每點價值（乘數，${currency}/${unitPoints}）`,
+        labelInitialMarginCurrency: (currency) => `初始保證金（每口，${currency}）`,
+        labelMaintenanceMarginCurrency: (currency) => `維持保證金（每口，${currency}）`,
         labelExpectedReturn: "預期報酬率（年化 %）",
         labelMaxDrawdown: "可接受最大回撤（%）",
         labelDailyVol: "假設日波動率（%）",
@@ -464,6 +469,9 @@
         thScenario: "情境",
         thPriceMove: "價格變動",
         thSimPnl: "模擬損益",
+        metricLabelPnlCurrency: (currency) => `目前浮動損益（${currency}）`,
+        thSimPnlCurrency: (currency) => `模擬損益（${currency}）`,
+        currencyHint: (currency) => `計價幣別：${currency}`,
         thRiskStatus: "風險判定",
         riskWaiting: "等待計算",
         aiInitial: "點擊「產生 AI 風險建議」，會根據你的部位與回撤設定產生文字建議。",
@@ -512,6 +520,9 @@
         labelContractMultiplier: "Point Value (Multiplier)",
         labelInitialMargin: "Initial Margin (Per Contract)",
         labelMaintenanceMargin: "Maintenance Margin (Per Contract)",
+        labelContractMultiplierCurrency: (currency) => `Point Value (${currency}/pt)`,
+        labelInitialMarginCurrency: (currency) => `Initial Margin (Per Contract, ${currency})`,
+        labelMaintenanceMarginCurrency: (currency) => `Maintenance Margin (Per Contract, ${currency})`,
         labelExpectedReturn: "Expected Return (Annual %)",
         labelMaxDrawdown: "Max Acceptable Drawdown (%)",
         labelDailyVol: "Assumed Daily Volatility (%)",
@@ -527,6 +538,9 @@
         thScenario: "Scenario",
         thPriceMove: "Price Move",
         thSimPnl: "Simulated PnL",
+        metricLabelPnlCurrency: (currency) => `Current Floating PnL (${currency})`,
+        thSimPnlCurrency: (currency) => `Simulated PnL (${currency})`,
+        currencyHint: (currency) => `Quote Currency: ${currency}`,
         thRiskStatus: "Risk Status",
         riskWaiting: "Waiting for calculation",
         aiInitial: "Click \"Generate AI Risk Advice\" to create recommendations based on your position and drawdown settings.",
@@ -586,14 +600,38 @@
     };
 
     const symbolSelect = document.getElementById("symbol");
+    const symbolCurrencyHint = document.getElementById("symbolCurrencyHint");
     const notesInput = document.getElementById("notes");
     const riskTagEl = document.getElementById("riskTag");
     const aiOutputEl = document.getElementById("aiOutput");
     const zhButton = document.getElementById("lang-zh");
     const enButton = document.getElementById("lang-en");
+    const symbolCurrencyMap = {
+      TX: "TWD",
+      MTX: "TWD",
+      SXF: "USD",
+      MES: "USD",
+      NASDAQ: "USD",
+      GOLD: "USD",
+      OIL: "USD"
+    };
 
     function t(key) {
       return i18n[currentLanguage][key];
+    }
+
+    function getActiveCurrencyCode() {
+      return symbolCurrencyMap[symbolSelect.value] || "USD";
+    }
+
+    function updateCurrencyUI() {
+      const currencyCode = getActiveCurrencyCode();
+      textNodes.labelContractMultiplier.textContent = t("labelContractMultiplierCurrency")(currencyCode, t("unitPoints"));
+      textNodes.labelInitialMargin.textContent = t("labelInitialMarginCurrency")(currencyCode);
+      textNodes.labelMaintenanceMargin.textContent = t("labelMaintenanceMarginCurrency")(currencyCode);
+      textNodes.metricLabelPnl.textContent = t("metricLabelPnlCurrency")(currencyCode);
+      textNodes.thSimPnl.textContent = t("thSimPnlCurrency")(currencyCode);
+      symbolCurrencyHint.textContent = t("currencyHint")(currencyCode);
     }
 
     function updateLanguageUI() {
@@ -609,6 +647,7 @@
           textNodes[key].innerHTML = copy[key];
           return;
         }
+        if (typeof copy[key] === "function") return;
         textNodes[key].textContent = copy[key];
       });
 
@@ -620,6 +659,7 @@
       symbolSelect.options[5].textContent = copy.symbolGold;
       symbolSelect.options[6].textContent = copy.symbolOil;
       notesInput.placeholder = copy.notesPlaceholder;
+      updateCurrencyUI();
 
       zhButton.classList.toggle("active", currentLanguage === "zh");
       enButton.classList.toggle("active", currentLanguage === "en");
@@ -629,10 +669,18 @@
       localStorage.setItem("rb-language", currentLanguage);
     }
 
-    const fmtMoney = (num) => {
+    const fmtMoney = (num, currencyCode) => {
       if (!Number.isFinite(num)) return '-';
       const locale = currentLanguage === 'en' ? 'en-US' : 'zh-TW';
-      return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(num);
+      try {
+        return new Intl.NumberFormat(locale, {
+          style: 'currency',
+          currency: currencyCode,
+          maximumFractionDigits: 0
+        }).format(num);
+      } catch (_) {
+        return `${currencyCode} ${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(num)}`;
+      }
     };
 
     const fmtPct = (num, digits = 2) => `${num.toFixed(digits)}%`;
@@ -642,6 +690,8 @@
       const contracts = Math.max(1, Number(document.getElementById('contracts').value) || 1);
       const entry = Number(document.getElementById('entryPrice').value) || 0;
       const current = Number(document.getElementById('currentPrice').value) || 0;
+      const symbol = symbolSelect.value;
+      const currencyCode = getActiveCurrencyCode();
       const multiplier = Number(document.getElementById('contractMultiplier').value) || 1;
       const initialMargin = Number(document.getElementById('initialMargin').value) || 0;
       const maintenanceMargin = Number(document.getElementById('maintenanceMargin').value) || 0;
@@ -655,15 +705,17 @@
       const equity = totalInitial + pnl;
       const equityRatio = totalMaintenance > 0 ? (equity / totalMaintenance) * 100 : 0;
 
-      const lossCapacity = totalInitial - totalMaintenance;
-      const pointsToLiquidation = lossCapacity > 0 ? (lossCapacity / (multiplier * contracts)) : 0;
-      const liquidationPrice = direction === 'long' ? entry - pointsToLiquidation : entry + pointsToLiquidation;
-      const liqDistancePts = Math.abs(current - liquidationPrice);
+      // Liquidation buffer in points based on current equity, not entry/current absolute gap.
+      const pointsBufferToMaintenance = (equity - totalMaintenance) / (multiplier * contracts);
+      const liquidationPrice = direction === 'long'
+        ? current - pointsBufferToMaintenance
+        : current + pointsBufferToMaintenance;
+      const liqDistancePts = pointsBufferToMaintenance;
       const dailySigmaPts = Math.max(entry * dailyVol, 1);
-      const zScore = liqDistancePts / dailySigmaPts;
-      const liqProb30 = Math.min(99, Math.max(1, (35 / (zScore + 1))));
+      const zScore = Math.max(liqDistancePts, 0) / dailySigmaPts;
+      const liqProb30 = liqDistancePts <= 0 ? 99 : Math.min(99, Math.max(1, (35 / (zScore + 1))));
 
-      document.getElementById('pnlValue').textContent = `${pnl >= 0 ? '+' : ''}${fmtMoney(pnl)}`;
+      document.getElementById('pnlValue').textContent = `${pnl >= 0 ? '+' : '-'}${fmtMoney(Math.abs(pnl), currencyCode)}`;
       document.getElementById('equityRatio').textContent = fmtPct(equityRatio, 1);
       document.getElementById('liqDistance').textContent = `${liqDistancePts.toFixed(1)} ${t('unitPoints')}`;
       document.getElementById('liqProbability').textContent = fmtPct(liqProb30, 1);
@@ -681,7 +733,7 @@
         tag.textContent = t('riskHigh');
       }
 
-      renderScenarios({ contracts, multiplier, sign, entry, direction, totalMaintenance, totalInitial });
+      renderScenarios({ contracts, multiplier, sign, entry, direction, totalMaintenance, totalInitial, currencyCode });
 
       return {
         pnl,
@@ -691,14 +743,15 @@
         dailyVol,
         totalInitial,
         totalMaintenance,
-        symbol: document.getElementById('symbol').value,
+        symbol,
+        currencyCode,
         expectedReturn: Number(document.getElementById('expectedReturn').value) || 0,
         maxDrawdown: Number(document.getElementById('maxDrawdown').value) || 0,
         notes: document.getElementById('notes').value.trim(),
       };
     }
 
-    function renderScenarios({ contracts, multiplier, sign, entry, direction, totalMaintenance, totalInitial }) {
+    function renderScenarios({ contracts, multiplier, sign, entry, direction, totalMaintenance, totalInitial, currencyCode }) {
       const scenarios = [-0.03, -0.015, 0.015, 0.03].map(change => {
         const newPrice = entry * (1 + change);
         const pnl = ((newPrice - entry) * sign) * multiplier * contracts;
@@ -719,7 +772,7 @@
         <tr>
           <td>${s.name}</td>
           <td>${s.movement}</td>
-          <td>${s.pnl >= 0 ? '+' : ''}${fmtMoney(s.pnl)}</td>
+          <td>${s.pnl >= 0 ? '+' : '-'}${fmtMoney(Math.abs(s.pnl), currencyCode)}</td>
           <td>${s.status}</td>
         </tr>
       `).join('');
@@ -757,6 +810,10 @@
 
     document.getElementById('calculateBtn').addEventListener('click', calculate);
     document.getElementById('aiAdviceBtn').addEventListener('click', generateAiAdvice);
+    symbolSelect.addEventListener('change', () => {
+      updateCurrencyUI();
+      calculate();
+    });
     zhButton.addEventListener('click', () => {
       currentLanguage = 'zh';
       updateLanguageUI();
