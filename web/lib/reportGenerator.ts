@@ -1,0 +1,273 @@
+import type { RiskAnswer } from "./riskScoring";
+
+export interface InvestmentReportInput {
+  investorProfile: string;
+  portfolioSummary: string;
+  riskPreference: string;
+  horizonYears?: number;
+  extraContext?: string;
+}
+
+export interface InvestmentReportResult {
+  ok: boolean;
+  report?: string;
+  error?: {
+    code:
+      | "MISSING_API_KEY"
+      | "EMPTY_INPUT"
+      | "TIMEOUT"
+      | "UPSTREAM_HTTP_ERROR"
+      | "UPSTREAM_NETWORK_ERROR"
+      | "INVALID_RESPONSE"
+      | "SAFETY_REWRITE_FAILED";
+    message: string;
+  };
+}
+
+export type PortfolioReport = {
+  summary: string;
+  riskWarnings: string[];
+  actionItems: string[];
+};
+
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+const DEFAULT_MODEL = "gemini-2.0-flash";
+const DEFAULT_TIMEOUT_MS = 12_000;
+const MIN_LENGTH = 300;
+const MAX_LENGTH = 600;
+
+const FORBIDDEN_PHRASES = ["保證獲利", "絕對報酬", "穩賺不賠", "零風險", "必定上漲", "一定賺"];
+
+function containsForbiddenPhrase(text: string): boolean {
+  return FORBIDDEN_PHRASES.some((phrase) => text.includes(phrase));
+}
+
+function countCjkChars(text: string): number {
+  return Array.from(text).filter((char) => /[\u4E00-\u9FFF]/.test(char)).length;
+}
+
+function hasFourParagraphs(text: string): boolean {
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  return paragraphs.length === 4;
+}
+
+function buildPrompt(input: InvestmentReportInput): string {
+  const horizonYears = input.horizonYears ?? 10;
+
+  return [
+    "你是審慎理財顧問，請輸出『繁體中文』投資分析報告。",
+    "嚴格規則：",
+    `1) 全文約 ${MIN_LENGTH}-${MAX_LENGTH} 字。`,
+    "2) 只能有固定四段，且段落標題與順序必須完全一致：",
+    "   推薦理由",
+    "   10年情境",
+    "   壓力測試",
+    "   風險提醒",
+    "3) 不可出現以下語句或同義保證式承諾：保證獲利、絕對報酬、穩賺不賠、零風險、必定上漲、一定賺。",
+    "4) 內容需具體、可讀，但不得提供保證式承諾。",
+    "",
+    "使用者資訊：",
+    `- 投資人概況：${input.investorProfile}`,
+    `- 持倉摘要：${input.portfolioSummary}`,
+    `- 風險偏好：${input.riskPreference}`,
+    `- 評估年期：${horizonYears} 年`,
+    input.extraContext ? `- 補充資訊：${input.extraContext}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function buildRewritePrompt(draft: string): string {
+  return [
+    "請重寫以下內容，保留核心觀點，但必須符合所有規則：",
+    `- 繁體中文 ${MIN_LENGTH}-${MAX_LENGTH} 字。`,
+    "- 僅四段，標題依序固定為：推薦理由、10年情境、壓力測試、風險提醒。",
+    "- 禁止詞：保證獲利、絕對報酬、穩賺不賠、零風險、必定上漲、一定賺。",
+    "",
+    "原始內容：",
+    draft,
+  ].join("\n");
+}
+
+function validateDraft(text: string): { ok: boolean; reason?: string } {
+  const cjkChars = countCjkChars(text);
+  if (cjkChars < MIN_LENGTH || cjkChars > MAX_LENGTH) {
+    return { ok: false, reason: "LENGTH_OUT_OF_RANGE" };
+  }
+
+  if (!hasFourParagraphs(text)) {
+    return { ok: false, reason: "INVALID_PARAGRAPH_COUNT" };
+  }
+
+  const expectedTitles = ["推薦理由", "10年情境", "壓力測試", "風險提醒"];
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const titlesOk = paragraphs.every((paragraph, idx) => paragraph.startsWith(expectedTitles[idx]));
+
+  if (!titlesOk) {
+    return { ok: false, reason: "INVALID_SECTION_TITLES" };
+  }
+
+  if (containsForbiddenPhrase(text)) {
+    return { ok: false, reason: "FORBIDDEN_PHRASE_FOUND" };
+  }
+
+  return { ok: true };
+}
+
+async function callGemini(prompt: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<InvestmentReportResult> {
+  if (typeof window !== "undefined") {
+    return {
+      ok: false,
+      error: {
+        code: "UPSTREAM_NETWORK_ERROR",
+        message: "generateInvestmentReport 必須在 server 端執行。",
+      },
+    };
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return {
+      ok: false,
+      error: {
+        code: "MISSING_API_KEY",
+        message: "伺服器未設定 GEMINI_API_KEY。",
+      },
+    };
+  }
+
+  const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(`${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.4,
+          topP: 0.9,
+        },
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: {
+          code: "UPSTREAM_HTTP_ERROR",
+          message: `Gemini API 請求失敗（HTTP ${response.status}）。請稍後再試。`,
+        },
+      };
+    }
+
+    const data = (await response.json()) as {
+      candidates?: Array<{
+        content?: {
+          parts?: Array<{ text?: string }>;
+        };
+      }>;
+    };
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    if (!text) {
+      return {
+        ok: false,
+        error: {
+          code: "INVALID_RESPONSE",
+          message: "模型回傳格式異常，請稍後重試。",
+        },
+      };
+    }
+
+    return { ok: true, report: text };
+  } catch (error) {
+    if ((error as Error).name === "AbortError") {
+      return {
+        ok: false,
+        error: {
+          code: "TIMEOUT",
+          message: "模型回應逾時，請稍後再試。",
+        },
+      };
+    }
+
+    return {
+      ok: false,
+      error: {
+        code: "UPSTREAM_NETWORK_ERROR",
+        message: "無法連線至模型服務，請稍後重試。",
+      },
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function generateInvestmentReport(input: InvestmentReportInput): Promise<InvestmentReportResult> {
+  if (!input.investorProfile?.trim() || !input.portfolioSummary?.trim() || !input.riskPreference?.trim()) {
+    return {
+      ok: false,
+      error: {
+        code: "EMPTY_INPUT",
+        message: "投資人概況、持倉摘要與風險偏好不可為空。",
+      },
+    };
+  }
+
+  const firstPass = await callGemini(buildPrompt(input));
+  if (!firstPass.ok || !firstPass.report) {
+    return firstPass;
+  }
+
+  const firstValidation = validateDraft(firstPass.report);
+  if (firstValidation.ok) {
+    return firstPass;
+  }
+
+  const secondPass = await callGemini(buildRewritePrompt(firstPass.report));
+  if (!secondPass.ok || !secondPass.report) {
+    return secondPass;
+  }
+
+  const secondValidation = validateDraft(secondPass.report);
+  if (!secondValidation.ok) {
+    return {
+      ok: false,
+      error: {
+        code: "SAFETY_REWRITE_FAILED",
+        message: "模型輸出未通過安全規則，請調整輸入後再試。",
+      },
+    };
+  }
+
+  return secondPass;
+}
+
+export function generateReport(answer: RiskAnswer, score: number): PortfolioReport {
+  const riskTier = score >= 70 ? "積極" : score >= 45 ? "平衡" : "保守";
+
+  return {
+    summary: `根據問答資料，您的投資風格偏向${riskTier}，建議以分散配置控制波動。`,
+    riskWarnings: [
+      `可承受回撤約 ${answer.drawdownTolerancePercent}% ，遇到市場劇烈波動時需避免追高殺低。`,
+      "請定期檢查資產相關性，避免單一市場風險過度集中。",
+    ],
+    actionItems: [
+      "每季再平衡一次，維持原始風險目標。",
+      "設定停利停損紀律並記錄投資日誌。",
+      "高波動資產可搭配防禦型資產降低淨值回撤。",
+    ],
+  };
+}
