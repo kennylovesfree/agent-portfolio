@@ -2,6 +2,13 @@
 
 > 目的：提供「再平衡建議」的決策支援框架與流程，不包含任何實際投資邏輯或自動化執行。
 
+## 前端入口與路由地圖
+- 唯一首頁入口：`/index.html`
+- 投資報告入口：`/report`（可直接進入）
+- 問卷入口：`/onboarding`（可選）
+- 問卷後流程：`/result` -> `/report`
+- 既有產品頁：`/rebalance_copilot.html`、`/futures_risk_copilot.html`、`/crypto_risk_copilot.html`
+
 ## 範圍（Scope）
 - 提供可審核的再平衡「建議流程」與架構
 - 明確區分：資料 → 規則/政策檢查 → 提案 → 人工批准 → 執行規劃（概念層）

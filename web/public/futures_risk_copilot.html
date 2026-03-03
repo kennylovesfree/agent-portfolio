@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Futures Risk Copilot | 期貨部位風險管理</title>
+  <meta name="description" content="期貨風險管理與爆倉機率評估工具，支援中英文切換與 AI 風險建議。" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Manrope:wght@300;400;600;700&display=swap');
+
+    :root {
+      --bg-0: #0a1018;
+      --bg-1: #0f1d2b;
+      --bg-2: #152d3a;
+      --card: rgba(255, 255, 255, 0.06);
+      --line: rgba(255, 255, 255, 0.12);
+      --ink: #e7edf7;
+      --muted: rgba(231, 237, 247, 0.68);
+      --accent: #f0c86a;
+      --accent-2: #66dfc7;
+      --accent-3: #8da6ff;
+      --danger: #ff6b7a;
+      --warn: #ffb347;
+      --safe: #7ce39d;
+      --shadow: 0 26px 70px rgba(5, 11, 20, 0.55);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Manrope", "Avenir Next", system-ui, sans-serif;
+      background:
+        radial-gradient(1200px 760px at 6% 2%, rgba(141, 166, 255, 0.18), transparent 62%),
+        radial-gradient(900px 700px at 95% 5%, rgba(102, 223, 199, 0.13), transparent 64%),
+        linear-gradient(160deg, var(--bg-0), var(--bg-1) 45%, var(--bg-2));
+      min-height: 100vh;
+    }
+
+    .page { min-height: 100vh; padding: 28px clamp(18px, 4vw, 56px) 48px; }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: inline-flex;
+      gap: 12px;
+      align-items: center;
+      font-weight: 700;
+    }
+
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(140deg, var(--accent), var(--accent-3));
+      color: #1a1a1a;
+      font-weight: 800;
+    }
+
+    a.back {
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .topbar-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .lang-switch {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      padding: 4px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .lang-btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+    }
+
+    .lang-btn.active {
+      background: rgba(255, 255, 255, 0.14);
+      color: var(--ink);
+    }
+
+    .hero {
+      margin-bottom: 18px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(240, 200, 106, 0.35);
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 14px 0 8px;
+      font-family: "Cormorant Garamond", serif;
+      font-size: clamp(34px, 4vw, 56px);
+      line-height: 1.02;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 860px;
+    }
+
+    main {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .card h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .grid { display: grid; gap: 14px; }
+
+    .row { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      background: rgba(9, 15, 24, 0.75);
+      color: var(--ink);
+      padding: 10px 12px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(141, 166, 255, 0.7);
+      box-shadow: 0 0 0 2px rgba(141, 166, 255, 0.24);
+    }
+
+    textarea { min-height: 92px; resize: vertical; }
+    .field-note { margin-top: 6px; color: var(--muted); font-size: 12px; }
+
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 11px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(140deg, var(--accent), #f6dda2);
+      color: #211700;
+    }
+
+    button.ghost {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .metrics {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .metric .label { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+    .metric .value { font-size: 20px; font-weight: 700; }
+
+    .risk-tag {
+      display: inline-flex;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-top: 6px;
+      width: fit-content;
+    }
+
+    .risk-low { background: rgba(124, 227, 157, 0.16); color: var(--safe); }
+    .risk-mid { background: rgba(255, 179, 71, 0.16); color: var(--warn); }
+    .risk-high { background: rgba(255, 107, 122, 0.16); color: var(--danger); }
+
+    .scenario-table {
+      margin-top: 14px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); text-align: left; }
+    th { color: var(--muted); font-weight: 600; background: rgba(255, 255, 255, 0.04); }
+    tr:last-child td { border-bottom: none; }
+
+    .ai-box {
+      margin-top: 14px;
+      border: 1px solid rgba(102, 223, 199, 0.25);
+      border-radius: 14px;
+      padding: 14px;
+      background: rgba(102, 223, 199, 0.08);
+      line-height: 1.65;
+      font-size: 14px;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 980px) {
+      main { grid-template-columns: 1fr; }
+      .row, .metrics { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark">R</div>
+        <div id="brandTitle">Futures Risk Copilot</div>
+      </div>
+      <div class="topbar-actions">
+        <a id="backHome" class="back" href="index.html">返回首頁</a>
+        <div class="lang-switch" role="group" aria-label="Language switch">
+          <button id="lang-zh" class="lang-btn active" type="button">中文</button>
+          <button id="lang-en" class="lang-btn" type="button">EN</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div id="heroEyebrow" class="eyebrow">Futures Risk Intelligence</div>
+      <h1 id="heroTitle">期貨部位風險管理中心</h1>
+      <p id="heroSubtitle" class="subtitle">輸入期貨部位、保證金、預期報酬率、最大回撤等資訊，自動估算<strong>爆倉風險</strong>、安全緩衝天數與壓力情境。內建 AI 建議引擎（本地規則版）協助你快速調整槓桿與停損策略。</p>
+    </section>
+
+    <main>
+      <section class="card">
+        <h2 id="inputCardTitle">部位與風險輸入</h2>
+        <div class="grid">
+          <div class="row">
+            <div>
+              <label id="labelSymbol" for="symbol">期貨品種</label>
+              <select id="symbol">
+                <option value="TX">台指期</option>
+                <option value="MTX">小台指</option>
+                <option value="SXF">標普 500 期貨 (SXF)</option>
+                <option value="MES">Micro E-mini S&P 500 (MES)</option>
+                <option value="NASDAQ">NASDAQ 期貨</option>
+                <option value="GOLD">黃金期貨</option>
+                <option value="OIL">原油期貨</option>
+              </select>
+              <div class="field-note" id="symbolCurrencyHint">計價幣別：TWD</div>
+            </div>
+            <div>
+              <label id="labelDirection" for="direction">方向</label>
+              <select id="direction">
+                <option id="directionLongOption" value="long">做多</option>
+                <option id="directionShortOption" value="short">做空</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label id="labelContracts" for="contracts">口數</label>
+              <input id="contracts" type="number" min="1" step="1" value="3" />
+            </div>
+            <div>
+              <label id="labelEntryPrice" for="entryPrice">進場價</label>
+              <input id="entryPrice" type="number" min="1" step="0.01" value="22340" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label id="labelCurrentPrice" for="currentPrice">當前價格</label>
+              <input id="currentPrice" type="number" min="1" step="0.01" value="22210" />
+            </div>
+            <div>
+              <label id="labelContractMultiplier" for="contractMultiplier">每點價值（乘數）</label>
+              <input id="contractMultiplier" type="number" min="1" step="1" value="200" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label id="labelInitialMargin" for="initialMargin">初始保證金（每口）</label>
+              <input id="initialMargin" type="number" min="1" step="1000" value="320000" />
+            </div>
+            <div>
+              <label id="labelMaintenanceMargin" for="maintenanceMargin">維持保證金（每口）</label>
+              <input id="maintenanceMargin" type="number" min="1" step="1000" value="245000" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label id="labelExpectedReturn" for="expectedReturn">預期報酬率（年化 %）</label>
+              <input id="expectedReturn" type="number" step="0.1" value="18" />
+            </div>
+            <div>
+              <label id="labelMaxDrawdown" for="maxDrawdown">可接受最大回撤（%）</label>
+              <input id="maxDrawdown" type="number" step="0.1" value="12" />
+            </div>
+          </div>
+
+          <div>
+            <label id="labelDailyVol" for="dailyVol">假設日波動率（%）</label>
+            <input id="dailyVol" type="number" step="0.1" value="1.8" />
+          </div>
+
+          <div>
+            <label id="labelNotes" for="notes">交易備註（可選）</label>
+            <textarea id="notes" placeholder="例如：事件交易、留倉天數、關鍵停損位... "></textarea>
+          </div>
+
+          <div class="actions">
+            <button id="calculateBtn">計算風險</button>
+            <button class="ghost" id="aiAdviceBtn" type="button">產生 AI 風險建議</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 id="dashboardTitle">風險儀表板</h2>
+        <div class="metrics">
+          <div class="metric">
+            <div id="metricLabelPnl" class="label">目前浮動損益</div>
+            <div class="value" id="pnlValue">-</div>
+          </div>
+          <div class="metric">
+            <div id="metricLabelEquityRatio" class="label">權益 / 維持保證金比</div>
+            <div class="value" id="equityRatio">-</div>
+          </div>
+          <div class="metric">
+            <div id="metricLabelLiqDistance" class="label">距離爆倉價格</div>
+            <div class="value" id="liqDistance">-</div>
+          </div>
+          <div class="metric">
+            <div id="metricLabelLiqProbability" class="label">預估爆倉概率（30日）</div>
+            <div class="value" id="liqProbability">-</div>
+          </div>
+        </div>
+
+        <div id="riskTag" class="risk-tag risk-mid">等待計算</div>
+
+        <div class="scenario-table">
+          <table>
+            <thead>
+              <tr>
+                <th id="thScenario">情境</th>
+                <th id="thPriceMove">價格變動</th>
+                <th id="thSimPnl">模擬損益</th>
+                <th id="thRiskStatus">風險判定</th>
+              </tr>
+            </thead>
+            <tbody id="scenarioBody"></tbody>
+          </table>
+        </div>
+
+        <div class="ai-box" id="aiOutput">點擊「產生 AI 風險建議」，會根據你的部位與回撤設定產生文字建議。</div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const i18n = {
+      zh: {
+        htmlLang: "zh-Hant",
+        title: "Futures Risk Copilot | 期貨部位風險管理",
+        metaDescription: "期貨風險管理與爆倉機率評估工具，支援中英文切換與 AI 風險建議。",
+        brandTitle: "Futures Risk Copilot",
+        backHome: "返回首頁",
+        heroEyebrow: "Futures Risk Intelligence",
+        heroTitle: "期貨部位風險管理中心",
+        heroSubtitle: "輸入期貨部位、保證金、預期報酬率、最大回撤等資訊，自動估算<strong>爆倉風險</strong>、安全緩衝天數與壓力情境。內建 AI 建議引擎（本地規則版）協助你快速調整槓桿與停損策略。",
+        inputCardTitle: "部位與風險輸入",
+        labelSymbol: "期貨品種",
+        symbolTx: "台指期",
+        symbolMtx: "小台指",
+        symbolSxf: "標普 500 期貨 (SXF)",
+        symbolMes: "Micro E-mini S&P 500 (MES)",
+        symbolNasdaq: "NASDAQ 期貨",
+        symbolGold: "黃金期貨",
+        symbolOil: "原油期貨",
+        labelDirection: "方向",
+        directionLongOption: "做多",
+        directionShortOption: "做空",
+        labelContracts: "口數",
+        labelEntryPrice: "進場價",
+        labelCurrentPrice: "當前價格",
+        labelContractMultiplier: "每點價值（乘數）",
+        labelInitialMargin: "初始保證金（每口）",
+        labelMaintenanceMargin: "維持保證金（每口）",
+        labelContractMultiplierCurrency: (currency, unitPoints) => `每點價值（乘數，${currency}/${unitPoints}）`,
+        labelInitialMarginCurrency: (currency) => `初始保證金（每口，${currency}）`,
+        labelMaintenanceMarginCurrency: (currency) => `維持保證金（每口，${currency}）`,
+        labelExpectedReturn: "預期報酬率（年化 %）",
+        labelMaxDrawdown: "可接受最大回撤（%）",
+        labelDailyVol: "假設日波動率（%）",
+        labelNotes: "交易備註（可選）",
+        notesPlaceholder: "例如：事件交易、留倉天數、關鍵停損位... ",
+        calculateBtn: "計算風險",
+        aiAdviceBtn: "產生 AI 風險建議",
+        dashboardTitle: "風險儀表板",
+        metricLabelPnl: "目前浮動損益",
+        metricLabelEquityRatio: "權益 / 維持保證金比",
+        metricLabelLiqDistance: "距離爆倉價格",
+        metricLabelLiqProbability: "預估爆倉概率（30日）",
+        thScenario: "情境",
+        thPriceMove: "價格變動",
+        thSimPnl: "模擬損益",
+        metricLabelPnlCurrency: (currency) => `目前浮動損益（${currency}）`,
+        thSimPnlCurrency: (currency) => `模擬損益（${currency}）`,
+        currencyHint: (currency) => `計價幣別：${currency}`,
+        thRiskStatus: "風險判定",
+        riskWaiting: "等待計算",
+        aiInitial: "點擊「產生 AI 風險建議」，會根據你的部位與回撤設定產生文字建議。",
+        riskLow: "低風險：保證金緩衝充足",
+        riskMid: "中風險：建議監控波動與槓桿",
+        riskHigh: "高風險：接近追繳/爆倉區間",
+        unitPoints: "點",
+        scenarioDown: "下跌",
+        scenarioUp: "上漲",
+        statusHighRisk: "追繳/高危",
+        statusWarning: "警戒",
+        statusSafe: "安全",
+        adviceIntro: (symbol, liqProb30, equityRatio) => `【${symbol}】部位診斷：目前 30 日爆倉機率約 ${liqProb30.toFixed(1)}%，權益/維持保證金比 ${equityRatio.toFixed(1)}%。`,
+        advice1Low: "1) 優先補足保證金或降低口數，目標把權益/維持保證金比拉回 150% 以上。",
+        advice1Ok: "1) 保證金緩衝尚可，建議以「固定風險額度」動態調整口數，避免行情急變。",
+        advice2High: "2) 建議設定硬停損與時間停損雙機制；當波動率上升時，優先減槓桿而不是攤平。",
+        advice2Low: "2) 可維持目前部位，但建議每日檢查隱含波動與跨夜風險事件。",
+        advice3: (rr) => `3) 預期報酬/可接受回撤比約 ${rr}。若低於 1.2，建議降低交易頻率或提高訊號門檻。`,
+        advice4: (notes) => `4) 交易備註重點：${notes}`,
+        advice5: "5) 可擴充功能：加入分批進場模擬、VaR 走勢圖、多商品相關性風險熱力圖。"
+      },
+      en: {
+        htmlLang: "en",
+        title: "Futures Risk Copilot | Futures Position Risk Management",
+        metaDescription: "Futures risk dashboard with liquidation probability estimation and bilingual AI risk guidance.",
+        brandTitle: "Futures Risk Copilot",
+        backHome: "Back to Home",
+        heroEyebrow: "Futures Risk Intelligence",
+        heroTitle: "Futures Position Risk Center",
+        heroSubtitle: "Input futures positions, margin settings, expected return, and max drawdown to estimate <strong>liquidation risk</strong>, safety buffer, and stress scenarios. The built-in local AI rule engine helps you adjust leverage and stop-loss strategy.",
+        inputCardTitle: "Position and Risk Inputs",
+        labelSymbol: "Futures Symbol",
+        symbolTx: "TAIEX Futures",
+        symbolMtx: "Mini TAIEX",
+        symbolSxf: "S&P 500 Futures (SXF)",
+        symbolMes: "Micro E-mini S&P 500 (MES)",
+        symbolNasdaq: "NASDAQ Futures",
+        symbolGold: "Gold Futures",
+        symbolOil: "Crude Oil Futures",
+        labelDirection: "Direction",
+        directionLongOption: "Long",
+        directionShortOption: "Short",
+        labelContracts: "Contracts",
+        labelEntryPrice: "Entry Price",
+        labelCurrentPrice: "Current Price",
+        labelContractMultiplier: "Point Value (Multiplier)",
+        labelInitialMargin: "Initial Margin (Per Contract)",
+        labelMaintenanceMargin: "Maintenance Margin (Per Contract)",
+        labelContractMultiplierCurrency: (currency) => `Point Value (${currency}/pt)`,
+        labelInitialMarginCurrency: (currency) => `Initial Margin (Per Contract, ${currency})`,
+        labelMaintenanceMarginCurrency: (currency) => `Maintenance Margin (Per Contract, ${currency})`,
+        labelExpectedReturn: "Expected Return (Annual %)",
+        labelMaxDrawdown: "Max Acceptable Drawdown (%)",
+        labelDailyVol: "Assumed Daily Volatility (%)",
+        labelNotes: "Trade Notes (Optional)",
+        notesPlaceholder: "e.g., event-driven setup, holding period, critical stop-loss level...",
+        calculateBtn: "Calculate Risk",
+        aiAdviceBtn: "Generate AI Risk Advice",
+        dashboardTitle: "Risk Dashboard",
+        metricLabelPnl: "Current Floating PnL",
+        metricLabelEquityRatio: "Equity / Maintenance Margin",
+        metricLabelLiqDistance: "Distance to Liquidation Price",
+        metricLabelLiqProbability: "Estimated Liquidation Probability (30D)",
+        thScenario: "Scenario",
+        thPriceMove: "Price Move",
+        thSimPnl: "Simulated PnL",
+        metricLabelPnlCurrency: (currency) => `Current Floating PnL (${currency})`,
+        thSimPnlCurrency: (currency) => `Simulated PnL (${currency})`,
+        currencyHint: (currency) => `Quote Currency: ${currency}`,
+        thRiskStatus: "Risk Status",
+        riskWaiting: "Waiting for calculation",
+        aiInitial: "Click \"Generate AI Risk Advice\" to create recommendations based on your position and drawdown settings.",
+        riskLow: "Low Risk: Margin buffer is sufficient",
+        riskMid: "Medium Risk: Monitor volatility and leverage",
+        riskHigh: "High Risk: Close to margin call/liquidation zone",
+        unitPoints: "pts",
+        scenarioDown: "Down",
+        scenarioUp: "Up",
+        statusHighRisk: "Margin call / High risk",
+        statusWarning: "Warning",
+        statusSafe: "Safe",
+        adviceIntro: (symbol, liqProb30, equityRatio) => `[${symbol}] Position diagnosis: estimated 30-day liquidation probability is ${liqProb30.toFixed(1)}%, with equity/maintenance margin ratio at ${equityRatio.toFixed(1)}%.`,
+        advice1Low: "1) Prioritize adding margin or reducing contracts. Target an equity/maintenance ratio above 150%.",
+        advice1Ok: "1) Margin buffer is acceptable. Use fixed risk budget sizing to adapt contract count in fast markets.",
+        advice2High: "2) Use both hard stop-loss and time stop-loss rules. When volatility rises, reduce leverage before averaging down.",
+        advice2Low: "2) Current position can be maintained, but monitor implied volatility and overnight event risk daily.",
+        advice3: (rr) => `3) Expected return / max drawdown ratio is about ${rr}. If below 1.2, reduce trading frequency or raise signal thresholds.`,
+        advice4: (notes) => `4) Trade note highlight: ${notes}`,
+        advice5: "5) Optional upgrades: scaling-in simulator, VaR trend chart, and cross-asset correlation heatmap."
+      }
+    };
+
+    let currentLanguage = "zh";
+    const textNodes = {
+      brandTitle: document.getElementById("brandTitle"),
+      backHome: document.getElementById("backHome"),
+      heroEyebrow: document.getElementById("heroEyebrow"),
+      heroTitle: document.getElementById("heroTitle"),
+      heroSubtitle: document.getElementById("heroSubtitle"),
+      inputCardTitle: document.getElementById("inputCardTitle"),
+      labelSymbol: document.getElementById("labelSymbol"),
+      labelDirection: document.getElementById("labelDirection"),
+      directionLongOption: document.getElementById("directionLongOption"),
+      directionShortOption: document.getElementById("directionShortOption"),
+      labelContracts: document.getElementById("labelContracts"),
+      labelEntryPrice: document.getElementById("labelEntryPrice"),
+      labelCurrentPrice: document.getElementById("labelCurrentPrice"),
+      labelContractMultiplier: document.getElementById("labelContractMultiplier"),
+      labelInitialMargin: document.getElementById("labelInitialMargin"),
+      labelMaintenanceMargin: document.getElementById("labelMaintenanceMargin"),
+      labelExpectedReturn: document.getElementById("labelExpectedReturn"),
+      labelMaxDrawdown: document.getElementById("labelMaxDrawdown"),
+      labelDailyVol: document.getElementById("labelDailyVol"),
+      labelNotes: document.getElementById("labelNotes"),
+      calculateBtn: document.getElementById("calculateBtn"),
+      aiAdviceBtn: document.getElementById("aiAdviceBtn"),
+      dashboardTitle: document.getElementById("dashboardTitle"),
+      metricLabelPnl: document.getElementById("metricLabelPnl"),
+      metricLabelEquityRatio: document.getElementById("metricLabelEquityRatio"),
+      metricLabelLiqDistance: document.getElementById("metricLabelLiqDistance"),
+      metricLabelLiqProbability: document.getElementById("metricLabelLiqProbability"),
+      thScenario: document.getElementById("thScenario"),
+      thPriceMove: document.getElementById("thPriceMove"),
+      thSimPnl: document.getElementById("thSimPnl"),
+      thRiskStatus: document.getElementById("thRiskStatus")
+    };
+
+    const symbolSelect = document.getElementById("symbol");
+    const symbolCurrencyHint = document.getElementById("symbolCurrencyHint");
+    const notesInput = document.getElementById("notes");
+    const riskTagEl = document.getElementById("riskTag");
+    const aiOutputEl = document.getElementById("aiOutput");
+    const zhButton = document.getElementById("lang-zh");
+    const enButton = document.getElementById("lang-en");
+    const symbolCurrencyMap = {
+      TX: "TWD",
+      MTX: "TWD",
+      SXF: "USD",
+      MES: "USD",
+      NASDAQ: "USD",
+      GOLD: "USD",
+      OIL: "USD"
+    };
+
+    function t(key) {
+      return i18n[currentLanguage][key];
+    }
+
+    function getActiveCurrencyCode() {
+      return symbolCurrencyMap[symbolSelect.value] || "USD";
+    }
+
+    function updateCurrencyUI() {
+      const currencyCode = getActiveCurrencyCode();
+      textNodes.labelContractMultiplier.textContent = t("labelContractMultiplierCurrency")(currencyCode, t("unitPoints"));
+      textNodes.labelInitialMargin.textContent = t("labelInitialMarginCurrency")(currencyCode);
+      textNodes.labelMaintenanceMargin.textContent = t("labelMaintenanceMarginCurrency")(currencyCode);
+      textNodes.metricLabelPnl.textContent = t("metricLabelPnlCurrency")(currencyCode);
+      textNodes.thSimPnl.textContent = t("thSimPnlCurrency")(currencyCode);
+      symbolCurrencyHint.textContent = t("currencyHint")(currencyCode);
+    }
+
+    function updateLanguageUI() {
+      const copy = i18n[currentLanguage];
+      document.documentElement.lang = copy.htmlLang;
+      document.title = copy.title;
+      const metaDescription = document.querySelector('meta[name="description"]');
+      if (metaDescription) metaDescription.setAttribute("content", copy.metaDescription);
+
+      Object.keys(textNodes).forEach((key) => {
+        if (!textNodes[key]) return;
+        if (key === "heroSubtitle") {
+          textNodes[key].innerHTML = copy[key];
+          return;
+        }
+        if (typeof copy[key] === "function") return;
+        textNodes[key].textContent = copy[key];
+      });
+
+      symbolSelect.options[0].textContent = copy.symbolTx;
+      symbolSelect.options[1].textContent = copy.symbolMtx;
+      symbolSelect.options[2].textContent = copy.symbolSxf;
+      symbolSelect.options[3].textContent = copy.symbolMes;
+      symbolSelect.options[4].textContent = copy.symbolNasdaq;
+      symbolSelect.options[5].textContent = copy.symbolGold;
+      symbolSelect.options[6].textContent = copy.symbolOil;
+      notesInput.placeholder = copy.notesPlaceholder;
+      updateCurrencyUI();
+
+      zhButton.classList.toggle("active", currentLanguage === "zh");
+      enButton.classList.toggle("active", currentLanguage === "en");
+      zhButton.setAttribute("aria-pressed", String(currentLanguage === "zh"));
+      enButton.setAttribute("aria-pressed", String(currentLanguage === "en"));
+
+      localStorage.setItem("rb-language", currentLanguage);
+    }
+
+    const fmtMoney = (num, currencyCode) => {
+      if (!Number.isFinite(num)) return '-';
+      const locale = currentLanguage === 'en' ? 'en-US' : 'zh-TW';
+      try {
+        return new Intl.NumberFormat(locale, {
+          style: 'currency',
+          currency: currencyCode,
+          maximumFractionDigits: 0
+        }).format(num);
+      } catch (_) {
+        return `${currencyCode} ${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(num)}`;
+      }
+    };
+
+    const fmtPct = (num, digits = 2) => `${num.toFixed(digits)}%`;
+
+    function calculate() {
+      const direction = document.getElementById('direction').value;
+      const contracts = Math.max(1, Number(document.getElementById('contracts').value) || 1);
+      const entry = Number(document.getElementById('entryPrice').value) || 0;
+      const current = Number(document.getElementById('currentPrice').value) || 0;
+      const symbol = symbolSelect.value;
+      const currencyCode = getActiveCurrencyCode();
+      const multiplier = Number(document.getElementById('contractMultiplier').value) || 1;
+      const initialMargin = Number(document.getElementById('initialMargin').value) || 0;
+      const maintenanceMargin = Number(document.getElementById('maintenanceMargin').value) || 0;
+      const dailyVol = Math.max(0.1, Number(document.getElementById('dailyVol').value) || 1) / 100;
+
+      const sign = direction === 'long' ? 1 : -1;
+      const pointMove = (current - entry) * sign;
+      const pnl = pointMove * multiplier * contracts;
+      const totalInitial = initialMargin * contracts;
+      const totalMaintenance = maintenanceMargin * contracts;
+      const equity = totalInitial + pnl;
+      const equityRatio = totalMaintenance > 0 ? (equity / totalMaintenance) * 100 : 0;
+
+      // Liquidation buffer in points based on current equity, not entry/current absolute gap.
+      const pointsBufferToMaintenance = (equity - totalMaintenance) / (multiplier * contracts);
+      const liquidationPrice = direction === 'long'
+        ? current - pointsBufferToMaintenance
+        : current + pointsBufferToMaintenance;
+      const liqDistancePts = pointsBufferToMaintenance;
+      const dailySigmaPts = Math.max(entry * dailyVol, 1);
+      const zScore = Math.max(liqDistancePts, 0) / dailySigmaPts;
+      const liqProb30 = liqDistancePts <= 0 ? 99 : Math.min(99, Math.max(1, (35 / (zScore + 1))));
+
+      document.getElementById('pnlValue').textContent = `${pnl >= 0 ? '+' : '-'}${fmtMoney(Math.abs(pnl), currencyCode)}`;
+      document.getElementById('equityRatio').textContent = fmtPct(equityRatio, 1);
+      document.getElementById('liqDistance').textContent = `${liqDistancePts.toFixed(1)} ${t('unitPoints')}`;
+      document.getElementById('liqProbability').textContent = fmtPct(liqProb30, 1);
+
+      const tag = document.getElementById('riskTag');
+      tag.className = 'risk-tag';
+      if (equityRatio >= 160 && liqProb30 < 20) {
+        tag.classList.add('risk-low');
+        tag.textContent = t('riskLow');
+      } else if (equityRatio >= 120 && liqProb30 < 40) {
+        tag.classList.add('risk-mid');
+        tag.textContent = t('riskMid');
+      } else {
+        tag.classList.add('risk-high');
+        tag.textContent = t('riskHigh');
+      }
+
+      renderScenarios({ contracts, multiplier, sign, entry, direction, totalMaintenance, totalInitial, currencyCode });
+
+      return {
+        pnl,
+        equityRatio,
+        liqProb30,
+        liquidationPrice,
+        dailyVol,
+        totalInitial,
+        totalMaintenance,
+        symbol,
+        currencyCode,
+        expectedReturn: Number(document.getElementById('expectedReturn').value) || 0,
+        maxDrawdown: Number(document.getElementById('maxDrawdown').value) || 0,
+        notes: document.getElementById('notes').value.trim(),
+      };
+    }
+
+    function renderScenarios({ contracts, multiplier, sign, entry, direction, totalMaintenance, totalInitial, currencyCode }) {
+      const scenarios = [-0.03, -0.015, 0.015, 0.03].map(change => {
+        const newPrice = entry * (1 + change);
+        const pnl = ((newPrice - entry) * sign) * multiplier * contracts;
+        const equity = totalInitial + pnl;
+        const status = equity <= totalMaintenance
+          ? t('statusHighRisk')
+          : (equity <= totalMaintenance * 1.2 ? t('statusWarning') : t('statusSafe'));
+        return {
+          name: `${change < 0 ? t('scenarioDown') : t('scenarioUp')} ${Math.abs(change * 100).toFixed(1)}%`,
+          movement: `${entry.toFixed(0)} → ${newPrice.toFixed(0)}`,
+          pnl,
+          status,
+        };
+      });
+
+      const body = document.getElementById('scenarioBody');
+      body.innerHTML = scenarios.map(s => `
+        <tr>
+          <td>${s.name}</td>
+          <td>${s.movement}</td>
+          <td>${s.pnl >= 0 ? '+' : '-'}${fmtMoney(Math.abs(s.pnl), currencyCode)}</td>
+          <td>${s.status}</td>
+        </tr>
+      `).join('');
+    }
+
+    function generateAiAdvice() {
+      const result = calculate();
+      const advice = [];
+      advice.push(t('adviceIntro')(result.symbol, result.liqProb30, result.equityRatio));
+
+      if (result.equityRatio < 120) {
+        advice.push(t('advice1Low'));
+      } else {
+        advice.push(t('advice1Ok'));
+      }
+
+      if (result.liqProb30 > 35) {
+        advice.push(t('advice2High'));
+      } else {
+        advice.push(t('advice2Low'));
+      }
+
+      if (result.expectedReturn > 0 && result.maxDrawdown > 0) {
+        const rr = (result.expectedReturn / result.maxDrawdown).toFixed(2);
+        advice.push(t('advice3')(rr));
+      }
+
+      if (result.notes) {
+        advice.push(t('advice4')(result.notes));
+      }
+
+      advice.push(t('advice5'));
+      document.getElementById('aiOutput').textContent = advice.join('\n');
+    }
+
+    document.getElementById('calculateBtn').addEventListener('click', calculate);
+    document.getElementById('aiAdviceBtn').addEventListener('click', generateAiAdvice);
+    symbolSelect.addEventListener('change', () => {
+      updateCurrencyUI();
+      calculate();
+    });
+    zhButton.addEventListener('click', () => {
+      currentLanguage = 'zh';
+      updateLanguageUI();
+      if (!document.querySelector('#scenarioBody tr')) {
+        riskTagEl.textContent = t('riskWaiting');
+        aiOutputEl.textContent = t('aiInitial');
+      }
+      calculate();
+    });
+    enButton.addEventListener('click', () => {
+      currentLanguage = 'en';
+      updateLanguageUI();
+      if (!document.querySelector('#scenarioBody tr')) {
+        riskTagEl.textContent = t('riskWaiting');
+        aiOutputEl.textContent = t('aiInitial');
+      }
+      calculate();
+    });
+
+    currentLanguage = localStorage.getItem('rb-language') === 'en' ? 'en' : 'zh';
+    updateLanguageUI();
+    riskTagEl.textContent = t('riskWaiting');
+    aiOutputEl.textContent = t('aiInitial');
+    calculate();
+  </script>
+</body>
+</html>

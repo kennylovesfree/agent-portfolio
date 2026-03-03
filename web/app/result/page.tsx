@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AllocationPieChart } from "@/components/AllocationPieChart";
 import { AssetCard } from "@/components/AssetCard";
+import { EmptyStateActions } from "@/components/ui/EmptyStateActions";
+import { PageShell } from "@/components/ui/PageShell";
+import { SurfaceCard } from "@/components/ui/SurfaceCard";
 import { assetUniverse } from "@/lib/assetUniverse";
 import { OnboardingAnswers } from "@/lib/types";
 
@@ -70,40 +73,53 @@ export default function ResultPage() {
   }, [riskScore]);
 
   return (
-    <main>
-      <h1 style={{ marginTop: 0 }}>配置結果頁</h1>
-      <p style={{ color: "#cbd5e1" }}>依據問卷結果輸出風險分數與建議配置。</p>
-
+    <PageShell
+      title="配置結果"
+      subtitle="依據問卷資料，提供你的風險分數與建議資產配置。"
+      rightSlot={
+        <Link href="/index.html" className="btn-secondary">
+          回首頁
+        </Link>
+      }
+    >
       {!answers ? (
-        <section style={{ border: "1px solid #334155", borderRadius: 16, padding: 20, background: "#111827" }}>
-          <p>尚無可顯示資料，請先完成問卷。</p>
-          <Link href="/" style={{ color: "#93c5fd" }}>
-            返回問卷首頁
-          </Link>
-        </section>
+        <EmptyStateActions
+          message="尚無可顯示資料。你可以先完成問卷，再回到此頁查看建議配置。"
+          actions={[
+            { label: "開始問卷", href: "/onboarding" },
+            { label: "回首頁", href: "/index.html", variant: "secondary" },
+          ]}
+        />
       ) : (
-        <>
-          <section style={{ border: "1px solid #334155", borderRadius: 16, padding: 20, background: "#111827" }}>
-            <h2 style={{ marginTop: 0 }}>問卷摘要</h2>
-            <p>風險分數：{riskScore}</p>
-            <p>投資目標：{answers.goal || "未選擇"}</p>
-          </section>
+        <div className="grid gap-5 md:gap-6">
+          <SurfaceCard>
+            <h2 className="m-0 text-xl font-semibold tracking-tight">風險摘要</h2>
+            <div className="mt-4 grid gap-2 text-sm text-text-secondary md:grid-cols-2">
+              <p className="m-0">風險分數：<span className="font-semibold text-text-primary">{riskScore}</span></p>
+              <p className="m-0">投資目標：<span className="font-semibold text-text-primary">{answers.goal || "未選擇"}</span></p>
+            </div>
+          </SurfaceCard>
 
-          <section className="grid two" style={{ alignItems: "start", marginTop: 20 }}>
+          <section className="grid gap-5 lg:grid-cols-[minmax(0,360px)_1fr] lg:gap-6">
             <AllocationPieChart data={allocation} />
 
-            <div className="grid">
-              {assetUniverse.map((asset) => (
-                <AssetCard key={asset.symbol} symbol={asset.symbol} name={asset.name} riskLevel={asset.volatility} />
-              ))}
+            <div className="grid gap-3">
+              <h3 className="m-0 text-lg font-semibold tracking-tight">可持有標的</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                {assetUniverse.map((asset) => (
+                  <AssetCard key={asset.symbol} symbol={asset.symbol} name={asset.name} riskLevel={asset.volatility} />
+                ))}
+              </div>
             </div>
           </section>
 
-          <Link href="/report" style={{ display: "inline-block", marginTop: 24, color: "#93c5fd" }}>
-            下一步：查看完整報告 →
-          </Link>
-        </>
+          <div>
+            <Link href="/report" className="btn-primary">
+              下一步：查看完整報告
+            </Link>
+          </div>
+        </div>
       )}
-    </main>
+    </PageShell>
   );
 }

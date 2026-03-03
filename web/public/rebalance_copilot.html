@@ -1,0 +1,2939 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rebalance Copilot | 智能資產配置預估</title>
+  <meta name="description" content="AI 投資組合配置與風險試算工具，支援中英文切換、壓力測試與快照分享。" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@300;400;600;700&display=swap');
+
+    :root {
+      --bg-0: #0b1118;
+      --bg-1: #0f1a26;
+      --bg-2: #102433;
+      --card: rgba(255, 255, 255, 0.06);
+      --card-strong: rgba(255, 255, 255, 0.12);
+      --line: rgba(255, 255, 255, 0.12);
+      --ink: #e8eef6;
+      --muted: rgba(232, 238, 246, 0.65);
+      --accent: #f0c86a;
+      --accent-2: #5fd6c2;
+      --accent-3: #87a9ff;
+      --good: #7bd88f;
+      --shadow: 0 26px 70px rgba(4, 10, 20, 0.6);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Manrope", "Avenir Next", system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 800px at 5% 5%, rgba(135, 169, 255, 0.18), transparent 60%),
+        radial-gradient(900px 600px at 95% 10%, rgba(95, 214, 194, 0.16), transparent 65%),
+        linear-gradient(160deg, var(--bg-0), var(--bg-1) 45%, var(--bg-2));
+      min-height: 100vh;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 999px;
+      opacity: 0.6;
+      mix-blend-mode: screen;
+      animation: drift 14s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .orb.one {
+      width: 240px;
+      height: 240px;
+      background: radial-gradient(circle at 30% 30%, rgba(135, 169, 255, 0.7), transparent 70%);
+      top: -90px;
+      right: -40px;
+    }
+
+    .orb.two {
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle at 40% 40%, rgba(240, 200, 106, 0.5), transparent 70%);
+      bottom: -150px;
+      left: -80px;
+      animation-delay: -6s;
+    }
+
+    @keyframes drift {
+      0%, 100% { transform: translateY(0) translateX(0); }
+      50% { transform: translateY(18px) translateX(-10px); }
+    }
+
+    header {
+      padding: 28px clamp(18px, 4vw, 60px) 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(140deg, var(--accent), var(--accent-3));
+      display: grid;
+      place-items: center;
+      color: #0d1218;
+      font-weight: 800;
+      box-shadow: 0 12px 30px rgba(124, 156, 255, 0.35);
+    }
+
+    .header-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .lang-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .lang-btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+    }
+
+    .lang-btn.active {
+      background: rgba(255, 255, 255, 0.14);
+      color: var(--ink);
+    }
+
+    .hero {
+      padding: 18px clamp(18px, 4vw, 60px) 8px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(240, 200, 106, 0.35);
+      color: var(--accent);
+      font-size: 13px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      width: fit-content;
+    }
+
+    h1 {
+      font-family: "Cormorant Garamond", serif;
+      font-size: clamp(34px, 4vw, 56px);
+      line-height: 1.05;
+      margin: 8px 0 0;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      max-width: 760px;
+      line-height: 1.7;
+    }
+
+    main {
+      padding: 18px clamp(18px, 4vw, 60px) 60px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+      letter-spacing: 0.4px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      background: rgba(7, 12, 20, 0.65);
+      color: var(--ink);
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: rgba(135, 169, 255, 0.7);
+      box-shadow: 0 0 0 2px rgba(135, 169, 255, 0.2);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .row.tight {
+      grid-template-columns: 1fr 120px;
+      align-items: center;
+    }
+
+    .range-wrap {
+      display: grid;
+      gap: 6px;
+    }
+
+    input[type="range"] {
+      accent-color: var(--accent-2);
+      height: 4px;
+      padding: 0;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      background: linear-gradient(140deg, var(--accent), #f6dda1);
+      color: #1d1500;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    button:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(240, 200, 106, 0.25); }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .stats {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .stat {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(10, 16, 26, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stat strong { color: var(--accent); font-size: 18px; }
+
+    .chart {
+      height: 260px;
+      border-radius: 18px;
+      background:
+        linear-gradient(120deg, rgba(135, 169, 255, 0.16), rgba(95, 214, 194, 0.08)),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 48px),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 48px);
+      border: 1px solid var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chart-meta {
+      margin-top: 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .legend-dot.optimistic { background: #63dfbf; }
+    .legend-dot.base { background: #f0c86a; }
+    .legend-dot.pessimistic { background: #ff9a7a; }
+
+    .chart-end {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chart-end-title {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .chart-end-pills {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .end-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .end-pill strong {
+      color: var(--ink);
+      font-size: 12px;
+      letter-spacing: 0.2px;
+    }
+
+    .chart-tooltip {
+      position: absolute;
+      pointer-events: none;
+      min-width: 190px;
+      max-width: 240px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(7, 12, 20, 0.9);
+      padding: 10px 12px;
+      color: var(--ink);
+      box-shadow: 0 14px 36px rgba(5, 10, 16, 0.5);
+      font-size: 12px;
+      line-height: 1.45;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 140ms ease, transform 140ms ease;
+      z-index: 2;
+    }
+
+    .chart-tooltip.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .chart-tooltip .time {
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+
+    .chart-tooltip .line {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 2px 0;
+    }
+
+    .chart-tooltip .line .key {
+      color: var(--muted);
+    }
+
+    .chart-tooltip .line .val {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+      margin-top: 12px;
+    }
+
+    .model-breakdown {
+      margin-top: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .model-breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .table {
+      display: grid;
+      gap: 10px;
+    }
+
+    .table-head, .table-row {
+      display: grid;
+      grid-template-columns: 0.9fr 1.2fr 1fr 1fr 70px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .allocation-table .table-head,
+    .allocation-table .table-row {
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+    }
+
+    .allocation-table .table-row {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(8, 14, 24, 0.55);
+      font-size: 13px;
+    }
+
+    .table-head {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .table-row button {
+      padding: 8px 10px;
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--ink);
+    }
+
+    .ticker-cell {
+      display: grid;
+      gap: 4px;
+      align-content: center;
+    }
+
+    .ticker-error {
+      display: none;
+      font-size: 12px;
+      color: #ff8b8b;
+      line-height: 1.2;
+    }
+
+    .ticker-cell.has-error {
+      align-content: start;
+    }
+
+    .ticker-cell.has-error .ticker-error {
+      display: block;
+      min-height: 16px;
+    }
+
+    .expert-card {
+      border: 1px solid rgba(240, 200, 106, 0.55);
+      background:
+        linear-gradient(160deg, rgba(240, 200, 106, 0.12), rgba(135, 169, 255, 0.06)),
+        var(--card);
+      box-shadow: 0 20px 60px rgba(240, 200, 106, 0.18), var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .expert-card::after {
+      content: "";
+      position: absolute;
+      inset: -80px auto auto -40px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(240, 200, 106, 0.25), transparent 70%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .expert-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(240, 200, 106, 0.18);
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .expert-summary {
+      font-size: 15px;
+      line-height: 1.7;
+      margin: 0 0 12px;
+      color: var(--ink);
+    }
+
+    .expert-list {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .expert-list li {
+      list-style: none;
+      position: relative;
+      padding-left: 10px;
+    }
+
+    .expert-list li::before {
+      content: "◆";
+      position: absolute;
+      left: -12px;
+      color: var(--accent);
+      font-size: 10px;
+      top: 4px;
+    }
+
+    .health-score {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin: 4px 0 12px;
+    }
+
+    .health-score strong {
+      font-size: 40px;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .health-band {
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .health-components {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .mini-stat {
+      border-radius: 12px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      background: rgba(8, 14, 24, 0.52);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .mini-stat strong {
+      display: block;
+      color: var(--ink);
+      font-size: 18px;
+      margin-top: 2px;
+    }
+
+    .flag-list {
+      margin: 12px 0 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .flag-list li {
+      list-style: disc;
+    }
+
+    .stress-table .table-head,
+    .stress-table .table-row {
+      grid-template-columns: 1.3fr 1fr 1fr 0.8fr;
+    }
+
+    .stress-table .table-row {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(8, 14, 24, 0.55);
+      font-size: 13px;
+    }
+
+    .data-quality-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .snapshot-result {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 20px;
+    }
+
+    footer {
+      padding: 18px clamp(18px, 4vw, 60px) 36px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 980px) {
+      main { grid-template-columns: 1fr; }
+      .row { grid-template-columns: 1fr; }
+      header { flex-direction: column; align-items: flex-start; }
+      .header-actions { justify-content: flex-start; }
+      .table-head, .table-row { grid-template-columns: 1fr; }
+      .table-row button { width: 100%; }
+      .health-components,
+      .model-breakdown-grid,
+      .data-quality-grid,
+      .stress-table .table-head,
+      .stress-table .table-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="orb one"></div>
+    <div class="orb two"></div>
+
+    <header>
+      <div class="brand">
+        <div class="brand-mark">R</div>
+        <div id="brandTitle">Rebalance Copilot</div>
+      </div>
+      <div class="header-actions">
+        <span class="chip" id="universeLabel">Universe: Taiwan + US stocks (API)</span>
+        <div class="lang-switch" role="group" aria-label="Language switch">
+          <button id="lang-zh" class="lang-btn active" type="button">中文</button>
+          <button id="lang-en" class="lang-btn" type="button">EN</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="hero">
+      <span id="heroEyebrow" class="eyebrow">Portfolio Forecast Studio</span>
+      <h1 id="heroTitle">輸入台股或美股代碼，快速預估年化收益、波動率與資產成長曲線。</h1>
+      <p id="heroSubtitle" class="subtitle">此頁面會即時呼叫市場資料 API 取得近一年報酬。回測與未來績效皆非保證，請勿視為投資建議。</p>
+    </section>
+
+    <main>
+      <section class="card">
+        <h2 id="inputCardTitle">投資條件輸入</h2>
+        <div class="grid">
+          <div class="table">
+            <div class="table-head">
+              <div id="tableHeadMarket">市場</div>
+              <div id="tableHeadTicker">代碼</div>
+              <div id="tableHeadAmount">金額</div>
+              <div id="tableHeadCurrency">幣種</div>
+              <div></div>
+            </div>
+            <div id="rows"></div>
+          </div>
+          <div class="actions">
+            <button id="addRow">新增標的</button>
+            <span id="maxCountChip" class="chip">最多 10 檔</span>
+          </div>
+          <div class="row">
+            <div>
+              <label id="labelYears" for="years">投資期限（1 - 30 年）</label>
+              <input id="years" type="range" min="1" max="30" value="10" />
+            </div>
+            <div>
+              <label id="labelYearsNumber" for="yearsNumber">年數</label>
+              <input id="yearsNumber" type="number" min="1" max="30" value="10" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label id="labelAge" for="age">年齡</label>
+              <input id="age" type="number" min="18" max="90" value="35" />
+            </div>
+            <div>
+              <label id="labelRiskLevel" for="riskLevel">風險承受等級</label>
+              <select id="riskLevel">
+                <option id="riskConservative" value="conservative">保守</option>
+                <option id="riskBalanced" value="balanced" selected>中性</option>
+                <option id="riskAggressive" value="aggressive">積極</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label id="labelTaxRegion" for="taxRegion">主要稅務地區</label>
+              <select id="taxRegion">
+                <option id="taxTw" value="TW" selected>台灣 (TW)</option>
+                <option id="taxUs" value="US">美國 (US)</option>
+                <option id="taxHk" value="HK">香港 (HK)</option>
+                <option id="taxSg" value="SG">新加坡 (SG)</option>
+              </select>
+            </div>
+            <div>
+              <label id="labelDisplayCurrency" for="displayCurrency">報表幣種</label>
+              <select id="displayCurrency">
+                <option id="ccyUsd" value="USD" selected>USD 美元</option>
+                <option id="ccyTwd" value="TWD">TWD 台幣</option>
+                <option id="ccyHkd" value="HKD">HKD 港幣</option>
+                <option id="ccyJpy" value="JPY">JPY 日圓</option>
+                <option id="ccyCny" value="CNY">CNY 人民幣</option>
+                <option id="ccyEur" value="EUR">EUR 歐元</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label id="labelOverride" for="override">手動調整年化報酬（%）</label>
+              <input id="override" type="number" min="-95" max="50" step="0.1" value="8.0" disabled />
+            </div>
+          </div>
+          <div class="actions">
+            <button id="calcBtn">更新試算結果</button>
+            <button id="aiBtn" type="button">查看 AI 建議</button>
+            <button id="shareBtn" type="button">複製分享連結</button>
+            <button id="saveSnapshotBtn" type="button">儲存決策快照</button>
+            <button id="exportShareImageBtn" type="button">匯出分享圖片</button>
+            <button id="compareSnapshotsBtn" type="button">比較最近兩次快照</button>
+            <label id="overrideToggleLabel" class="chip" style="cursor:pointer;">
+              <input id="overrideToggle" type="checkbox" style="margin:0;" />
+              <span id="overrideToggleText">使用手動年化報酬</span>
+            </label>
+            <span class="chip" id="scenarioId">Scenario: --</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 id="outputCardTitle">預估輸出</h2>
+        <div class="stats">
+          <div class="stat">
+            <span id="statLabelRate">預期年化收益率</span>
+            <strong id="outputRate">--</strong>
+          </div>
+          <div class="stat">
+            <span id="statLabelVol">年化波動率</span>
+            <strong id="outputVol">--</strong>
+          </div>
+          <div class="stat">
+            <span id="statLabelDd">最大回撤（模擬）</span>
+            <strong id="outputDD">--</strong>
+          </div>
+          <div class="stat">
+            <span id="statLabelTotal">期末資產總額</span>
+            <strong id="outputTotal">--</strong>
+          </div>
+          <div class="stat">
+            <span id="statLabelGain">累積收益</span>
+            <strong id="outputGain">--</strong>
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <div class="chart-meta">
+            <div class="chart-legend">
+              <span class="legend-item"><span class="legend-dot optimistic"></span><span id="chartLegendOptimistic">樂觀（P80）</span></span>
+              <span class="legend-item"><span class="legend-dot base"></span><span id="chartLegendBase">基準（P50）</span></span>
+              <span class="legend-item"><span class="legend-dot pessimistic"></span><span id="chartLegendPessimistic">悲觀（P20）</span></span>
+            </div>
+            <div class="chart-end">
+              <div id="chartEndLabel" class="chart-end-title">期末情境</div>
+              <div class="chart-end-pills">
+                <span class="end-pill"><span id="chartP80">P80</span><strong id="chartEndOptimistic">--</strong></span>
+                <span class="end-pill"><span id="chartP50">P50</span><strong id="chartEndBase">--</strong></span>
+                <span class="end-pill"><span id="chartP20">P20</span><strong id="chartEndPessimistic">--</strong></span>
+              </div>
+            </div>
+          </div>
+          <div class="chart">
+            <canvas id="trend"></canvas>
+            <div id="chartTooltip" class="chart-tooltip" aria-hidden="true"></div>
+          </div>
+        </div>
+        <div class="note" id="assumptionNote"></div>
+        <div class="model-breakdown">
+          <div class="model-breakdown-grid">
+            <div class="mini-stat"><span id="modelHistWeightLabel">歷史訊號權重</span><strong id="modelHistWeight">--</strong></div>
+            <div class="mini-stat"><span id="modelAnchorLabel">Anchor 貢獻</span><strong id="modelAnchor">--</strong></div>
+            <div class="mini-stat"><span id="modelDragLabel">扣費與懲罰</span><strong id="modelDrag">--</strong></div>
+          </div>
+          <div class="note" id="modelMethodNote">模型：--</div>
+        </div>
+      </section>
+
+      <section class="card allocation-table">
+        <h2 id="allocationTitle">配置優化建議</h2>
+        <div class="table">
+          <div class="table-head">
+            <div id="allocationHeadBucket">資產類別</div>
+            <div id="allocationHeadCurrent">目前占比</div>
+            <div id="allocationHeadTarget">建議占比</div>
+            <div id="allocationHeadDelta">調整方向</div>
+          </div>
+          <div id="allocationRows"></div>
+        </div>
+      </section>
+
+      <section class="card expert-card">
+        <h2 id="expertTitle">專家建議（個性化）</h2>
+        <div class="expert-badge">Expert Insight</div>
+        <p class="expert-summary" id="expertSummary">填寫完股票與金額後，點擊「查看 AI 建議」。</p>
+        <ul class="expert-list" id="expertList"></ul>
+      </section>
+
+      <section class="card">
+        <h2 id="healthTitle">投資組合健康度</h2>
+        <div class="health-score">
+          <strong id="healthScore">--</strong>
+          <span id="healthBand" class="health-band">--</span>
+        </div>
+        <div class="health-components">
+          <div class="mini-stat"><span id="compLabelConcentration">濃度分數</span><strong id="compConcentration">--</strong></div>
+          <div class="mini-stat"><span id="compLabelDiversification">分散分數</span><strong id="compDiversification">--</strong></div>
+          <div class="mini-stat"><span id="compLabelVolatility">波動分數</span><strong id="compVolatility">--</strong></div>
+          <div class="mini-stat"><span id="compLabelDrawdown">回撤分數</span><strong id="compDrawdown">--</strong></div>
+        </div>
+        <ul class="flag-list" id="healthFlags"></ul>
+      </section>
+
+      <section class="card stress-table">
+        <h2 id="stressTitle">標準壓力情境測試</h2>
+        <div class="table">
+          <div class="table-head">
+            <div id="stressHeadScenario">情境</div>
+            <div id="stressHeadPnl">組合損益 (USD)</div>
+            <div id="stressHeadDd">估計回撤</div>
+            <div id="stressHeadRisk">風險標籤</div>
+          </div>
+          <div id="stressRows"></div>
+        </div>
+        <div class="note" id="stressMeta">worst-case: --；survival days: --</div>
+      </section>
+
+      <section class="card">
+        <h2 id="qualityTitle">資料可信度</h2>
+        <div class="data-quality-grid">
+          <div class="mini-stat"><span id="qualityLabelLatest">最新價格日期</span><strong id="qualityLatest">--</strong></div>
+          <div class="mini-stat"><span id="qualityLabelBase">基準價格日期</span><strong id="qualityBase">--</strong></div>
+          <div class="mini-stat"><span id="qualityLabelCoverage">資料覆蓋率</span><strong id="qualityCoverage">--</strong></div>
+        </div>
+        <div class="note" id="qualityNote">資料來源：台股 FinMind、美股 Stooq。</div>
+      </section>
+
+      <section class="card">
+        <h2 id="snapshotTitle">決策快照與分享</h2>
+        <p id="snapshotDescription" class="note">可儲存當下輸入與輸出，並匯出手機友善分享圖片。</p>
+        <div class="snapshot-result" id="snapshotResult">尚未儲存快照。</div>
+      </section>
+    </main>
+
+    <footer id="footerText">
+      長期收益估算：CMA 收斂模型（名目扣費），歷史訊號僅做小比例修正；行情來源：台股 FinMind、美股 Stooq。
+    </footer>
+  </div>
+
+  <script>
+    const API_BASE_URL = (() => {
+      const host = (window.location.hostname || '').toLowerCase();
+      if (host === 'localhost' || host === '127.0.0.1') {
+        return `http://${host}:8000`;
+      }
+      // Production/staging should call same-origin API routes.
+      return '';
+    })();
+    const FX_RATES = { USD: 1, TWD: 0.032, HKD: 0.128, JPY: 0.0068, CNY: 0.14, EUR: 1.08 };
+    const RISK_MODELS = {
+      conservative: { volScale: 0.78, stockTarget: 0.45, bondTarget: 0.4, cashTarget: 0.15 },
+      balanced: { volScale: 0.9, stockTarget: 0.65, bondTarget: 0.25, cashTarget: 0.1 },
+      aggressive: { volScale: 1.05, stockTarget: 0.8, bondTarget: 0.15, cashTarget: 0.05 }
+    };
+    const RETURN_MODEL_CAP = 0.12;
+    const RETURN_MODEL_FLOOR = -0.02;
+
+    const rowsEl = document.getElementById('rows');
+    const yearsEl = document.getElementById('years');
+    const yearsNumberEl = document.getElementById('yearsNumber');
+    const displayCurrencyEl = document.getElementById('displayCurrency');
+    const overrideEl = document.getElementById('override');
+    const overrideToggleEl = document.getElementById('overrideToggle');
+    const ageEl = document.getElementById('age');
+    const riskLevelEl = document.getElementById('riskLevel');
+    const taxRegionEl = document.getElementById('taxRegion');
+    const scenarioIdEl = document.getElementById('scenarioId');
+    const allocationRowsEl = document.getElementById('allocationRows');
+
+    const outputRateEl = document.getElementById('outputRate');
+    const outputVolEl = document.getElementById('outputVol');
+    const outputDDEl = document.getElementById('outputDD');
+    const outputTotalEl = document.getElementById('outputTotal');
+    const outputGainEl = document.getElementById('outputGain');
+    const assumptionNoteEl = document.getElementById('assumptionNote');
+    const modelHistWeightEl = document.getElementById('modelHistWeight');
+    const modelAnchorEl = document.getElementById('modelAnchor');
+    const modelDragEl = document.getElementById('modelDrag');
+    const modelMethodNoteEl = document.getElementById('modelMethodNote');
+    const expertSummaryEl = document.getElementById('expertSummary');
+    const expertListEl = document.getElementById('expertList');
+    const aiBtnEl = document.getElementById('aiBtn');
+    const healthScoreEl = document.getElementById('healthScore');
+    const healthBandEl = document.getElementById('healthBand');
+    const compConcentrationEl = document.getElementById('compConcentration');
+    const compDiversificationEl = document.getElementById('compDiversification');
+    const compVolatilityEl = document.getElementById('compVolatility');
+    const compDrawdownEl = document.getElementById('compDrawdown');
+    const healthFlagsEl = document.getElementById('healthFlags');
+    const stressRowsEl = document.getElementById('stressRows');
+    const stressMetaEl = document.getElementById('stressMeta');
+    const qualityLatestEl = document.getElementById('qualityLatest');
+    const qualityBaseEl = document.getElementById('qualityBase');
+    const qualityCoverageEl = document.getElementById('qualityCoverage');
+    const qualityNoteEl = document.getElementById('qualityNote');
+    const snapshotResultEl = document.getElementById('snapshotResult');
+    const saveSnapshotBtnEl = document.getElementById('saveSnapshotBtn');
+    const exportShareImageBtnEl = document.getElementById('exportShareImageBtn');
+    const compareSnapshotsBtnEl = document.getElementById('compareSnapshotsBtn');
+    const zhButton = document.getElementById('lang-zh');
+    const enButton = document.getElementById('lang-en');
+    const chartEndOptimisticEl = document.getElementById('chartEndOptimistic');
+    const chartEndBaseEl = document.getElementById('chartEndBase');
+    const chartEndPessimisticEl = document.getElementById('chartEndPessimistic');
+    const chartTooltipEl = document.getElementById('chartTooltip');
+
+    const canvas = document.getElementById('trend');
+    const ctx = canvas.getContext('2d');
+    let latestChartSeries = null;
+    let chartTooltipCleanup = null;
+    let currentLanguage = localStorage.getItem('rb-language') === 'en' ? 'en' : 'zh';
+
+    const i18n = {
+      zh: {
+        htmlLang: 'zh-Hant',
+        title: 'Rebalance Copilot | 智能資產配置預估',
+        metaDescription: 'AI 投資組合配置與風險試算工具，支援中英文切換、壓力測試與快照分享。',
+        universeLabel: 'Universe: Taiwan + US stocks (API)',
+        heroTitle: '輸入台股或美股代碼，快速預估年化收益、波動率與資產成長曲線。',
+        heroSubtitle: '此頁面以 CMA 長期假設為主，搭配歷史訊號收斂與成本懲罰估算長期年化。回測與未來績效皆非保證，請勿視為投資建議。',
+        inputCardTitle: '投資條件輸入',
+        tableHeadMarket: '市場',
+        tableHeadTicker: '代碼',
+        tableHeadAmount: '金額',
+        tableHeadCurrency: '幣種',
+        addRow: '新增標的',
+        maxCountChip: '最多 10 檔',
+        labelYears: '投資期限（1 - 30 年）',
+        labelYearsNumber: '年數',
+        labelAge: '年齡',
+        labelRiskLevel: '風險承受等級',
+        riskConservative: '保守',
+        riskBalanced: '中性',
+        riskAggressive: '積極',
+        labelTaxRegion: '主要稅務地區',
+        taxTw: '台灣 (TW)',
+        taxUs: '美國 (US)',
+        taxHk: '香港 (HK)',
+        taxSg: '新加坡 (SG)',
+        labelDisplayCurrency: '報表幣種',
+        ccyUsd: 'USD 美元',
+        ccyTwd: 'TWD 台幣',
+        ccyHkd: 'HKD 港幣',
+        ccyJpy: 'JPY 日圓',
+        ccyCny: 'CNY 人民幣',
+        ccyEur: 'EUR 歐元',
+        labelOverride: '手動調整年化報酬（%）',
+        calcBtn: '更新試算結果',
+        aiBtn: '查看 AI 建議',
+        shareBtn: '複製分享連結',
+        saveSnapshotBtn: '儲存決策快照',
+        exportShareImageBtn: '匯出分享圖片',
+        compareSnapshotsBtn: '比較最近兩次快照',
+        overrideToggleText: '使用手動年化報酬',
+        outputCardTitle: '預估輸出',
+        statLabelRate: '預期年化收益率',
+        statLabelVol: '年化波動率',
+        statLabelDd: '最大回撤（模擬）',
+        statLabelTotal: '期末資產總額',
+        statLabelGain: '累積收益',
+        chartLegendOptimistic: '樂觀（P80）',
+        chartLegendBase: '基準（P50）',
+        chartLegendPessimistic: '悲觀（P20）',
+        chartP80: 'P80',
+        chartP50: 'P50',
+        chartP20: 'P20',
+        chartEndLabel: '期末情境',
+        chartTooltipYear: '年',
+        chartTooltipValue: '金額',
+        chartTooltipReturn: '報酬',
+        modelHistWeightLabel: '歷史訊號權重',
+        modelAnchorLabel: 'Anchor 貢獻',
+        modelDragLabel: '扣費與懲罰',
+        modelMethodPrefix: '模型',
+        modelFallbackHint: '後端模型不可用，已切換本地收斂估算。',
+        modelManualOverride: '已啟用手動年化覆寫',
+        allocationTitle: '配置優化建議',
+        allocationHeadBucket: '資產類別',
+        allocationHeadCurrent: '目前占比',
+        allocationHeadTarget: '建議占比',
+        allocationHeadDelta: '調整方向',
+        expertTitle: '專家建議（個性化）',
+        expertInitial: '填寫完股票與金額後，點擊「查看 AI 建議」。',
+        healthTitle: '投資組合健康度',
+        compLabelConcentration: '濃度分數',
+        compLabelDiversification: '分散分數',
+        compLabelVolatility: '波動分數',
+        compLabelDrawdown: '回撤分數',
+        healthBandPrefix: '風險等級',
+        stressTitle: '標準壓力情境測試',
+        stressHeadScenario: '情境',
+        stressHeadPnl: '組合損益 (USD)',
+        stressHeadDd: '估計回撤',
+        stressHeadRisk: '風險標籤',
+        qualityTitle: '資料可信度',
+        qualityLabelLatest: '最新價格日期',
+        qualityLabelBase: '基準價格日期',
+        qualityLabelCoverage: '資料覆蓋率',
+        qualitySource: '行情來源：台股 FinMind、美股 Stooq。',
+        snapshotTitle: '決策快照與分享',
+        snapshotDescription: '可儲存當下輸入與輸出，並匯出手機友善分享圖片。',
+        snapshotEmpty: '尚未儲存快照。',
+        footerText: '長期收益估算：CMA 收斂模型（名目扣費），歷史訊號僅做小比例修正；行情來源：台股 FinMind、美股 Stooq。',
+        remove: '移除',
+        tickerPlaceholderUs: '例：AAPL 或 MSFT',
+        tickerPlaceholderTw: '例：2330 或 台積電',
+        aiGenerating: 'AI 生成中...',
+        aiView: '查看 AI 建議',
+        emptyRows: '請至少輸入一檔代碼與金額。',
+        invalidInputPrefix: '輸入不通過：',
+        invalidPosition: '請先輸入有效部位。',
+        invalidDataQuery: '請先完成有效行情查詢。',
+        amountPositive: '投資金額需大於 0。',
+        waitResult: '等待試算結果。',
+        stressMetaEmpty: '最差情境：--；存活天數：--',
+        stressMetaWorstCase: '最差情境',
+        stressMetaSurvivalDays: '存活天數',
+        riskLabelLow: '低',
+        riskLabelMedium: '中',
+        riskLabelHigh: '高',
+        riskLabelExtreme: '極高',
+        noRiskFlags: '目前無顯著風險旗標。',
+        noScenario: '無情境資料',
+        coveredAssets: (priced, nonCash) => `已覆蓋 ${priced}/${nonCash} 檔非現金標的。`,
+        cashOnlyCoverage: '目前組合為現金部位，資料覆蓋率視為 100%。',
+        noSnapshotToSave: '目前沒有可儲存的結果，請先完成一次試算。',
+        snapshotSaved: (id) => `已儲存快照：${id}`,
+        noSnapshotToShare: '目前沒有可分享內容，請先完成一次試算。',
+        exportFailed: '匯出圖片失敗，請稍後再試。',
+        shareOpened: '已開啟系統分享，分享圖已準備完成。',
+        shareCanceled: '已取消分享。',
+        shareDownloaded: '已下載分享圖片（PNG）。',
+        needTwoSnapshots: '至少需要 2 筆快照才能比較。',
+        copied: '已複製',
+        copyManual: '請手動複製網址',
+        loadedSnapshots: (count) => `已載入 ${count} 筆快照。`,
+        analyzeLoading: '正在分析組合與風險。',
+        aiUnavailable: 'AI 服務暫時不可用，請稍後再試。',
+        aiCooldown: 'AI 建議冷卻中，請稍後再試。',
+        aiNeedsRefresh: '輸入已變更，請按「查看 AI 建議」重新生成。',
+        aiUpdatedHint: '已更新試算；按「查看 AI 建議」產生 AI 建議。',
+        priorityHigh: '高優先',
+        priorityMedium: '中優先',
+        priorityLow: '低優先',
+        adviceFallbackReason: '請檢視目前配置與風險控管是否符合目標。'
+      },
+      en: {
+        htmlLang: 'en',
+        title: 'Rebalance Copilot | AI Portfolio Forecast',
+        metaDescription: 'AI portfolio allocation and risk simulator with bilingual UI, stress testing, and snapshot sharing.',
+        universeLabel: 'Universe: Taiwan + US stocks (API)',
+        heroTitle: 'Enter Taiwan or US tickers to quickly project annual return, volatility, and growth path.',
+        heroSubtitle: 'This page estimates long-run annual return with a CMA-convergent model, historical-signal shrinkage, and cost penalties. Backtests and future performance are not guaranteed and are not investment advice.',
+        inputCardTitle: 'Portfolio Input Settings',
+        tableHeadMarket: 'Market',
+        tableHeadTicker: 'Ticker',
+        tableHeadAmount: 'Amount',
+        tableHeadCurrency: 'Currency',
+        addRow: 'Add Asset',
+        maxCountChip: 'Up to 10 assets',
+        labelYears: 'Investment Horizon (1 - 30 years)',
+        labelYearsNumber: 'Years',
+        labelAge: 'Age',
+        labelRiskLevel: 'Risk Profile',
+        riskConservative: 'Conservative',
+        riskBalanced: 'Balanced',
+        riskAggressive: 'Aggressive',
+        labelTaxRegion: 'Primary Tax Region',
+        taxTw: 'Taiwan (TW)',
+        taxUs: 'United States (US)',
+        taxHk: 'Hong Kong (HK)',
+        taxSg: 'Singapore (SG)',
+        labelDisplayCurrency: 'Display Currency',
+        ccyUsd: 'USD',
+        ccyTwd: 'TWD',
+        ccyHkd: 'HKD',
+        ccyJpy: 'JPY',
+        ccyCny: 'CNY',
+        ccyEur: 'EUR',
+        labelOverride: 'Manual Annual Return Override (%)',
+        calcBtn: 'Update Results',
+        aiBtn: 'View AI Advice',
+        shareBtn: 'Copy Share Link',
+        saveSnapshotBtn: 'Save Snapshot',
+        exportShareImageBtn: 'Export Share Image',
+        compareSnapshotsBtn: 'Compare Latest Snapshots',
+        overrideToggleText: 'Use Manual Return Override',
+        outputCardTitle: 'Forecast Output',
+        statLabelRate: 'Expected Annual Return',
+        statLabelVol: 'Annual Volatility',
+        statLabelDd: 'Max Drawdown (Simulated)',
+        statLabelTotal: 'Ending Portfolio Value',
+        statLabelGain: 'Cumulative Gain',
+        chartLegendOptimistic: 'Optimistic (P80)',
+        chartLegendBase: 'Base (P50)',
+        chartLegendPessimistic: 'Pessimistic (P20)',
+        chartP80: 'P80',
+        chartP50: 'P50',
+        chartP20: 'P20',
+        chartEndLabel: 'End Scenarios',
+        chartTooltipYear: 'Year',
+        chartTooltipValue: 'Value',
+        chartTooltipReturn: 'Return',
+        modelHistWeightLabel: 'Historical Signal Weight',
+        modelAnchorLabel: 'Anchor Contribution',
+        modelDragLabel: 'Fees & Penalties',
+        modelMethodPrefix: 'Model',
+        modelFallbackHint: 'Backend model unavailable. Switched to local convergent estimate.',
+        modelManualOverride: 'Manual annual override is active',
+        allocationTitle: 'Allocation Optimization',
+        allocationHeadBucket: 'Asset Class',
+        allocationHeadCurrent: 'Current Weight',
+        allocationHeadTarget: 'Suggested Weight',
+        allocationHeadDelta: 'Adjustment',
+        expertTitle: 'Personalized Expert Advice',
+        expertInitial: 'After entering tickers and amounts, click "View AI Advice".',
+        healthTitle: 'Portfolio Health',
+        compLabelConcentration: 'Concentration Score',
+        compLabelDiversification: 'Diversification Score',
+        compLabelVolatility: 'Volatility Score',
+        compLabelDrawdown: 'Drawdown Score',
+        healthBandPrefix: 'Risk Level',
+        stressTitle: 'Standard Stress Scenarios',
+        stressHeadScenario: 'Scenario',
+        stressHeadPnl: 'Portfolio PnL (USD)',
+        stressHeadDd: 'Estimated Drawdown',
+        stressHeadRisk: 'Risk Label',
+        qualityTitle: 'Data Reliability',
+        qualityLabelLatest: 'Latest Price Date',
+        qualityLabelBase: 'Base Price Date',
+        qualityLabelCoverage: 'Data Coverage',
+        qualitySource: 'Market data sources: FinMind (TW) and Stooq (US).',
+        snapshotTitle: 'Decision Snapshot & Sharing',
+        snapshotDescription: 'Save current inputs and outputs, then export a mobile-friendly share image.',
+        snapshotEmpty: 'No snapshot saved yet.',
+        footerText: 'Long-run return model: CMA-convergent (nominal net of fees) with limited historical adjustment; market data sources: FinMind (TW) and Stooq (US).',
+        remove: 'Remove',
+        tickerPlaceholderUs: 'e.g., AAPL or MSFT',
+        tickerPlaceholderTw: 'e.g., 2330 or TSMC',
+        aiGenerating: 'Generating AI advice...',
+        aiView: 'View AI Advice',
+        emptyRows: 'Please enter at least one ticker and amount.',
+        invalidInputPrefix: 'Invalid input:',
+        invalidPosition: 'Please enter valid positions first.',
+        invalidDataQuery: 'Please complete valid market data queries first.',
+        amountPositive: 'Investment amount must be greater than 0.',
+        waitResult: 'Waiting for calculation results.',
+        stressMetaEmpty: 'Worst case: --; Survival days: --',
+        stressMetaWorstCase: 'Worst case',
+        stressMetaSurvivalDays: 'Survival days',
+        riskLabelLow: 'Low',
+        riskLabelMedium: 'Medium',
+        riskLabelHigh: 'High',
+        riskLabelExtreme: 'Extreme',
+        noRiskFlags: 'No significant risk flags detected.',
+        noScenario: 'No scenario data',
+        coveredAssets: (priced, nonCash) => `Covered ${priced}/${nonCash} non-cash assets.`,
+        cashOnlyCoverage: 'Portfolio is currently cash-only; data coverage is treated as 100%.',
+        noSnapshotToSave: 'No result is available to save yet. Run a calculation first.',
+        snapshotSaved: (id) => `Snapshot saved: ${id}`,
+        noSnapshotToShare: 'No shareable result yet. Run a calculation first.',
+        exportFailed: 'Image export failed. Please try again later.',
+        shareOpened: 'System share opened. The share image is ready.',
+        shareCanceled: 'Share canceled.',
+        shareDownloaded: 'Share image downloaded (PNG).',
+        needTwoSnapshots: 'At least 2 snapshots are required for comparison.',
+        copied: 'Copied',
+        copyManual: 'Please copy the URL manually',
+        loadedSnapshots: (count) => `Loaded ${count} snapshot(s).`,
+        analyzeLoading: 'Analyzing portfolio and risk...',
+        aiUnavailable: 'AI service is temporarily unavailable. Please try again later.',
+        aiCooldown: 'AI advice is cooling down. Please try again shortly.',
+        aiNeedsRefresh: 'Inputs changed. Click "View AI Advice" to regenerate.',
+        aiUpdatedHint: 'Calculation updated. Click "View AI Advice" to generate AI guidance.',
+        priorityHigh: 'High Priority',
+        priorityMedium: 'Medium Priority',
+        priorityLow: 'Low Priority',
+        adviceFallbackReason: 'Validate allocation and risk controls.'
+      }
+    };
+
+    function t(key) {
+      return i18n[currentLanguage]?.[key] ?? i18n.zh[key] ?? key;
+    }
+
+    function applyLanguage(lang) {
+      currentLanguage = lang === 'en' ? 'en' : 'zh';
+      localStorage.setItem('rb-language', currentLanguage);
+      document.documentElement.lang = t('htmlLang');
+      document.title = t('title');
+      const meta = document.querySelector('meta[name="description"]');
+      if (meta) meta.setAttribute('content', t('metaDescription'));
+
+      const textMap = {
+        universeLabel: 'universeLabel',
+        heroTitle: 'heroTitle',
+        heroSubtitle: 'heroSubtitle',
+        inputCardTitle: 'inputCardTitle',
+        tableHeadMarket: 'tableHeadMarket',
+        tableHeadTicker: 'tableHeadTicker',
+        tableHeadAmount: 'tableHeadAmount',
+        tableHeadCurrency: 'tableHeadCurrency',
+        addRow: 'addRow',
+        maxCountChip: 'maxCountChip',
+        labelYears: 'labelYears',
+        labelYearsNumber: 'labelYearsNumber',
+        labelAge: 'labelAge',
+        labelRiskLevel: 'labelRiskLevel',
+        riskConservative: 'riskConservative',
+        riskBalanced: 'riskBalanced',
+        riskAggressive: 'riskAggressive',
+        labelTaxRegion: 'labelTaxRegion',
+        taxTw: 'taxTw',
+        taxUs: 'taxUs',
+        taxHk: 'taxHk',
+        taxSg: 'taxSg',
+        labelDisplayCurrency: 'labelDisplayCurrency',
+        ccyUsd: 'ccyUsd',
+        ccyTwd: 'ccyTwd',
+        ccyHkd: 'ccyHkd',
+        ccyJpy: 'ccyJpy',
+        ccyCny: 'ccyCny',
+        ccyEur: 'ccyEur',
+        labelOverride: 'labelOverride',
+        calcBtn: 'calcBtn',
+        aiBtn: 'aiBtn',
+        shareBtn: 'shareBtn',
+        saveSnapshotBtn: 'saveSnapshotBtn',
+        exportShareImageBtn: 'exportShareImageBtn',
+        compareSnapshotsBtn: 'compareSnapshotsBtn',
+        overrideToggleText: 'overrideToggleText',
+        outputCardTitle: 'outputCardTitle',
+        statLabelRate: 'statLabelRate',
+        statLabelVol: 'statLabelVol',
+        statLabelDd: 'statLabelDd',
+        statLabelTotal: 'statLabelTotal',
+        statLabelGain: 'statLabelGain',
+        chartLegendOptimistic: 'chartLegendOptimistic',
+        chartLegendBase: 'chartLegendBase',
+        chartLegendPessimistic: 'chartLegendPessimistic',
+        chartP80: 'chartP80',
+        chartP50: 'chartP50',
+        chartP20: 'chartP20',
+        chartEndLabel: 'chartEndLabel',
+        modelHistWeightLabel: 'modelHistWeightLabel',
+        modelAnchorLabel: 'modelAnchorLabel',
+        modelDragLabel: 'modelDragLabel',
+        allocationTitle: 'allocationTitle',
+        allocationHeadBucket: 'allocationHeadBucket',
+        allocationHeadCurrent: 'allocationHeadCurrent',
+        allocationHeadTarget: 'allocationHeadTarget',
+        allocationHeadDelta: 'allocationHeadDelta',
+        expertTitle: 'expertTitle',
+        healthTitle: 'healthTitle',
+        compLabelConcentration: 'compLabelConcentration',
+        compLabelDiversification: 'compLabelDiversification',
+        compLabelVolatility: 'compLabelVolatility',
+        compLabelDrawdown: 'compLabelDrawdown',
+        stressTitle: 'stressTitle',
+        stressHeadScenario: 'stressHeadScenario',
+        stressHeadPnl: 'stressHeadPnl',
+        stressHeadDd: 'stressHeadDd',
+        stressHeadRisk: 'stressHeadRisk',
+        qualityTitle: 'qualityTitle',
+        qualityLabelLatest: 'qualityLabelLatest',
+        qualityLabelBase: 'qualityLabelBase',
+        qualityLabelCoverage: 'qualityLabelCoverage',
+        snapshotTitle: 'snapshotTitle',
+        snapshotDescription: 'snapshotDescription',
+        footerText: 'footerText'
+      };
+      Object.keys(textMap).forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = t(textMap[id]);
+      });
+
+      const currentQualityText = qualityNoteEl.textContent || '';
+      if (currentQualityText === i18n.zh.qualitySource || currentQualityText === i18n.en.qualitySource) {
+        qualityNoteEl.textContent = t('qualitySource');
+      }
+      if (!modelMethodNoteEl.textContent || modelMethodNoteEl.textContent.includes('--')) {
+        modelMethodNoteEl.textContent = `${t('modelMethodPrefix')}: --`;
+      }
+      if (!snapshotResultEl.textContent || snapshotResultEl.textContent === i18n.zh.snapshotEmpty || snapshotResultEl.textContent === i18n.en.snapshotEmpty) {
+        snapshotResultEl.textContent = t('snapshotEmpty');
+      }
+      if (expertSummaryEl.textContent === i18n.zh.expertInitial || expertSummaryEl.textContent === i18n.en.expertInitial) {
+        expertSummaryEl.textContent = t('expertInitial');
+      }
+
+      rowsEl.querySelectorAll('.table-row').forEach((row) => {
+        const marketSelect = row.querySelector('.market');
+        const tickerInput = row.querySelector('.ticker');
+        const removeBtn = row.querySelector('.remove');
+        if (marketSelect?.options?.length >= 2) {
+          marketSelect.options[0].textContent = currentLanguage === 'en' ? 'TW Market' : '台股 TW';
+          marketSelect.options[1].textContent = currentLanguage === 'en' ? 'US Market' : '美股 US';
+        }
+        if (tickerInput) tickerInput.placeholder = getTickerPlaceholder(marketSelect?.value || 'TW');
+        if (removeBtn) removeBtn.textContent = t('remove');
+      });
+
+      zhButton.classList.toggle('active', currentLanguage === 'zh');
+      enButton.classList.toggle('active', currentLanguage === 'en');
+      zhButton.setAttribute('aria-pressed', String(currentLanguage === 'zh'));
+      enButton.setAttribute('aria-pressed', String(currentLanguage === 'en'));
+      renderChartLegendAndEndLabels(latestChartSeries, displayCurrencyEl.value);
+      bindChartTooltip(latestChartSeries, displayCurrencyEl.value, Number(yearsEl.value || 1));
+    }
+
+    function formatCurrency(value, currency) {
+      try { return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value); }
+      catch (_) { return `${value.toFixed(0)} ${currency}`; }
+    }
+
+    function hashCode(str) { let hash = 0; for (let i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash |= 0; } return Math.abs(hash); }
+    function seededRandom(seed) { const x = Math.sin(seed) * 10000; return x - Math.floor(x); }
+    function mulberry32(a) { return function() { let t = a += 0x6D2B79F5; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+    function debounce(fn, waitMs) { let timer = null; return (...args) => { window.clearTimeout(timer); timer = window.setTimeout(() => fn(...args), waitMs); }; }
+
+    const RETURN_CACHE_TTL_MS = 5 * 60 * 1000;
+    const ADVICE_CACHE_TTL_MS = 2 * 60 * 1000;
+    const AI_DEBOUNCE_MS = 1000;
+    const AI_COOLDOWN_MS = 10000;
+    const AI_RETRY_DELAY_MS = 6000;
+    const SNAPSHOT_STORAGE_KEY = 'rebalance_snapshots_v1';
+    const annualReturnCache = new Map();
+    const adviceCache = new Map();
+    let activeReturnController = null;
+    let activeAdviceController = null;
+    let activeRiskController = null;
+    let lastAiRequestAt = 0;
+    let lastAiPayloadKey = '';
+    let aiAdviceStale = false;
+    let latestSnapshotDraft = null;
+
+    function normalizeTicker(ticker, market = 'TW') {
+      const normalized = (ticker || '').trim().toUpperCase();
+      if (market === 'TW') return normalized.endsWith('.TW') ? normalized.slice(0, -3) : normalized;
+      if (market === 'US') return normalized.endsWith('.US') ? normalized.slice(0, -3) : normalized;
+      return normalized;
+    }
+
+    function classifyAssetClassForRisk(ticker, market = 'TW', isCash = false) {
+      const normalizedTicker = String(ticker || '').trim().toUpperCase();
+      if (isCash || !normalizedTicker || ['CASH', 'USD', 'USDT', 'USDC'].includes(normalizedTicker)) return 'cash';
+      if (['BND', 'AGG', 'TLT', 'IEF', 'LQD', 'SHY', 'HYG', 'TIP', 'MUB', '00679B', '00865B'].includes(normalizedTicker)) return 'bond';
+      return 'equity';
+    }
+
+    function estimateAssetVolatility({ market = 'TW', ticker = '', expectedReturn = 0, isCash = false }) {
+      const assetClass = classifyAssetClassForRisk(ticker, market, isCash);
+      const normalizedMarket = String(market || 'TW').toUpperCase();
+
+      let anchorVol = 0.2;
+      let anchorReturn = normalizedMarket === 'US' ? 0.065 : 0.07;
+      let minVol = 0.12;
+      let maxVol = 0.35;
+
+      if (assetClass === 'bond') {
+        anchorVol = 0.07;
+        anchorReturn = 0.03;
+        minVol = 0.04;
+        maxVol = 0.12;
+      } else if (assetClass === 'cash') {
+        anchorVol = 0.012;
+        anchorReturn = 0.015;
+        minVol = 0.005;
+        maxVol = 0.03;
+      } else if (normalizedMarket === 'TW') {
+        anchorVol = 0.22;
+      } else if (normalizedMarket === 'US') {
+        anchorVol = 0.18;
+      }
+
+      const rawSignal = (Number(expectedReturn || 0) - anchorReturn) * 0.35;
+      const boundedSignal = clampNumber(rawSignal, -0.04, 0.04);
+      return clampNumber(anchorVol + boundedSignal, minVol, maxVol);
+    }
+
+    function clampNumber(value, lo, hi) {
+      return Math.min(hi, Math.max(lo, value));
+    }
+
+    function classifyAssetClassLocal(detail) {
+      const ticker = String(detail.normalizedTicker || '').trim().toUpperCase();
+      if (!ticker || detail.isCash || ['CASH', 'USD', 'USDT', 'USDC'].includes(ticker)) return 'cash';
+      if (['BND', 'AGG', 'TLT', 'IEF', 'LQD', 'SHY', 'HYG', 'TIP', 'MUB', '00679B', '00865B'].includes(ticker)) return 'bond';
+      return 'equity';
+    }
+
+    function computeHistoricalWeightLocal(years) {
+      const raw = 0.55 * Math.exp(-(years - 1) / 8);
+      return clampNumber(raw, 0.05, 0.55);
+    }
+
+    function computeExpectedReturnFallback(profile, details, coverage) {
+      const histWeight = computeHistoricalWeightLocal(profile.horizonYears);
+      const safeCoverage = clampNumber(Number(coverage || 0), 0, 1);
+
+      let anchorReturn = 0;
+      let historicalSignalReturn = 0;
+      let grossReturn = 0;
+      let maxWeight = 0;
+
+      details.forEach((item) => {
+        const w = Number(item.weight || 0);
+        maxWeight = Math.max(maxWeight, w);
+        const assetClass = classifyAssetClassLocal(item);
+
+        let anchor = 0.07;
+        if (assetClass === 'cash') anchor = 0.015;
+        else if (assetClass === 'bond') anchor = 0.03;
+        else if ((item.market || '').toUpperCase() === 'US') anchor = 0.065;
+
+        let lo = -0.2;
+        let hi = 0.25;
+        if (assetClass === 'bond') { lo = -0.05; hi = 0.08; }
+        if (assetClass === 'cash') { lo = 0; hi = 0.03; }
+        const hist = clampNumber(Number(item.expectedReturn || 0), lo, hi);
+        const blended = (1 - histWeight) * anchor + histWeight * hist;
+
+        anchorReturn += w * anchor;
+        historicalSignalReturn += w * hist;
+        grossReturn += w * blended;
+      });
+
+      const feeDrag = 0.008;
+      const concentrationPenalty = clampNumber((maxWeight - 0.35) * 0.04, 0, 0.012);
+      const coveragePenalty = safeCoverage < 0.8 ? (0.8 - safeCoverage) * 0.02 : 0;
+      const totalDrag = feeDrag + concentrationPenalty + coveragePenalty;
+      const expectedReturn = clampNumber(grossReturn - totalDrag, RETURN_MODEL_FLOOR, RETURN_MODEL_CAP);
+
+      return {
+        expected_return: expectedReturn,
+        components: {
+          anchor_return: anchorReturn,
+          historical_signal_return: historicalSignalReturn,
+          historical_weight: histWeight,
+          fee_drag: feeDrag,
+          concentration_penalty: concentrationPenalty,
+          coverage_penalty: coveragePenalty,
+          total_drag: totalDrag
+        },
+        method: 'cma_convergent_fallback_v1'
+      };
+    }
+
+    function renderExpectedReturnBreakdown(model) {
+      const components = model?.components || {};
+      modelHistWeightEl.textContent = `${((components.historical_weight || 0) * 100).toFixed(1)}%`;
+      modelAnchorEl.textContent = `${((components.anchor_return || 0) * 100).toFixed(2)}%`;
+      modelDragEl.textContent = `-${((components.total_drag || 0) * 100).toFixed(2)}%`;
+      modelMethodNoteEl.textContent = `${t('modelMethodPrefix')}: ${model?.method || '--'}`;
+    }
+
+    function clearExpectedReturnBreakdown() {
+      modelHistWeightEl.textContent = '--';
+      modelAnchorEl.textContent = '--';
+      modelDragEl.textContent = '--';
+      modelMethodNoteEl.textContent = `${t('modelMethodPrefix')}: --`;
+    }
+
+    function getTickerPlaceholder(market) {
+      return market === 'US' ? t('tickerPlaceholderUs') : t('tickerPlaceholderTw');
+    }
+
+    function createRow(ticker = '', amount = 0, currency = 'TWD', market = 'TW') {
+      const row = document.createElement('div');
+      row.className = 'table-row';
+      row.innerHTML = `
+        <select class="market">
+          <option value="TW" ${market === 'TW' ? 'selected' : ''}>${currentLanguage === 'en' ? 'TW Market' : '台股 TW'}</option>
+          <option value="US" ${market === 'US' ? 'selected' : ''}>${currentLanguage === 'en' ? 'US Market' : '美股 US'}</option>
+        </select>
+        <div class="ticker-cell">
+          <input class="ticker" type="text" placeholder="${getTickerPlaceholder(market)}" value="${ticker}" />
+          <div class="ticker-error"></div>
+        </div>
+        <input class="amount" type="number" min="0" step="100" value="${amount}" />
+        <select class="currency"><option value="USD" ${currency === 'USD' ? 'selected' : ''}>USD</option><option value="TWD" ${currency === 'TWD' ? 'selected' : ''}>TWD</option><option value="HKD" ${currency === 'HKD' ? 'selected' : ''}>HKD</option><option value="JPY" ${currency === 'JPY' ? 'selected' : ''}>JPY</option><option value="CNY" ${currency === 'CNY' ? 'selected' : ''}>CNY</option><option value="EUR" ${currency === 'EUR' ? 'selected' : ''}>EUR</option></select>
+        <button type="button" class="remove">${t('remove')}</button>`;
+      row.querySelector('.remove').addEventListener('click', () => { row.remove(); calculate(); });
+      row.querySelector('.market').addEventListener('input', (event) => {
+        row.querySelector('.ticker').placeholder = getTickerPlaceholder(event.target.value);
+      });
+      row.querySelectorAll('input, select').forEach(el => el.addEventListener('input', scheduleCalculate));
+      return row;
+    }
+
+    function addRow(ticker, amount, currency, market = 'TW') { if (rowsEl.children.length >= 10) return; rowsEl.appendChild(createRow(ticker, amount, currency, market)); }
+
+    function getRows() {
+      return Array.from(rowsEl.querySelectorAll('.table-row')).map(row => {
+        const market = row.querySelector('.market').value || 'TW';
+        const tickerRaw = row.querySelector('.ticker').value.trim();
+        const amount = Math.max(0, Number(row.querySelector('.amount').value || 0));
+        const currency = row.querySelector('.currency').value;
+        const normalizedTicker = normalizeTicker(tickerRaw, market);
+        return { rowEl: row, market, ticker: normalizedTicker, normalizedTicker, amount, currency };
+      }).filter(r => r.ticker || r.amount > 0);
+    }
+
+    function getRowsForScenario(rows) {
+      return rows.map(row => ({
+        market: row.market || 'TW',
+        ticker: normalizeTicker(row.ticker || row.normalizedTicker || '', row.market || 'TW'),
+        amount: Number(row.amount || 0),
+        currency: row.currency || 'TWD'
+      }));
+    }
+
+    async function fetchAnnualReturn(market, query, signal) {
+      const normalizedMarket = market || 'TW';
+      const normalizedQuery = normalizeTicker(query, normalizedMarket);
+      const cacheKey = `${normalizedMarket}:${normalizedQuery}`;
+      const cached = annualReturnCache.get(cacheKey);
+      if (cached && Date.now() < cached.expiresAt) return cached.payload;
+
+      const endpoint = normalizedMarket === 'US'
+        ? '/api/v1/us-stock/annual-return'
+        : '/api/v1/tw-stock/annual-return';
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: normalizedQuery }),
+        signal
+      });
+      let payload = null;
+      try { payload = await response.json(); } catch (_) { payload = null; }
+      if (!response.ok) {
+        const err = new Error(payload?.message || 'API request failed.');
+        err.status = response.status;
+        err.payload = payload;
+        throw err;
+      }
+      annualReturnCache.set(cacheKey, { payload, expiresAt: Date.now() + RETURN_CACHE_TTL_MS });
+      return payload;
+    }
+
+    async function fetchExpectedReturn(payload, signal) {
+      const response = await fetch(`${API_BASE_URL}/api/v1/portfolio/expected-return`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal
+      });
+      let parsed = null;
+      try { parsed = await response.json(); } catch (_) { parsed = null; }
+      if (!response.ok) {
+        const err = new Error(parsed?.message || 'Expected return model failed.');
+        err.status = response.status;
+        err.payload = parsed;
+        throw err;
+      }
+      return parsed;
+    }
+
+    async function fetchAiAdvice(payload, signal) {
+      const cacheKey = JSON.stringify(payload);
+      const cached = adviceCache.get(cacheKey);
+      if (cached && Date.now() < cached.expiresAt) return { payload: cached.payload, cacheHit: true };
+
+      async function runRequest() {
+        const response = await fetch(`${API_BASE_URL}/api/v1/advice/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal
+        });
+        let parsed = null;
+        try { parsed = await response.json(); } catch (_) { parsed = null; }
+        return { response, parsed };
+      }
+
+      let { response, parsed } = await runRequest();
+      if (response.status === 429) {
+        await new Promise(resolve => setTimeout(resolve, AI_RETRY_DELAY_MS));
+        if (signal?.aborted) {
+          const abortErr = new Error('AI request aborted');
+          abortErr.name = 'AbortError';
+          throw abortErr;
+        }
+        ({ response, parsed } = await runRequest());
+      }
+      if (!response.ok) {
+        const err = new Error(parsed?.message || 'AI advice request failed.');
+        err.status = response.status;
+        err.payload = parsed;
+        throw err;
+      }
+      adviceCache.set(cacheKey, { payload: parsed, expiresAt: Date.now() + ADVICE_CACHE_TTL_MS });
+      return { payload: parsed, cacheHit: false };
+    }
+
+    async function fetchPortfolioHealth(payload, signal) {
+      const response = await fetch(`${API_BASE_URL}/api/v1/portfolio/health-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal
+      });
+      let parsed = null;
+      try { parsed = await response.json(); } catch (_) { parsed = null; }
+      if (!response.ok) {
+        const err = new Error(parsed?.message || 'Portfolio health check failed.');
+        err.status = response.status;
+        err.payload = parsed;
+        throw err;
+      }
+      return parsed;
+    }
+
+    async function fetchStressTest(payload, signal) {
+      const response = await fetch(`${API_BASE_URL}/api/v1/portfolio/stress-test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal
+      });
+      let parsed = null;
+      try { parsed = await response.json(); } catch (_) { parsed = null; }
+      if (!response.ok) {
+        const err = new Error(parsed?.message || 'Stress test failed.');
+        err.status = response.status;
+        err.payload = parsed;
+        throw err;
+      }
+      return parsed;
+    }
+
+    function formatTimestamp(ts) {
+      const date = new Date(ts);
+      return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+    }
+
+    function setAiButtonLoading(isLoading) {
+      aiBtnEl.disabled = isLoading;
+      aiBtnEl.textContent = isLoading ? t('aiGenerating') : t('aiView');
+    }
+
+    function setTickerError(rowEl, message = '') {
+      const cellEl = rowEl.querySelector('.ticker-cell');
+      const errorEl = rowEl.querySelector('.ticker-error');
+      const hasError = Boolean(message);
+      if (cellEl) cellEl.classList.toggle('has-error', hasError);
+      if (errorEl) errorEl.textContent = message || '';
+    }
+
+    function describeApiError(err, market = 'TW') {
+      const code = err?.payload?.error_code || '';
+      if (currentLanguage === 'en') {
+        if (code === 'STOCK_NOT_FOUND') return market === 'US' ? 'US ticker not found.' : 'TW ticker or name not found.';
+        if (code === 'AMBIGUOUS_NAME') return 'Multiple matches found. Please use ticker code.';
+        if (code === 'INVALID_QUERY') return 'Invalid input format.';
+        if (code === 'NO_PRICE_DATA') return 'No usable price data found.';
+        if (code === 'UPSTREAM_ERROR') return 'Market data service is temporarily unavailable.';
+        if (code === 'CONFIG_ERROR') return 'Backend API token is not configured.';
+        return err?.payload?.message || err?.message || 'Request failed. Please try again later.';
+      }
+      if (code === 'STOCK_NOT_FOUND') return market === 'US' ? '查無此美股代碼。' : '查無此台股代碼或名稱。';
+      if (code === 'AMBIGUOUS_NAME') return '名稱對應多筆，請改用代碼。';
+      if (code === 'INVALID_QUERY') return '輸入格式不正確。';
+      if (code === 'NO_PRICE_DATA') return '查無可用價格資料。';
+      if (code === 'UPSTREAM_ERROR') return '行情服務暫時異常，請稍後再試。';
+      if (code === 'CONFIG_ERROR') return '後端尚未設定 API Token。';
+      return err?.payload?.message || err?.message || '查詢失敗，請稍後再試。';
+    }
+
+    function describeRiskApiError(err) {
+      const code = err?.payload?.error_code || '';
+      if (currentLanguage === 'en') {
+        if (code === 'INVALID_PORTFOLIO_INPUT') return 'Portfolio input is incomplete.';
+        if (code === 'RISK_ENGINE_ERROR') return 'Risk engine is temporarily unavailable.';
+        return err?.payload?.message || err?.message || 'Risk module is temporarily unavailable.';
+      }
+      if (code === 'INVALID_PORTFOLIO_INPUT') return '組合輸入不完整，無法完成診斷。';
+      if (code === 'RISK_ENGINE_ERROR') return '風險引擎暫時異常，請稍後再試。';
+      return err?.payload?.message || err?.message || '風險模組暫時不可用。';
+    }
+
+    function clearHealthCheck(message = t('waitResult')) {
+      healthScoreEl.textContent = '--';
+      healthBandEl.textContent = '--';
+      compConcentrationEl.textContent = '--';
+      compDiversificationEl.textContent = '--';
+      compVolatilityEl.textContent = '--';
+      compDrawdownEl.textContent = '--';
+      healthFlagsEl.innerHTML = `<li>${message}</li>`;
+    }
+
+    function clearStressTest(message = t('waitResult')) {
+      stressRowsEl.innerHTML = `<div class="table-row"><div>${message}</div><div>--</div><div>--</div><div>--</div></div>`;
+      stressMetaEl.textContent = t('stressMetaEmpty');
+    }
+
+    function formatStressRiskLabel(label) {
+      const raw = String(label || '').trim();
+      if (!raw) return '--';
+      const normalized = raw.toLowerCase();
+      if (normalized === 'low' || normalized === '低') return t('riskLabelLow');
+      if (normalized === 'medium' || normalized === 'med' || normalized === '中') return t('riskLabelMedium');
+      if (normalized === 'high' || normalized === '高') return t('riskLabelHigh');
+      if (normalized === 'extreme' || normalized === 'very high' || normalized === '極高') return t('riskLabelExtreme');
+      return raw;
+    }
+
+    function formatScenarioIdLabel(scenarioId) {
+      const raw = String(scenarioId || '').trim();
+      if (!raw) return '--';
+      const normalized = raw.toUpperCase();
+      const map = {
+        'GLOBAL_EQUITY_-15': {
+          zh: '全球股市 -15%',
+          en: 'Global Equity -15%'
+        },
+        'RATE_SHOCK_BOND_-8': {
+          zh: '利率衝擊（債券 -8%）',
+          en: 'Rate Shock (Bond -8%)'
+        }
+      };
+      if (map[normalized]) return map[normalized][currentLanguage] || map[normalized].zh;
+
+      const equityMatch = normalized.match(/^GLOBAL_EQUITY_(-?\d+(?:\.\d+)?)$/);
+      if (equityMatch) {
+        const pct = equityMatch[1];
+        return currentLanguage === 'en' ? `Global Equity ${pct}%` : `全球股市 ${pct}%`;
+      }
+
+      const bondMatch = normalized.match(/^RATE_SHOCK_BOND_(-?\d+(?:\.\d+)?)$/);
+      if (bondMatch) {
+        const pct = bondMatch[1];
+        return currentLanguage === 'en' ? `Rate Shock (Bond ${pct}%)` : `利率衝擊（債券 ${pct}%）`;
+      }
+
+      return raw.replaceAll('_', ' ');
+    }
+
+    function clearDataQuality(message = t('qualitySource')) {
+      qualityLatestEl.textContent = '--';
+      qualityBaseEl.textContent = '--';
+      qualityCoverageEl.textContent = '--';
+      qualityNoteEl.textContent = message;
+    }
+
+    function renderHealthCheck(payload) {
+      healthScoreEl.textContent = String(payload.health_score ?? '--');
+      const band = payload.risk_band || '--';
+      healthBandEl.textContent = `${t('healthBandPrefix')}: ${formatStressRiskLabel(band)}`;
+      compConcentrationEl.textContent = payload?.components?.concentration_score ?? '--';
+      compDiversificationEl.textContent = payload?.components?.diversification_score ?? '--';
+      compVolatilityEl.textContent = payload?.components?.volatility_score ?? '--';
+      compDrawdownEl.textContent = payload?.components?.drawdown_score ?? '--';
+      const explanations = payload.explanations || [];
+      healthFlagsEl.innerHTML = explanations.length
+        ? explanations.map(text => `<li>${text}</li>`).join('')
+        : `<li>${t('noRiskFlags')}</li>`;
+    }
+
+    function renderStressTest(payload) {
+      const rows = payload?.scenario_results || [];
+      stressRowsEl.innerHTML = rows.length
+        ? rows.map(row => `<div class="table-row"><div>${formatScenarioIdLabel(row.scenario_id)}</div><div>${formatCurrency(row.portfolio_pnl_usd || 0, 'USD')}</div><div>${((row.drawdown_est || 0) * 100).toFixed(2)}%</div><div>${formatStressRiskLabel(row.risk_label)}</div></div>`).join('')
+        : `<div class="table-row"><div>${t('noScenario')}</div><div>--</div><div>--</div><div>--</div></div>`;
+      const worst = payload?.worst_case;
+      stressMetaEl.textContent = worst
+        ? `${t('stressMetaWorstCase')}: ${formatScenarioIdLabel(worst.scenario_id)} (${formatCurrency(worst.portfolio_pnl_usd || 0, 'USD')})${currentLanguage === 'en' ? ';' : '；'} ${t('stressMetaSurvivalDays')}: ${payload?.survival_days_est ?? '--'}`
+        : t('stressMetaEmpty');
+    }
+
+    function renderDataQuality(details) {
+      const priced = details.filter(item => !item.isCash && item.priceDateLatest && item.priceDateBase);
+      const nonCash = details.filter(item => !item.isCash);
+      const coverage = nonCash.length ? priced.length / nonCash.length : 1;
+      const latestDate = priced.map(item => item.priceDateLatest).sort().slice(-1)[0] || '--';
+      const baseDate = priced.map(item => item.priceDateBase).sort()[0] || '--';
+
+      qualityLatestEl.textContent = latestDate;
+      qualityBaseEl.textContent = baseDate;
+      qualityCoverageEl.textContent = `${(coverage * 100).toFixed(0)}%`;
+      qualityNoteEl.textContent = nonCash.length
+        ? t('coveredAssets')(priced.length, nonCash.length)
+        : t('cashOnlyCoverage');
+      return coverage;
+    }
+
+    function buildRiskPositions(details) {
+      return details.map(item => ({
+        ticker: item.normalizedTicker || '',
+        market: item.market || 'TW',
+        amountUsd: item.amountUsd,
+        expectedReturn: item.expectedReturn,
+        volatility: item.volatility,
+        weight: item.weight
+      }));
+    }
+
+    function buildHealthPayload(profile, details, portfolioReturn, portfolioVol, dd) {
+      return {
+        profile: {
+          age: profile.age,
+          riskLevel: profile.riskLevel,
+          taxRegion: profile.taxRegion,
+          horizonYears: profile.horizonYears
+        },
+        positions: buildRiskPositions(details),
+        portfolio: {
+          expectedReturn: portfolioReturn,
+          volatility: portfolioVol,
+          maxDrawdown: dd
+        }
+      };
+    }
+
+    function buildStressPayload(details) {
+      return { positions: buildRiskPositions(details) };
+    }
+
+    function readSnapshots() {
+      try {
+        const raw = localStorage.getItem(SNAPSHOT_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function writeSnapshots(snapshots) {
+      localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshots));
+    }
+
+    function saveSnapshot() {
+      if (!latestSnapshotDraft) {
+        snapshotResultEl.textContent = t('noSnapshotToSave');
+        return;
+      }
+      const snapshots = readSnapshots();
+      const snapshot = {
+        ...latestSnapshotDraft,
+        id: `snapshot_${Date.now()}`,
+        created_at: new Date().toISOString()
+      };
+      snapshots.push(snapshot);
+      writeSnapshots(snapshots.slice(-50));
+      snapshotResultEl.textContent = t('snapshotSaved')(snapshot.id);
+    }
+
+    function drawRoundedRect(ctxRef, x, y, width, height, radius, fillStyle, strokeStyle = '') {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctxRef.beginPath();
+      ctxRef.moveTo(x + r, y);
+      ctxRef.arcTo(x + width, y, x + width, y + height, r);
+      ctxRef.arcTo(x + width, y + height, x, y + height, r);
+      ctxRef.arcTo(x, y + height, x, y, r);
+      ctxRef.arcTo(x, y, x + width, y, r);
+      ctxRef.closePath();
+      ctxRef.fillStyle = fillStyle;
+      ctxRef.fill();
+      if (strokeStyle) {
+        ctxRef.strokeStyle = strokeStyle;
+        ctxRef.lineWidth = 2;
+        ctxRef.stroke();
+      }
+    }
+
+    function wrapTextLines(ctxRef, text, maxWidth) {
+      const words = String(text || '').split(/\s+/).filter(Boolean);
+      if (!words.length) return ['--'];
+      if (words.length === 1 && ctxRef.measureText(words[0]).width > maxWidth) {
+        const lines = [];
+        let line = '';
+        Array.from(words[0]).forEach(ch => {
+          const next = `${line}${ch}`;
+          if (ctxRef.measureText(next).width <= maxWidth || !line) {
+            line = next;
+          } else {
+            lines.push(line);
+            line = ch;
+          }
+        });
+        if (line) lines.push(line);
+        return lines;
+      }
+      const lines = [];
+      let line = '';
+      words.forEach(word => {
+        const next = line ? `${line} ${word}` : word;
+        if (ctxRef.measureText(next).width <= maxWidth || !line) {
+          line = next;
+        } else {
+          lines.push(line);
+          line = word;
+        }
+      });
+      if (line) lines.push(line);
+      return lines;
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function exportShareImage() {
+      if (!latestSnapshotDraft) {
+        snapshotResultEl.textContent = t('noSnapshotToShare');
+        return;
+      }
+
+      const snapshot = latestSnapshotDraft;
+      const outputs = snapshot.outputs || {};
+      const health = snapshot.health || {};
+      const stress = snapshot.stress || {};
+      const worst = stress.worst_case || {};
+      const summary = (expertSummaryEl.textContent || '').trim() || '本次試算提供風險與配置參考。';
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      const canvasShare = document.createElement('canvas');
+      canvasShare.width = 1080;
+      canvasShare.height = 1350;
+      const c = canvasShare.getContext('2d');
+      if (!c) {
+        snapshotResultEl.textContent = t('exportFailed');
+        return;
+      }
+
+      const bg = c.createLinearGradient(0, 0, canvasShare.width, canvasShare.height);
+      bg.addColorStop(0, '#0b1118');
+      bg.addColorStop(0.5, '#0f1a26');
+      bg.addColorStop(1, '#102433');
+      c.fillStyle = bg;
+      c.fillRect(0, 0, canvasShare.width, canvasShare.height);
+
+      c.fillStyle = '#f0c86a';
+      c.font = '700 48px Manrope, system-ui, sans-serif';
+      c.fillText('Rebalance Copilot 分享摘要', 64, 92);
+      c.fillStyle = 'rgba(232, 238, 246, 0.72)';
+      c.font = '400 26px Manrope, system-ui, sans-serif';
+      c.fillText(`Scenario #${snapshot.scenario_seed || '--'}  ·  ${timestamp}`, 64, 132);
+
+      const cardX = 64;
+      const cardW = 952;
+      const gap = 22;
+      let y = 164;
+
+      drawRoundedRect(c, cardX, y, cardW, 230, 24, 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.12)');
+      c.fillStyle = '#e8eef6';
+      c.font = '600 30px Manrope, system-ui, sans-serif';
+      c.fillText('核心績效', cardX + 26, y + 48);
+      c.font = '700 54px Manrope, system-ui, sans-serif';
+      c.fillStyle = '#f0c86a';
+      c.fillText(`${((outputs.expectedReturn || 0) * 100).toFixed(2)}%`, cardX + 26, y + 122);
+      c.fillStyle = 'rgba(232,238,246,0.72)';
+      c.font = '400 24px Manrope, system-ui, sans-serif';
+      c.fillText('預期年化收益', cardX + 26, y + 156);
+      c.fillStyle = '#e8eef6';
+      c.font = '600 34px Manrope, system-ui, sans-serif';
+      c.fillText(`波動 ${(outputs.volatility * 100 || 0).toFixed(2)}%`, cardX + 430, y + 110);
+      c.fillText(`回撤 ${(outputs.maxDrawdown * 100 || 0).toFixed(2)}%`, cardX + 430, y + 158);
+      c.fillText(`健康度 ${health.health_score ?? '--'}`, cardX + 430, y + 206);
+      y += 230 + gap;
+
+      drawRoundedRect(c, cardX, y, cardW, 190, 24, 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.12)');
+      c.fillStyle = '#e8eef6';
+      c.font = '600 30px Manrope, system-ui, sans-serif';
+      c.fillText('風險診斷', cardX + 26, y + 48);
+      c.font = '500 26px Manrope, system-ui, sans-serif';
+      c.fillStyle = 'rgba(232,238,246,0.80)';
+      const explain = (health.explanations || []).slice(0, 2).join(' / ') || '目前無顯著風險旗標。';
+      wrapTextLines(c, explain, cardW - 52).slice(0, 2).forEach((line, idx) => {
+        c.fillText(line, cardX + 26, y + 96 + idx * 36);
+      });
+      c.fillStyle = '#5fd6c2';
+      c.fillText(`Risk Band: ${(health.risk_band || '--').toUpperCase()}`, cardX + 26, y + 164);
+      y += 190 + gap;
+
+      drawRoundedRect(c, cardX, y, cardW, 190, 24, 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.12)');
+      c.fillStyle = '#e8eef6';
+      c.font = '600 30px Manrope, system-ui, sans-serif';
+      c.fillText('壓力測試重點', cardX + 26, y + 48);
+      c.font = '500 26px Manrope, system-ui, sans-serif';
+      c.fillStyle = 'rgba(232,238,246,0.85)';
+      c.fillText(`Worst Case: ${worst.scenario_id || '--'}`, cardX + 26, y + 96);
+      c.fillText(`PnL: ${formatCurrency(worst.portfolio_pnl_usd || 0, 'USD')}`, cardX + 26, y + 136);
+      c.fillText(`Survival Days: ${stress.survival_days_est ?? '--'}`, cardX + 26, y + 176);
+      y += 190 + gap;
+
+      drawRoundedRect(c, cardX, y, cardW, 280, 24, 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.12)');
+      c.fillStyle = '#e8eef6';
+      c.font = '600 30px Manrope, system-ui, sans-serif';
+      c.fillText('AI 摘要與資料品質', cardX + 26, y + 48);
+      c.font = '500 24px Manrope, system-ui, sans-serif';
+      c.fillStyle = 'rgba(232,238,246,0.82)';
+      wrapTextLines(c, summary, cardW - 52).slice(0, 4).forEach((line, idx) => {
+        c.fillText(line, cardX + 26, y + 94 + idx * 34);
+      });
+      c.fillStyle = '#87a9ff';
+      c.fillText(`資料覆蓋率 ${qualityCoverageEl.textContent || '--'}，僅供參考，不構成投資建議。`, cardX + 26, y + 244);
+
+      c.fillStyle = 'rgba(232,238,246,0.56)';
+      c.font = '400 20px Manrope, system-ui, sans-serif';
+      c.fillText('Generated by Rebalance Copilot', 64, 1316);
+
+      const blob = await new Promise(resolve => canvasShare.toBlob(resolve, 'image/png'));
+      if (!blob) {
+        snapshotResultEl.textContent = t('exportFailed');
+        return;
+      }
+
+      const filename = `rebalance_share_${Date.now()}.png`;
+      let shareFile = null;
+      try {
+        shareFile = new File([blob], filename, { type: 'image/png' });
+      } catch (_) {
+        shareFile = null;
+      }
+      if (shareFile && navigator.share && navigator.canShare && navigator.canShare({ files: [shareFile] })) {
+        try {
+          await navigator.share({ files: [shareFile], title: 'Rebalance 分享摘要' });
+          snapshotResultEl.textContent = t('shareOpened');
+          return;
+        } catch (err) {
+          if (err?.name === 'AbortError') {
+            snapshotResultEl.textContent = t('shareCanceled');
+            return;
+          }
+        }
+      }
+
+      downloadBlob(blob, filename);
+      snapshotResultEl.textContent = t('shareDownloaded');
+    }
+
+    function compareLatestSnapshots() {
+      const snapshots = readSnapshots();
+      if (snapshots.length < 2) {
+        snapshotResultEl.textContent = t('needTwoSnapshots');
+        return;
+      }
+      const previous = snapshots[snapshots.length - 2];
+      const latest = snapshots[snapshots.length - 1];
+      const outputPrev = previous.outputs || {};
+      const outputLast = latest.outputs || {};
+      const healthPrev = previous.health || {};
+      const healthLast = latest.health || {};
+
+      const message = [
+        `比較 ${previous.id} -> ${latest.id}`,
+        `expectedReturn: ${(outputPrev.expectedReturn ?? 0).toFixed(4)} -> ${(outputLast.expectedReturn ?? 0).toFixed(4)}`,
+        `volatility: ${(outputPrev.volatility ?? 0).toFixed(4)} -> ${(outputLast.volatility ?? 0).toFixed(4)}`,
+        `maxDrawdown: ${(outputPrev.maxDrawdown ?? 0).toFixed(4)} -> ${(outputLast.maxDrawdown ?? 0).toFixed(4)}`,
+        `health_score: ${healthPrev.health_score ?? '--'} -> ${healthLast.health_score ?? '--'}`
+      ].join(' | ');
+      snapshotResultEl.textContent = message;
+    }
+
+    function buildUserProfile() {
+      const age = Math.max(18, Math.min(90, Number(ageEl.value || 35)));
+      ageEl.value = age;
+      return { age, taxRegion: taxRegionEl.value, riskLevel: riskLevelEl.value, horizonYears: Number(yearsEl.value || 10) };
+    }
+
+    function syncYearsFromRange() { yearsNumberEl.value = yearsEl.value; }
+    function syncYearsFromNumber() { let val = Number(yearsNumberEl.value || 1); if (val < 1) val = 1; if (val > 30) val = 30; yearsNumberEl.value = val; yearsEl.value = val; }
+
+    function drawChart(payload) {
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      canvas.width = width;
+      canvas.height = height;
+      ctx.clearRect(0, 0, width, height);
+
+      const fallbackValues = Array.isArray(payload) ? payload : [0, 1];
+      const series = Array.isArray(payload) ? {
+        points: fallbackValues.map((_, i) => i),
+        base: fallbackValues,
+        optimistic: null,
+        pessimistic: null
+      } : (payload || {});
+
+      const points = Array.isArray(series.points) && series.points.length ? series.points : fallbackValues.map((_, i) => i);
+      const baseValues = Array.isArray(series.base) && series.base.length ? series.base : fallbackValues;
+      const optimisticValues = Array.isArray(series.optimistic) && series.optimistic.length === baseValues.length ? series.optimistic : null;
+      const pessimisticValues = Array.isArray(series.pessimistic) && series.pessimistic.length === baseValues.length ? series.pessimistic : null;
+
+      const allValues = baseValues
+        .concat(optimisticValues || [])
+        .concat(pessimisticValues || [])
+        .filter(v => Number.isFinite(v));
+
+      const padding = 36;
+      const maxVal = allValues.length ? Math.max(...allValues) : 1;
+      const minVal = allValues.length ? Math.min(...allValues) : 0;
+      const range = maxVal - minVal || 1;
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding, padding);
+      ctx.lineTo(padding, height - padding);
+      ctx.lineTo(width - padding, height - padding);
+      ctx.stroke();
+
+      const toPoints = (values) => values.map((val, index) => ({
+        x: padding + (index / (values.length - 1 || 1)) * (width - padding * 2),
+        y: height - padding - ((val - minVal) / range) * (height - padding * 2),
+        value: val,
+        t: points[index] ?? index
+      }));
+
+      const basePoints = toPoints(baseValues);
+      const optimisticPoints = optimisticValues ? toPoints(optimisticValues) : null;
+      const pessimisticPoints = pessimisticValues ? toPoints(pessimisticValues) : null;
+
+      if (optimisticPoints && pessimisticPoints) {
+        ctx.beginPath();
+        ctx.moveTo(optimisticPoints[0].x, optimisticPoints[0].y);
+        optimisticPoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        pessimisticPoints.slice().reverse().forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(124,156,255,0.14)';
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(99,223,191,0.55)';
+        ctx.lineWidth = 1.25;
+        ctx.beginPath();
+        ctx.moveTo(optimisticPoints[0].x, optimisticPoints[0].y);
+        optimisticPoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(255,154,122,0.58)';
+        ctx.beginPath();
+        ctx.moveTo(pessimisticPoints[0].x, pessimisticPoints[0].y);
+        pessimisticPoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(basePoints[0].x, basePoints[0].y);
+      basePoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.strokeStyle = '#f0c86a';
+      ctx.lineWidth = 2.8;
+      ctx.stroke();
+
+      ctx.lineTo(basePoints[basePoints.length - 1].x, height - padding);
+      ctx.lineTo(basePoints[0].x, height - padding);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(240,200,106,0.08)';
+      ctx.fill();
+
+      if (optimisticPoints && pessimisticPoints) {
+        const endPts = [
+          { pt: optimisticPoints[optimisticPoints.length - 1], color: '#63dfbf' },
+          { pt: basePoints[basePoints.length - 1], color: '#f0c86a' },
+          { pt: pessimisticPoints[pessimisticPoints.length - 1], color: '#ff9a7a' }
+        ];
+        endPts.forEach(({ pt, color }) => {
+          ctx.beginPath();
+          ctx.fillStyle = color;
+          ctx.arc(pt.x, pt.y, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+    }
+
+    function randnWithRng(rng) { let u = 0, v = 0; while (u === 0) u = rng(); while (v === 0) v = rng(); return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v); }
+    function simulatePath(initial, years, mu, sigma, seed) {
+      const steps = Math.max(12, years * 12); const dt = 1 / 12; const values = [initial]; let current = initial; const rng = mulberry32(seed);
+      for (let i = 0; i < steps; i++) { const shock = randnWithRng(rng); const growth = (mu - 0.5 * sigma * sigma) * dt + sigma * Math.sqrt(dt) * shock; current = Math.max(0, current * Math.exp(growth)); values.push(current); }
+      return values;
+    }
+    function maxDrawdown(series) { let peak = series[0]; let maxDD = 0; series.forEach(val => { if (val > peak) peak = val; const dd = peak ? (peak - val) / peak : 0; if (dd > maxDD) maxDD = dd; }); return maxDD; }
+
+    function percentile(values, q) {
+      if (!values.length) return 0;
+      const sorted = values.slice().sort((a, b) => a - b);
+      const idx = (sorted.length - 1) * clampNumber(q, 0, 1);
+      const lo = Math.floor(idx);
+      const hi = Math.ceil(idx);
+      if (lo === hi) return sorted[lo];
+      const ratio = idx - lo;
+      return sorted[lo] * (1 - ratio) + sorted[hi] * ratio;
+    }
+
+    function estimateDrawdownBySimulation(initial, years, mu, sigma, seed, paths = 120) {
+      const drawdowns = [];
+      for (let i = 0; i < paths; i += 1) {
+        const path = simulatePath(initial, years, mu, sigma, seed + i * 17);
+        drawdowns.push(maxDrawdown(path));
+      }
+      return percentile(drawdowns, 0.6);
+    }
+
+    function buildScenarioCurvesP20P50P80(initial, years, mu, sigma) {
+      const steps = Math.max(12, years * 12);
+      const points = [];
+      const base = [];
+      const optimistic = [];
+      const pessimistic = [];
+      const z80 = 0.8416;
+      const z20 = -0.8416;
+      const safeMu = Number.isFinite(mu) ? mu : 0;
+      const safeSigma = Math.max(0, Number.isFinite(sigma) ? sigma : 0);
+      for (let i = 0; i <= steps; i += 1) {
+        const t = (i / steps) * years;
+        const baseVal = initial * Math.pow(1 + safeMu, t);
+        const volTerm = safeSigma * Math.sqrt(t);
+        points.push(t);
+        base.push(baseVal);
+        pessimistic.push(Math.max(0, baseVal * Math.exp(z20 * volTerm)));
+        optimistic.push(baseVal * Math.exp(z80 * volTerm));
+      }
+      return { points, base, optimistic, pessimistic };
+    }
+
+    function renderChartLegendAndEndLabels(series, currency) {
+      if (!series || !Array.isArray(series.base) || !series.base.length) {
+        chartEndOptimisticEl.textContent = '--';
+        chartEndBaseEl.textContent = '--';
+        chartEndPessimisticEl.textContent = '--';
+        return;
+      }
+      const lastIndex = series.base.length - 1;
+      chartEndOptimisticEl.textContent = formatCurrency(series.optimistic[lastIndex] || 0, currency);
+      chartEndBaseEl.textContent = formatCurrency(series.base[lastIndex] || 0, currency);
+      chartEndPessimisticEl.textContent = formatCurrency(series.pessimistic[lastIndex] || 0, currency);
+    }
+
+    function hideChartTooltip() {
+      chartTooltipEl.classList.remove('show');
+      chartTooltipEl.setAttribute('aria-hidden', 'true');
+      chartTooltipEl.innerHTML = '';
+    }
+
+    function bindChartTooltip(series, currency, years) {
+      if (chartTooltipCleanup) {
+        chartTooltipCleanup();
+        chartTooltipCleanup = null;
+      }
+      hideChartTooltip();
+      if (!series || !Array.isArray(series.points) || series.points.length < 2) return;
+
+      const linesCount = series.points.length;
+      const clampIdx = (idx) => Math.max(0, Math.min(linesCount - 1, idx));
+      const base0 = Math.max(1e-9, series.base[0] || 1);
+
+      const renderAt = (clientX, clientY) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+        const ratio = rect.width ? x / rect.width : 0;
+        const idx = clampIdx(Math.round(ratio * (linesCount - 1)));
+        const year = Number(series.points[idx] || 0);
+
+        const valOptimistic = series.optimistic[idx] || 0;
+        const valBase = series.base[idx] || 0;
+        const valPessimistic = series.pessimistic[idx] || 0;
+        const retBase = ((valBase / base0) - 1) * 100;
+
+        chartTooltipEl.innerHTML = `
+          <div class="time">${t('chartTooltipYear')}: ${year.toFixed(1)} / ${years}</div>
+          <div class="line"><span class="key">${t('chartLegendOptimistic')} ${t('chartTooltipValue')}</span><span class="val">${formatCurrency(valOptimistic, currency)}</span></div>
+          <div class="line"><span class="key">${t('chartLegendBase')} ${t('chartTooltipValue')}</span><span class="val">${formatCurrency(valBase, currency)}</span></div>
+          <div class="line"><span class="key">${t('chartLegendPessimistic')} ${t('chartTooltipValue')}</span><span class="val">${formatCurrency(valPessimistic, currency)}</span></div>
+          <div class="line"><span class="key">${t('chartTooltipReturn')} (${t('chartLegendBase')})</span><span class="val">${retBase.toFixed(1)}%</span></div>
+        `;
+
+        const offsetX = 14;
+        const offsetY = 14;
+        const maxLeft = rect.width - chartTooltipEl.offsetWidth - 6;
+        const maxTop = rect.height - chartTooltipEl.offsetHeight - 6;
+        const left = Math.max(6, Math.min(maxLeft, x + offsetX));
+        const top = Math.max(6, Math.min(maxTop, (clientY - rect.top) + offsetY));
+        chartTooltipEl.style.left = `${left}px`;
+        chartTooltipEl.style.top = `${top}px`;
+        chartTooltipEl.classList.add('show');
+        chartTooltipEl.setAttribute('aria-hidden', 'false');
+      };
+
+      const onMouseMove = (event) => renderAt(event.clientX, event.clientY);
+      const onMouseLeave = () => hideChartTooltip();
+      const onTouchMove = (event) => {
+        const touch = event.touches && event.touches[0];
+        if (!touch) return;
+        renderAt(touch.clientX, touch.clientY);
+      };
+      const onTouchEnd = () => hideChartTooltip();
+
+      canvas.addEventListener('mousemove', onMouseMove);
+      canvas.addEventListener('mouseleave', onMouseLeave);
+      canvas.addEventListener('touchstart', onTouchMove, { passive: true });
+      canvas.addEventListener('touchmove', onTouchMove, { passive: true });
+      canvas.addEventListener('touchend', onTouchEnd, { passive: true });
+
+      chartTooltipCleanup = () => {
+        canvas.removeEventListener('mousemove', onMouseMove);
+        canvas.removeEventListener('mouseleave', onMouseLeave);
+        canvas.removeEventListener('touchstart', onTouchMove);
+        canvas.removeEventListener('touchmove', onTouchMove);
+        canvas.removeEventListener('touchend', onTouchEnd);
+      };
+    }
+
+    function computeSuggestedTargets(profile) {
+      const base = RISK_MODELS[profile.riskLevel] || RISK_MODELS.balanced;
+      const ageAdj = profile.age >= 55 ? -0.08 : profile.age <= 30 ? 0.05 : 0;
+      const horizonAdj = profile.horizonYears >= 15 ? 0.04 : profile.horizonYears <= 3 ? -0.06 : 0;
+      const stockTarget = Math.max(0.25, Math.min(0.9, base.stockTarget + ageAdj + horizonAdj));
+      const cashTarget = Math.max(0.05, Math.min(0.25, base.cashTarget + (profile.taxRegion === 'TW' ? 0.01 : 0)));
+      const bondTarget = Math.max(0.05, 1 - stockTarget - cashTarget);
+      return { stock: stockTarget, bond: bondTarget, cash: cashTarget };
+    }
+
+    function suggestAllocation(details, profile) {
+      const current = { stock: 0, bond: 0, cash: 0 };
+      details.forEach(item => {
+        const t = item.normalizedTicker;
+        if (!t) { current.cash += item.weight; return; }
+        if (['BND','AGG','TLT','IEF','00679B','00865B'].includes(t)) current.bond += item.weight;
+        else if (['CASH','USD'].includes(t)) current.cash += item.weight;
+        else current.stock += item.weight;
+      });
+      const target = computeSuggestedTargets(profile);
+      const rows = [
+        { bucket: currentLanguage === 'en' ? 'Equity' : '股票', currentWeight: current.stock, targetWeight: target.stock },
+        { bucket: currentLanguage === 'en' ? 'Bond' : '債券', currentWeight: current.bond, targetWeight: target.bond },
+        { bucket: currentLanguage === 'en' ? 'Cash' : '現金', currentWeight: current.cash, targetWeight: target.cash },
+      ].map(r => ({ ...r, delta: r.targetWeight - r.currentWeight, rationale: r.delta > 0 ? (currentLanguage === 'en' ? 'Increase allocation' : '建議提高配置') : (r.delta < 0 ? (currentLanguage === 'en' ? 'Reduce allocation' : '建議降低配置') : (currentLanguage === 'en' ? 'Keep current' : '維持現況')) }));
+      return rows;
+    }
+
+    function renderAllocation(rows) {
+      allocationRowsEl.innerHTML = rows.map(r => `<div class="table-row"><div>${r.bucket}</div><div>${(r.currentWeight*100).toFixed(1)}%</div><div>${(r.targetWeight*100).toFixed(1)}%</div><div>${r.delta >= 0 ? '+' : ''}${(r.delta*100).toFixed(1)}% (${r.rationale})</div></div>`).join('');
+    }
+
+    function generateAdviceFallback(details, years, portfolioReturn, portfolioVol, dd, profile, suggestions) {
+      const top = details.slice().sort((a,b)=>b.weight-a.weight)[0];
+      const topLabel = top ? `${top.normalizedTicker || (currentLanguage === 'en' ? 'Cash' : '現金')} (${(top.weight*100).toFixed(0)}%)` : (currentLanguage === 'en' ? 'N/A' : '無');
+      const riskWord = profile.riskLevel === 'conservative'
+        ? (currentLanguage === 'en' ? 'conservative' : '保守')
+        : profile.riskLevel === 'aggressive'
+          ? (currentLanguage === 'en' ? 'aggressive' : '積極')
+          : (currentLanguage === 'en' ? 'balanced' : '中性');
+      return {
+        summary: currentLanguage === 'en'
+          ? `For age ${profile.age}, tax region ${profile.taxRegion}, and ${riskWord} profile, the largest position is ${topLabel} with simulated drawdown ${(dd*100).toFixed(1)}%.`
+          : `依 ${profile.age} 歲、${profile.taxRegion} 稅務地區與 ${riskWord}風險等級，組合目前最大持倉為 ${topLabel}，模擬回撤 ${(dd*100).toFixed(1)}%。`,
+        risk_level: portfolioVol >= 0.24 ? 'high' : (portfolioVol >= 0.15 ? 'medium' : 'low'),
+        actions: [
+          {
+            title: currentLanguage === 'en' ? 'Allocation Shift' : '配置調整',
+            reason: currentLanguage === 'en'
+              ? `Equity ${(suggestions[0].targetWeight*100).toFixed(0)}% / Bond ${(suggestions[1].targetWeight*100).toFixed(0)}% / Cash ${(suggestions[2].targetWeight*100).toFixed(0)}%.`
+              : `股票 ${(suggestions[0].targetWeight*100).toFixed(0)}% / 債券 ${(suggestions[1].targetWeight*100).toFixed(0)}% / 現金 ${(suggestions[2].targetWeight*100).toFixed(0)}%。`,
+            priority: 'high'
+          },
+          {
+            title: currentLanguage === 'en' ? 'Horizon Match' : '期限匹配',
+            reason: years <= 3
+              ? (currentLanguage === 'en' ? 'Short horizon: increase defensive assets.' : '期限偏短，建議提高防禦資產比例。')
+              : (years >= 15
+                  ? (currentLanguage === 'en' ? 'Long horizon: keep growth tilt and rebalance regularly.' : '期限偏長，可維持成長配置並定期再平衡。')
+                  : (currentLanguage === 'en' ? 'Medium horizon: keep balanced stock-bond mix.' : '期限中等，維持股債平衡配置。')),
+            priority: 'medium'
+          }
+        ],
+        watchouts: [
+          portfolioVol >= 0.24
+            ? (currentLanguage === 'en' ? 'Volatility is elevated; verify risk tolerance and cash buffer.' : '波動偏高，請確認心理承受度與現金備援。')
+            : (currentLanguage === 'en' ? 'Volatility is manageable; focus on disciplined rebalancing.' : '波動尚可，重點是紀律執行再平衡。'),
+          portfolioReturn >= 0.1
+            ? (currentLanguage === 'en' ? 'Expected return is aggressive; pair with stronger risk controls.' : '預期報酬偏積極，需搭配風險管理。')
+            : (currentLanguage === 'en' ? 'Expected return is moderate to conservative; adjust to goal.' : '預期報酬中性至保守，可依目標調整。')
+        ],
+        disclaimer: currentLanguage === 'en' ? 'For reference only; not investment advice.' : '本建議僅供參考，不構成投資建議。',
+        model_meta: { provider: 'rule-engine', model: 'fallback-v1', latency_ms: 0 }
+      };
+    }
+
+    function renderExpertAdvice(advice, fallbackUsed, fallbackMessage = '', metadata = {}) {
+      const formatPriorityLabel = (priority) => {
+        const level = String(priority || 'medium').trim().toLowerCase();
+        if (level === 'high') return t('priorityHigh');
+        if (level === 'low') return t('priorityLow');
+        return t('priorityMedium');
+      };
+      const formatReason = (reason) => {
+        const raw = String(reason || '').trim();
+        if (!raw) return t('adviceFallbackReason');
+        if (currentLanguage === 'zh' && raw.toLowerCase() === 'validate allocation and risk controls.') {
+          return t('adviceFallbackReason');
+        }
+        return raw;
+      };
+      const defaultActionTitle = currentLanguage === 'en' ? 'Review portfolio risk' : '檢視投資組合風險';
+
+      expertSummaryEl.textContent = advice.summary || '--';
+      const items = [];
+      if (fallbackUsed) items.push(`<li>${currentLanguage === 'en' ? 'AI is unavailable. Switched to rule-based guidance.' : 'AI 暫時不可用，已切換規則建議。'}</li>`);
+      if (fallbackMessage) items.push(`<li>${fallbackMessage}</li>`);
+      if (!fallbackUsed && metadata.cacheHit) items.push(`<li>${currentLanguage === 'en' ? 'Inputs unchanged. Reused previous AI response.' : '輸入未變更，已復用上次 AI 建議。'}</li>`);
+      if (!fallbackUsed && metadata.generatedAt) items.push(`<li>${currentLanguage === 'en' ? 'Generated at' : '建議生成時間'}: ${formatTimestamp(metadata.generatedAt)}</li>`);
+      (advice.actions || []).slice(0, 3).forEach(action => {
+        const priorityLabel = formatPriorityLabel(action?.priority);
+        const title = String(action?.title || defaultActionTitle).trim() || defaultActionTitle;
+        const reason = formatReason(action?.reason);
+        items.push(`<li>【${priorityLabel}】${title}：${reason}</li>`);
+      });
+      (advice.watchouts || []).forEach(msg => items.push(`<li>${msg}</li>`));
+      if (advice.disclaimer) items.push(`<li>${advice.disclaimer}</li>`);
+      expertListEl.innerHTML = items.join('');
+    }
+
+    function buildAdvicePayload(profile, details, suggestions, portfolioReturn, portfolioVol, dd, totalUsd) {
+      return {
+        profile: {
+          age: profile.age,
+          riskLevel: profile.riskLevel,
+          taxRegion: profile.taxRegion,
+          horizonYears: profile.horizonYears
+        },
+        portfolio: {
+          totalUsd,
+          expectedReturn: portfolioReturn,
+          volatility: portfolioVol,
+          maxDrawdown: dd,
+          positions: details.map(d => ({
+            ticker: d.normalizedTicker || '',
+            name: d.resolvedStockName || null,
+            weight: d.weight,
+            expectedReturn: d.expectedReturn,
+            volatility: d.volatility
+          })),
+          allocationSuggestion: suggestions.map(s => ({
+            bucket: s.bucket,
+            currentWeight: s.currentWeight,
+            targetWeight: s.targetWeight,
+            delta: s.delta
+          }))
+        },
+        locale: currentLanguage === 'en' ? 'en-US' : 'zh-TW'
+      };
+    }
+
+    function seedFromScenario(profile, rows, years, displayCurrency, overrideState) {
+      const payload = JSON.stringify({
+        profile,
+        rows: getRowsForScenario(rows).map(r => ({ ...r, amount: Number(r.amount.toFixed(2)) })),
+        years,
+        displayCurrency,
+        overrideState
+      });
+      return hashCode(payload) || 1;
+    }
+
+    function base64EncodeUnicode(str) { return btoa(unescape(encodeURIComponent(str))); }
+    function base64DecodeUnicode(str) { return decodeURIComponent(escape(atob(str))); }
+
+    function serializeScenarioToQuery(profile, rows, years, displayCurrency, override) {
+      const data = { profile, rows: getRowsForScenario(rows), years, displayCurrency, override };
+      return new URLSearchParams({ s: base64EncodeUnicode(JSON.stringify(data)) }).toString();
+    }
+
+    function hydrateScenarioFromQuery() {
+      const params = new URLSearchParams(window.location.search);
+      const raw = params.get('s');
+      if (!raw) return null;
+      try { return JSON.parse(base64DecodeUnicode(raw)); } catch (_) { return null; }
+    }
+
+    let latestCalcRun = 0;
+    const scheduleCalculate = debounce(() => calculate({ includeAi: false }), AI_DEBOUNCE_MS);
+
+    async function calculate(options = {}) {
+      const includeAi = Boolean(options.includeAi);
+      const forceAi = Boolean(options.forceAi);
+      const runId = ++latestCalcRun;
+      if (activeReturnController) activeReturnController.abort();
+      if (activeAdviceController) activeAdviceController.abort();
+      if (activeRiskController) activeRiskController.abort();
+      activeReturnController = new AbortController();
+
+      const years = Number(yearsEl.value || 1);
+      const displayCurrency = displayCurrencyEl.value;
+      const rows = getRows();
+      const profile = buildUserProfile();
+      const risk = RISK_MODELS[profile.riskLevel] || RISK_MODELS.balanced;
+
+      if (!rows.length) {
+        outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
+        drawChart([0, 1]); assumptionNoteEl.textContent = t('emptyRows'); expertSummaryEl.textContent = '--'; expertListEl.innerHTML = ''; allocationRowsEl.innerHTML = '';
+        latestChartSeries = null;
+        renderChartLegendAndEndLabels(null, displayCurrencyEl.value);
+        bindChartTooltip(null, displayCurrencyEl.value, years);
+        clearExpectedReturnBreakdown();
+        clearHealthCheck(t('invalidPosition'));
+        clearStressTest(t('invalidPosition'));
+        clearDataQuality(t('invalidDataQuery'));
+        latestSnapshotDraft = null;
+        return;
+      }
+
+      let totalUsd = 0;
+      const details = [];
+      const invalidRows = [];
+      const detailTasks = rows.map(async (row) => {
+        const fx = FX_RATES[row.currency] || 1;
+        const amountUsd = row.amount * fx;
+        row.rowEl.querySelector('.ticker').style.borderColor = '';
+        setTickerError(row.rowEl, '');
+        if (!row.normalizedTicker) {
+          return {
+            row,
+            amountUsd,
+            detail: {
+              ...row,
+              amountUsd,
+              expectedReturn: 0.01,
+              volatility: 0.02,
+              isCash: true,
+              priceDateLatest: null,
+              priceDateBase: null
+            }
+          };
+        }
+        const apiData = await fetchAnnualReturn(row.market, row.normalizedTicker, activeReturnController.signal);
+        const expectedReturn = Number(apiData.annual_return);
+        return {
+          row,
+          amountUsd,
+          detail: {
+            ...row,
+            amountUsd,
+            normalizedTicker: apiData.resolved_stock_id,
+            resolvedStockName: apiData.resolved_stock_name,
+            expectedReturn,
+            volatility: estimateAssetVolatility({
+              market: row.market,
+              ticker: apiData.resolved_stock_id,
+              expectedReturn,
+              isCash: false
+            }),
+            isCash: false,
+            priceDateLatest: apiData.price_date_latest || null,
+            priceDateBase: apiData.price_date_base || null
+          }
+        };
+      });
+
+      const detailResults = await Promise.allSettled(detailTasks);
+      if (runId !== latestCalcRun || activeReturnController.signal.aborted) return;
+      detailResults.forEach((result, idx) => {
+        const row = rows[idx];
+        const fx = FX_RATES[row.currency] || 1;
+        totalUsd += row.amount * fx;
+        if (result.status === 'fulfilled') {
+          details.push(result.value.detail);
+          return;
+        }
+        if (result.reason?.name === 'AbortError') return;
+        const explain = describeApiError(result.reason, row.market);
+        invalidRows.push({ query: `${row.market}:${row.normalizedTicker}`, message: explain });
+        row.rowEl.querySelector('.ticker').style.borderColor = 'rgba(255, 90, 90, 0.9)';
+        setTickerError(row.rowEl, explain);
+      });
+
+      if (runId !== latestCalcRun) return;
+
+      if (invalidRows.length) {
+        outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
+        drawChart([0, 1]);
+        latestChartSeries = null;
+        renderChartLegendAndEndLabels(null, displayCurrencyEl.value);
+        bindChartTooltip(null, displayCurrencyEl.value, years);
+        clearExpectedReturnBreakdown();
+        expertSummaryEl.textContent = '--';
+        expertListEl.innerHTML = '';
+        allocationRowsEl.innerHTML = '';
+        clearHealthCheck(t('invalidPosition'));
+        clearStressTest(t('invalidPosition'));
+        clearDataQuality(t('invalidDataQuery'));
+        latestSnapshotDraft = null;
+        assumptionNoteEl.textContent = `${t('invalidInputPrefix')} ${invalidRows.map(x => `${x.query}（${x.message}）`).join('；')}`;
+        return;
+      }
+
+      if (totalUsd === 0) {
+        outputRateEl.textContent = '--'; outputVolEl.textContent = '--'; outputDDEl.textContent = '--'; outputTotalEl.textContent = '--'; outputGainEl.textContent = '--';
+        drawChart([0, 1]); assumptionNoteEl.textContent = t('amountPositive'); expertSummaryEl.textContent = '--'; expertListEl.innerHTML = ''; allocationRowsEl.innerHTML = '';
+        latestChartSeries = null;
+        renderChartLegendAndEndLabels(null, displayCurrencyEl.value);
+        bindChartTooltip(null, displayCurrencyEl.value, years);
+        clearExpectedReturnBreakdown();
+        clearHealthCheck(t('amountPositive'));
+        clearStressTest(t('amountPositive'));
+        clearDataQuality(t('amountPositive'));
+        latestSnapshotDraft = null;
+        return;
+      }
+
+      details.forEach(item => { item.weight = item.amountUsd / totalUsd; });
+      let weightedVar = 0;
+      details.forEach(item => { weightedVar += Math.pow(item.weight * item.volatility, 2); });
+      const portfolioVol = Math.sqrt(weightedVar) * risk.volScale;
+      const coverage = renderDataQuality(details);
+
+      const expectedReturnPayload = {
+        profile: {
+          age: profile.age,
+          riskLevel: profile.riskLevel,
+          taxRegion: profile.taxRegion,
+          horizonYears: profile.horizonYears
+        },
+        positions: details.map(item => ({
+          ticker: item.normalizedTicker || '',
+          market: item.market || 'TW',
+          weight: item.weight,
+          expectedReturn: item.expectedReturn,
+          isCash: Boolean(item.isCash)
+        })),
+        coverage
+      };
+
+      let expectedReturnModel = computeExpectedReturnFallback(profile, details, coverage);
+      let expectedReturnModelFallback = true;
+      try {
+        expectedReturnModel = await fetchExpectedReturn(expectedReturnPayload, activeReturnController.signal);
+        expectedReturnModelFallback = false;
+      } catch (err) {
+        if (err?.name === 'AbortError') return;
+      }
+      if (runId !== latestCalcRun || activeReturnController.signal.aborted) return;
+
+      renderExpectedReturnBreakdown(expectedReturnModel);
+      if (expectedReturnModelFallback) {
+        modelMethodNoteEl.textContent = `${modelMethodNoteEl.textContent} · ${t('modelFallbackHint')}`;
+      }
+
+      let portfolioReturn = Number(expectedReturnModel?.expected_return || 0);
+      portfolioReturn = clampNumber(portfolioReturn, RETURN_MODEL_FLOOR, RETURN_MODEL_CAP);
+      if (overrideToggleEl.checked) {
+        portfolioReturn = Math.max(-0.95, Math.min(0.5, Number(overrideEl.value) / 100));
+        modelMethodNoteEl.textContent = `${modelMethodNoteEl.textContent} · ${t('modelManualOverride')}`;
+      }
+
+      const finalUsd = totalUsd * Math.pow(1 + portfolioReturn, years);
+      const gainUsd = finalUsd - totalUsd;
+      const fxOut = FX_RATES[displayCurrency] || 1;
+      outputRateEl.textContent = `${(portfolioReturn * 100).toFixed(2)}%`;
+      outputVolEl.textContent = `${(portfolioVol * 100).toFixed(2)}%`;
+
+      const overrideState = { enabled: overrideToggleEl.checked, value: Number(overrideEl.value) };
+      const seed = seedFromScenario(profile, rows, years, displayCurrency, overrideState);
+      const dd = estimateDrawdownBySimulation(totalUsd, years, portfolioReturn, portfolioVol, seed);
+      const projection = buildScenarioCurvesP20P50P80(totalUsd, years, portfolioReturn, portfolioVol);
+      outputDDEl.textContent = `${(dd * 100).toFixed(2)}%`;
+      outputTotalEl.textContent = formatCurrency(finalUsd / fxOut, displayCurrency);
+      outputGainEl.textContent = formatCurrency(gainUsd / fxOut, displayCurrency);
+      latestChartSeries = {
+        points: projection.points,
+        base: projection.base.map(v => v / fxOut),
+        optimistic: projection.optimistic.map(v => v / fxOut),
+        pessimistic: projection.pessimistic.map(v => v / fxOut)
+      };
+      renderChartLegendAndEndLabels(latestChartSeries, displayCurrency);
+      bindChartTooltip(latestChartSeries, displayCurrency, years);
+      requestAnimationFrame(() => drawChart(latestChartSeries));
+
+      const suggestions = suggestAllocation(details, profile);
+      renderAllocation(suggestions);
+
+      const healthPayload = buildHealthPayload(profile, details, portfolioReturn, portfolioVol, dd);
+      const stressPayload = buildStressPayload(details);
+      activeRiskController = new AbortController();
+      let healthData = null;
+      let stressData = null;
+
+      try {
+        const [healthResult, stressResult] = await Promise.allSettled([
+          fetchPortfolioHealth(healthPayload, activeRiskController.signal),
+          fetchStressTest(stressPayload, activeRiskController.signal),
+        ]);
+
+        if (runId !== latestCalcRun || activeRiskController.signal.aborted) return;
+
+        if (healthResult.status === 'fulfilled') {
+          healthData = healthResult.value;
+          renderHealthCheck(healthData);
+        } else if (healthResult.reason?.name !== 'AbortError') {
+          clearHealthCheck(describeRiskApiError(healthResult.reason));
+        }
+
+        if (stressResult.status === 'fulfilled') {
+          stressData = stressResult.value;
+          renderStressTest(stressData);
+        } else if (stressResult.reason?.name !== 'AbortError') {
+          clearStressTest(describeRiskApiError(stressResult.reason));
+        }
+      } catch (_) {
+        const riskMsg = currentLanguage === 'en' ? 'Risk module is temporarily unavailable.' : '風險模組暫時不可用。';
+        clearHealthCheck(riskMsg);
+        clearStressTest(riskMsg);
+      }
+
+      const aiPayload = buildAdvicePayload(profile, details, suggestions, portfolioReturn, portfolioVol, dd, totalUsd);
+      const aiPayloadKey = JSON.stringify(aiPayload);
+      const inputChangedSinceLastAi = lastAiPayloadKey && lastAiPayloadKey !== aiPayloadKey;
+      if (inputChangedSinceLastAi) aiAdviceStale = true;
+
+      let advice = generateAdviceFallback(details, years, portfolioReturn, portfolioVol, dd, profile, suggestions);
+      let fallbackUsed = true;
+      let fallbackMessage = '';
+      const underCooldown = (Date.now() - lastAiRequestAt) < AI_COOLDOWN_MS;
+      const adviceMeta = { cacheHit: false, generatedAt: null };
+
+      if (!includeAi) {
+        fallbackMessage = aiAdviceStale
+          ? t('aiNeedsRefresh')
+          : t('aiUpdatedHint');
+      } else if (underCooldown && !forceAi) {
+        fallbackMessage = t('aiCooldown');
+      } else {
+        setAiButtonLoading(true);
+        expertSummaryEl.textContent = t('aiGenerating');
+        expertListEl.innerHTML = `<li>${t('analyzeLoading')}</li>`;
+        try {
+          activeAdviceController = new AbortController();
+          const aiResult = await fetchAiAdvice(aiPayload, activeAdviceController.signal);
+          advice = aiResult.payload;
+          fallbackUsed = false;
+          lastAiRequestAt = Date.now();
+          adviceMeta.generatedAt = lastAiRequestAt;
+          adviceMeta.cacheHit = aiResult.cacheHit;
+          lastAiPayloadKey = aiPayloadKey;
+          aiAdviceStale = false;
+        } catch (err) {
+          if (err?.name === 'AbortError') return;
+          if (err?.status === 429) fallbackMessage = t('aiCooldown');
+          else fallbackMessage = t('aiUnavailable');
+        } finally {
+          if (runId === latestCalcRun) setAiButtonLoading(false);
+        }
+      }
+
+      if (runId !== latestCalcRun) return;
+      renderExpertAdvice(advice, fallbackUsed, fallbackMessage, adviceMeta);
+
+      scenarioIdEl.textContent = `Scenario: ${seed}`;
+      const resolved = details.filter(d => d.resolvedStockName).map(d => `${d.normalizedTicker} ${d.resolvedStockName}`);
+      const components = expectedReturnModel?.components || {};
+      const resolvedNote = currentLanguage === 'en'
+        ? (resolved.length ? `Resolved: ${resolved.join(', ')}` : 'No stock ticker input.')
+        : (resolved.length ? `已解析：${resolved.join('、')}` : '無股票代碼輸入。');
+      if (currentLanguage === 'en') {
+        assumptionNoteEl.textContent =
+          `Method ${expectedReturnModel?.method || '--'} · hist-weight ${(components.historical_weight * 100 || 0).toFixed(1)}% · ` +
+          `anchor ${(components.anchor_return * 100 || 0).toFixed(2)}% · total drag ${((components.total_drag || 0) * 100).toFixed(2)}%. ` +
+          `${resolvedNote}`;
+      } else {
+        assumptionNoteEl.textContent =
+          `估算口徑：${expectedReturnModel?.method || '--'}（CMA 收斂）· 歷史權重 ${(components.historical_weight * 100 || 0).toFixed(1)}% · ` +
+          `anchor ${(components.anchor_return * 100 || 0).toFixed(2)}% · 扣費與懲罰 ${((components.total_drag || 0) * 100).toFixed(2)}%；${resolvedNote}`;
+      }
+
+      latestSnapshotDraft = {
+        scenario_seed: seed,
+        inputs: {
+          profile,
+          rows: getRowsForScenario(rows),
+          years,
+          displayCurrency,
+          override: overrideState
+        },
+        outputs: {
+          expectedReturn: portfolioReturn,
+          volatility: portfolioVol,
+          maxDrawdown: dd,
+          finalUsd,
+          gainUsd
+        },
+        health: healthData,
+        stress: stressData
+      };
+
+      const query = serializeScenarioToQuery(profile, rows, years, displayCurrency, overrideState);
+      history.replaceState(null, '', `${location.pathname}?${query}`);
+    }
+
+    function copyShareUrl() {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        scenarioIdEl.textContent = `${scenarioIdEl.textContent} · ${t('copied')}`;
+      }).catch(() => {
+        scenarioIdEl.textContent = `${scenarioIdEl.textContent} · ${t('copyManual')}`;
+      });
+    }
+
+    yearsEl.addEventListener('input', () => { syncYearsFromRange(); scheduleCalculate(); });
+    yearsNumberEl.addEventListener('input', () => { syncYearsFromNumber(); scheduleCalculate(); });
+    overrideToggleEl.addEventListener('change', () => { overrideEl.disabled = !overrideToggleEl.checked; calculate({ includeAi: false }); });
+    document.getElementById('calcBtn').addEventListener('click', () => calculate({ includeAi: false }));
+    aiBtnEl.addEventListener('click', () => calculate({ includeAi: true, forceAi: true }));
+    document.getElementById('shareBtn').addEventListener('click', copyShareUrl);
+    saveSnapshotBtnEl.addEventListener('click', saveSnapshot);
+    exportShareImageBtnEl.addEventListener('click', exportShareImage);
+    compareSnapshotsBtnEl.addEventListener('click', compareLatestSnapshots);
+    document.getElementById('addRow').addEventListener('click', () => { addRow('', 0, 'TWD', 'TW'); calculate({ includeAi: false }); });
+    [displayCurrencyEl, overrideEl, ageEl, riskLevelEl, taxRegionEl].forEach(el => el.addEventListener('input', scheduleCalculate));
+    zhButton.addEventListener('click', () => { applyLanguage('zh'); calculate({ includeAi: false }); });
+    enButton.addEventListener('click', () => { applyLanguage('en'); calculate({ includeAi: false }); });
+
+    function init() {
+      clearHealthCheck(t('waitResult'));
+      clearStressTest(t('waitResult'));
+      clearDataQuality(t('qualitySource'));
+      clearExpectedReturnBreakdown();
+      const existingSnapshots = readSnapshots();
+      snapshotResultEl.textContent = existingSnapshots.length
+        ? t('loadedSnapshots')(existingSnapshots.length)
+        : t('snapshotEmpty');
+      const scenario = hydrateScenarioFromQuery();
+      if (scenario) {
+        rowsEl.innerHTML = '';
+        const profile = scenario.profile || {};
+        ageEl.value = profile.age || 35;
+        riskLevelEl.value = profile.riskLevel || 'balanced';
+        taxRegionEl.value = profile.taxRegion || 'TW';
+        yearsEl.value = scenario.years || 10;
+        yearsNumberEl.value = scenario.years || 10;
+        displayCurrencyEl.value = scenario.displayCurrency || 'USD';
+        overrideToggleEl.checked = Boolean(scenario.override?.enabled);
+        overrideEl.disabled = !overrideToggleEl.checked;
+        overrideEl.value = scenario.override?.value ?? 8.0;
+        (scenario.rows || []).forEach(r => addRow(r.ticker || '', r.amount || 0, r.currency || 'TWD', r.market || 'TW'));
+      } else {
+        addRow('2330', 100000, 'TWD', 'TW');
+        addRow('AAPL', 2000, 'USD', 'US');
+        addRow('2454', 40000, 'TWD', 'TW');
+        syncYearsFromRange();
+      }
+      applyLanguage(currentLanguage);
+      calculate({ includeAi: false });
+    }
+
+    init();
+  </script>
+</body>
+</html>

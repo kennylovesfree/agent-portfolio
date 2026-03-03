@@ -4,29 +4,24 @@ interface AssetCardProps {
   riskLevel: string;
 }
 
+const riskTone: Record<string, string> = {
+  low: "bg-emerald-500/20 text-emerald-200",
+  medium: "bg-amber-500/20 text-amber-200",
+  high: "bg-rose-500/20 text-rose-200",
+};
+
 export function AssetCard({ symbol, name, riskLevel }: AssetCardProps) {
+  const tone = riskTone[riskLevel] ?? "bg-slate-500/20 text-slate-200";
+
   return (
-    <article
-      style={{
-        border: "1px solid #334155",
-        borderRadius: 14,
-        padding: 16,
-        background: "rgba(15, 23, 42, 0.75)",
-      }}
-    >
-      <strong>{symbol}</strong>
-      <p style={{ margin: "8px 0", color: "#e2e8f0" }}>{name}</p>
-      <span
-        style={{
-          display: "inline-block",
-          background: "#1d4ed8",
-          borderRadius: 999,
-          padding: "4px 10px",
-          fontSize: 12,
-        }}
-      >
-        風險等級：{riskLevel}
-      </span>
+    <article className="surface-card p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="m-0 text-xs uppercase tracking-[0.2em] text-text-muted">{symbol}</p>
+          <p className="mt-1 text-sm font-medium text-text-secondary">{name}</p>
+        </div>
+        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>風險：{riskLevel}</span>
+      </div>
     </article>
   );
 }
