@@ -83,9 +83,9 @@ export default function ReportPage() {
     return () => controller.abort();
   }, [answers, localScore, localTemplateReport]);
 
+  const hasApiResult = apiResult !== null;
   const activeScore = apiResult?.score ?? localScore;
   const activeReport = apiResult?.report ?? localTemplateReport;
-  const activeSource = apiResult?.source ?? (activeReport ? "template" : null);
 
   return (
     <PageShell
@@ -107,13 +107,13 @@ export default function ReportPage() {
         />
       ) : (
         <div className="grid gap-5 md:gap-6">
-          {loading && !apiResult ? (
+          {loading && !hasApiResult ? (
             <SurfaceCard>
               <p className="m-0 text-sm text-text-muted">AI 正在生成報告中...</p>
             </SurfaceCard>
           ) : null}
 
-          {activeSource === "template" ? (
+          {apiResult?.source === "template" ? (
             <SurfaceCard className="border-amber-400/40 bg-amber-500/10">
               <p className="m-0 text-sm text-amber-100">
                 已使用標準版報告（原因：{apiResult?.error?.message || "AI 服務不可用"}）。
@@ -121,7 +121,7 @@ export default function ReportPage() {
             </SurfaceCard>
           ) : null}
 
-          {activeSource === "ai" ? (
+          {apiResult?.source === "ai" ? (
             <SurfaceCard className="border-emerald-400/40 bg-emerald-500/10">
               <p className="m-0 text-sm text-emerald-100">AI 個人化報告已生成完成。</p>
             </SurfaceCard>
