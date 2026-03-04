@@ -7,7 +7,7 @@ import { AssetCard } from "@/components/AssetCard";
 import { EmptyStateActions } from "@/components/ui/EmptyStateActions";
 import { PageShell } from "@/components/ui/PageShell";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
-import { assetUniverse } from "@/lib/assetUniverse";
+import { buildRecommendedAssets, recommendationCount } from "@/lib/recommendation";
 import { OnboardingAnswers } from "@/lib/types";
 
 const SESSION_STORAGE_KEY = "onboarding-answers";
@@ -67,15 +67,21 @@ export default function ResultPage() {
   }, []);
 
   const riskScore = useMemo(() => (answers ? buildRiskScore(answers) : null), [answers]);
+
   const allocation = useMemo(() => {
     if (riskScore === null) return [];
     return buildAllocationByScore(riskScore);
   }, [riskScore]);
 
+  const recommendedAssets = useMemo(() => {
+    if (!answers || riskScore === null) return [];
+    return buildRecommendedAssets(answers, riskScore);
+  }, [answers, riskScore]);
+
   return (
     <PageShell
       title="配置結果"
-      subtitle="依據問卷資料，提供你的風險分數與建議資產配置。"
+      subtitle="依據問卷資料，提供你的風險分數、配置比例與候選標的。"
       rightSlot={
         <Link href="/index.html" className="btn-secondary">
           回首頁
@@ -95,8 +101,12 @@ export default function ResultPage() {
           <SurfaceCard>
             <h2 className="m-0 text-xl font-semibold tracking-tight">風險摘要</h2>
             <div className="mt-4 grid gap-2 text-sm text-text-secondary md:grid-cols-2">
-              <p className="m-0">風險分數：<span className="font-semibold text-text-primary">{riskScore}</span></p>
-              <p className="m-0">投資目標：<span className="font-semibold text-text-primary">{answers.goal || "未選擇"}</span></p>
+              <p className="m-0">
+                風險分數：<span className="font-semibold text-text-primary">{riskScore}</span>
+              </p>
+              <p className="m-0">
+                投資目標：<span className="font-semibold text-text-primary">{answers.goal || "未選擇"}</span>
+              </p>
             </div>
           </SurfaceCard>
 
@@ -104,9 +114,9 @@ export default function ResultPage() {
             <AllocationPieChart data={allocation} />
 
             <div className="grid gap-3">
-              <h3 className="m-0 text-lg font-semibold tracking-tight">可持有標的</h3>
+              <h3 className="m-0 text-lg font-semibold tracking-tight">推薦標的（{recommendationCount} 檔）</h3>
               <div className="grid gap-3 md:grid-cols-2">
-                {assetUniverse.map((asset) => (
+                {recommendedAssets.map((asset) => (
                   <AssetCard key={asset.symbol} symbol={asset.symbol} name={asset.name} riskLevel={asset.volatility} />
                 ))}
               </div>

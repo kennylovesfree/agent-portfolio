@@ -13,6 +13,18 @@
 - 共用 UI 元件位於 `components/ui/`：`PageShell`、`SurfaceCard`、`FormField`、`ProgressHeader`、`PrimaryButton`、`SecondaryButton`、`EmptyStateActions`。
 - 目標風格為深色極簡，統一 onboarding/result/report 三頁體驗。
 
+## AI Report Flow
+
+- `POST /api/report`：接收問卷答案，嘗試呼叫 Gemini 生成個人化報告。
+- 若 AI 服務逾時、未設定金鑰或回應格式異常，會自動回退本地模板報告（不中斷使用者流程）。
+- `/report` 頁面會顯示報告來源（AI 或標準版）。
+
+## Asset Recommendation Strategy
+
+- 標的池定義於 `lib/assetUniverse.ts`（本地靜態池，含風險區間與目標適配）。
+- 結果頁透過 `lib/recommendation.ts` 根據問卷分數與投資目標篩選推薦。
+- 每次固定展示 8 檔，並套用類別多樣性約束（避免全部同類標的）。
+
 ## Setup
 
 ```bash
