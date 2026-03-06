@@ -32,7 +32,8 @@ export type PortfolioReport = {
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 const DEFAULT_MODEL = "gemini-2.0-flash";
-const DEFAULT_TIMEOUT_MS = 12_000;
+const DEFAULT_TIMEOUT_MS = 20_000;
+const DEFAULT_TIMEOUT_RETRIES = 1;
 const MIN_LENGTH = 300;
 const MAX_LENGTH = 600;
 
@@ -145,74 +146,96 @@ async function callGemini(prompt: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promi
   }
 
   const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutRetries = Number.parseInt(process.env.GEMINI_TIMEOUT_RETRIES || "", 10);
+  const maxRetries = Number.isFinite(timeoutRetries) && timeoutRetries >= 0 ? timeoutRetries : DEFAULT_TIMEOUT_RETRIES;
 
-  try {
-    const response = await fetch(`${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.4,
-          topP: 0.9,
-        },
-      }),
-      signal: controller.signal,
-    });
+  let lastTimeoutError: InvestmentReportResult | null = null;
 
-    if (!response.ok) {
-      return {
-        ok: false,
-        error: {
-          code: "UPSTREAM_HTTP_ERROR",
-          message: `Gemini API 請求失敗（HTTP ${response.status}）。請稍後再試。`,
-        },
-      };
-    }
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(`${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.4,
+            topP: 0.9,
+          },
+        }),
+        signal: controller.signal,
+      });
 
-    const data = (await response.json()) as {
-      candidates?: Array<{
-        content?: {
-          parts?: Array<{ text?: string }>;
+      if (!response.ok) {
+        return {
+          ok: false,
+          error: {
+            code: "UPSTREAM_HTTP_ERROR",
+            message: `Gemini API 請求失敗（HTTP ${response.status}）。請稍後再試。`,
+          },
         };
-      }>;
-    };
+      }
 
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-    if (!text) {
+      const data = (await response.json()) as {
+        candidates?: Array<{
+          content?: {
+            parts?: Array<{ text?: string }>;
+          };
+        }>;
+      };
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (!text) {
+        return {
+          ok: false,
+          error: {
+            code: "INVALID_RESPONSE",
+            message: "模型回傳格式異常，請稍後重試。",
+          },
+        };
+      }
+
+      return { ok: true, report: text };
+    } catch (error) {
+      if ((error as Error).name === "AbortError") {
+        lastTimeoutError = {
+          ok: false,
+          error: {
+            code: "TIMEOUT",
+            message: `模型回應逾時（${timeoutMs / 1000} 秒），已自動重試 ${maxRetries} 次；請稍後再試。`,
+          },
+        };
+
+        if (attempt < maxRetries) {
+          continue;
+        }
+
+        return lastTimeoutError;
+      }
+
       return {
         ok: false,
         error: {
-          code: "INVALID_RESPONSE",
-          message: "模型回傳格式異常，請稍後重試。",
+          code: "UPSTREAM_NETWORK_ERROR",
+          message: "無法連線至模型服務，請稍後重試。",
         },
       };
+    } finally {
+      clearTimeout(timer);
     }
+  }
 
-    return { ok: true, report: text };
-  } catch (error) {
-    if ((error as Error).name === "AbortError") {
-      return {
-        ok: false,
-        error: {
-          code: "TIMEOUT",
-          message: "模型回應逾時，請稍後再試。",
-        },
-      };
-    }
-
-    return {
+  return (
+    lastTimeoutError ?? {
       ok: false,
       error: {
-        code: "UPSTREAM_NETWORK_ERROR",
-        message: "無法連線至模型服務，請稍後重試。",
+        code: "TIMEOUT",
+        message: "模型回應逾時，請稍後再試。",
       },
-    };
-  } finally {
-    clearTimeout(timer);
-  }
+    }
+  );
 }
 
 export async function generateInvestmentReport(input: InvestmentReportInput): Promise<InvestmentReportResult> {
