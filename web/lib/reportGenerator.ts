@@ -34,8 +34,13 @@ const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 const DEFAULT_MODEL = "gemini-2.0-flash";
 const DEFAULT_TIMEOUT_MS = 20_000;
 const DEFAULT_TIMEOUT_RETRIES = 1;
+const DEFAULT_REWRITE_ATTEMPTS = 2;
 const MIN_LENGTH = 300;
 const MAX_LENGTH = 600;
+const MIN_VALIDATION_LENGTH = 220;
+const MAX_VALIDATION_LENGTH = 1200;
+const MIN_SECTION_LENGTH = 20;
+const SECTION_TITLES = ["推薦理由", "10年情境", "壓力測試", "風險提醒"] as const;
 
 const FORBIDDEN_PHRASES = ["保證獲利", "絕對報酬", "穩賺不賠", "零風險", "必定上漲", "一定賺"];
 
@@ -47,13 +52,52 @@ function countCjkChars(text: string): number {
   return Array.from(text).filter((char) => /[\u4E00-\u9FFF]/.test(char)).length;
 }
 
-function hasFourParagraphs(text: string): boolean {
-  const paragraphs = text
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean);
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
-  return paragraphs.length === 4;
+function parseSections(text: string): Array<{ title: (typeof SECTION_TITLES)[number]; body: string }> {
+  const normalized = text.replace(/\r/g, "").trim();
+  if (!normalized) return [];
+
+  const titlePattern = SECTION_TITLES.map(escapeRegExp).join("|");
+  const headingPattern = new RegExp(
+    `^\\s*(?:#{1,4}\\s*|[-*]\\s*|\\d+[.)]\\s*)?(${titlePattern})[：:]?\\s*(.*)$`,
+    "gm",
+  );
+  const matches = Array.from(normalized.matchAll(headingPattern));
+
+  if (matches.length === 0) return [];
+
+  return matches.map((match, idx) => {
+    const nextMatch = matches[idx + 1];
+    const lineTail = (match[2] ?? "").trim();
+    const bodyStart = (match.index ?? 0) + match[0].length;
+    const bodyEnd = nextMatch?.index ?? normalized.length;
+    const bodyTail = normalized.slice(bodyStart, bodyEnd).trim();
+    const body = [lineTail, bodyTail].filter(Boolean).join("\n").trim();
+
+    return {
+      title: match[1] as (typeof SECTION_TITLES)[number],
+      body,
+    };
+  });
+}
+
+function pickOrderedSections(
+  sections: Array<{ title: (typeof SECTION_TITLES)[number]; body: string }>,
+): Array<{ title: (typeof SECTION_TITLES)[number]; body: string }> | null {
+  const ordered: Array<{ title: (typeof SECTION_TITLES)[number]; body: string }> = [];
+  let cursor = -1;
+
+  for (const title of SECTION_TITLES) {
+    const foundIdx = sections.findIndex((section, idx) => idx > cursor && section.title === title);
+    if (foundIdx === -1) return null;
+    ordered.push(sections[foundIdx]);
+    cursor = foundIdx;
+  }
+
+  return ordered;
 }
 
 function buildPrompt(input: InvestmentReportInput): string {
@@ -96,24 +140,18 @@ function buildRewritePrompt(draft: string): string {
 
 function validateDraft(text: string): { ok: boolean; reason?: string } {
   const cjkChars = countCjkChars(text);
-  if (cjkChars < MIN_LENGTH || cjkChars > MAX_LENGTH) {
+  if (cjkChars < MIN_VALIDATION_LENGTH || cjkChars > MAX_VALIDATION_LENGTH) {
     return { ok: false, reason: "LENGTH_OUT_OF_RANGE" };
   }
 
-  if (!hasFourParagraphs(text)) {
-    return { ok: false, reason: "INVALID_PARAGRAPH_COUNT" };
+  const sections = parseSections(text);
+  const orderedSections = pickOrderedSections(sections);
+  if (!orderedSections) {
+    return { ok: false, reason: "INVALID_SECTION_TITLES" };
   }
 
-  const expectedTitles = ["推薦理由", "10年情境", "壓力測試", "風險提醒"];
-  const paragraphs = text
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-
-  const titlesOk = paragraphs.every((paragraph, idx) => paragraph.startsWith(expectedTitles[idx]));
-
-  if (!titlesOk) {
-    return { ok: false, reason: "INVALID_SECTION_TITLES" };
+  if (orderedSections.some((section) => countCjkChars(section.body) < MIN_SECTION_LENGTH)) {
+    return { ok: false, reason: "SECTION_CONTENT_TOO_SHORT" };
   }
 
   if (containsForbiddenPhrase(text)) {
@@ -259,23 +297,28 @@ export async function generateInvestmentReport(input: InvestmentReportInput): Pr
     return firstPass;
   }
 
-  const secondPass = await callGemini(buildRewritePrompt(firstPass.report));
-  if (!secondPass.ok || !secondPass.report) {
-    return secondPass;
+  let draft = firstPass.report;
+  for (let attempt = 0; attempt < DEFAULT_REWRITE_ATTEMPTS; attempt += 1) {
+    const rewriteResult = await callGemini(buildRewritePrompt(draft));
+    if (!rewriteResult.ok || !rewriteResult.report) {
+      return rewriteResult;
+    }
+
+    const rewriteValidation = validateDraft(rewriteResult.report);
+    if (rewriteValidation.ok) {
+      return rewriteResult;
+    }
+
+    draft = rewriteResult.report;
   }
 
-  const secondValidation = validateDraft(secondPass.report);
-  if (!secondValidation.ok) {
-    return {
-      ok: false,
-      error: {
-        code: "SAFETY_REWRITE_FAILED",
-        message: "模型輸出未通過安全規則，請調整輸入後再試。",
-      },
-    };
-  }
-
-  return secondPass;
+  return {
+    ok: false,
+    error: {
+      code: "SAFETY_REWRITE_FAILED",
+      message: "模型輸出未通過安全規則，請稍後再試。",
+    },
+  };
 }
 
 export function generateReport(answer: RiskAnswer, score: number): PortfolioReport {

@@ -19,21 +19,36 @@ function isOnboardingAnswers(value: unknown): value is OnboardingAnswers {
 }
 
 function parseAiTextToReport(aiText: string, fallback: PortfolioReport): PortfolioReport {
-  const paragraphs = aiText
-    .split(/\n{2,}/)
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const expectedTitles = ["推薦理由", "10年情境", "壓力測試", "風險提醒"] as const;
+  const titlePattern = expectedTitles.map((title) => title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const normalized = aiText.replace(/\r/g, "").trim();
 
-  const extract = (title: string) => {
-    const paragraph = paragraphs.find((item) => item.startsWith(title));
-    if (!paragraph) return "";
-    return paragraph.replace(new RegExp(`^${title}[：:]?\\s*`), "").trim();
-  };
+  const headingPattern = new RegExp(
+    `^\\s*(?:#{1,4}\\s*|[-*]\\s*|\\d+[.)]\\s*)?(${titlePattern})[：:]?\\s*(.*)$`,
+    "gm",
+  );
+  const matches = Array.from(normalized.matchAll(headingPattern));
 
-  const recommendation = extract("推薦理由");
-  const scenario = extract("10年情境");
-  const stress = extract("壓力測試");
-  const warning = extract("風險提醒");
+  const contentByTitle = new Map<string, string>();
+  for (let i = 0; i < matches.length; i += 1) {
+    const match = matches[i];
+    const nextMatch = matches[i + 1];
+    const title = match[1];
+    const lineTail = (match[2] ?? "").trim();
+    const bodyStart = (match.index ?? 0) + match[0].length;
+    const bodyEnd = nextMatch?.index ?? normalized.length;
+    const bodyTail = normalized.slice(bodyStart, bodyEnd).trim();
+    const body = [lineTail, bodyTail].filter(Boolean).join(" ").trim();
+
+    if (title && body && !contentByTitle.has(title)) {
+      contentByTitle.set(title, body);
+    }
+  }
+
+  const recommendation = contentByTitle.get("推薦理由") ?? "";
+  const scenario = contentByTitle.get("10年情境") ?? "";
+  const stress = contentByTitle.get("壓力測試") ?? "";
+  const warning = contentByTitle.get("風險提醒") ?? "";
 
   const summary = [recommendation, scenario].filter(Boolean).join(" ").trim() || fallback.summary;
 
