@@ -411,7 +411,7 @@
 
     .products-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 14px;
     }
 
@@ -434,6 +434,69 @@
       color: var(--muted);
       line-height: 1.55;
       min-height: 58px;
+    }
+
+    .plans-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .plan {
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .plan-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .plan h3 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .plan-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .plan ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      display: grid;
+      gap: 7px;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .plans-ctas {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .plans-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
     }
 
     .steps {
@@ -550,6 +613,7 @@
       .menu-btn { display: inline-flex; align-items: center; justify-content: center; }
       .hero,
       .products-grid,
+      .plans-grid,
       .steps,
       .trust-grid {
         grid-template-columns: 1fr;
@@ -608,6 +672,7 @@
 
         <nav class="top-nav">
           <a id="nav-solutions" href="#products" data-scroll-link="products">解決方案</a>
+          <a id="nav-plans" href="#plans" data-scroll-link="plans">方案</a>
           <a id="nav-how" href="#how-it-works" data-scroll-link="how-it-works">方法</a>
           <a id="nav-contact" href="#contact" data-scroll-link="contact">聯絡</a>
         </nav>
@@ -625,6 +690,7 @@
       <aside id="mobile-drawer" class="mobile-drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Mobile navigation">
         <div class="stack">
           <a id="m-nav-solutions" class="btn secondary" href="#products" data-scroll-link="products">解決方案</a>
+          <a id="m-nav-plans" class="btn secondary" href="#plans" data-scroll-link="plans">方案</a>
           <a id="m-nav-how" class="btn secondary" href="#how-it-works" data-scroll-link="how-it-works">方法</a>
           <a id="m-nav-contact" class="btn secondary" href="#contact" data-scroll-link="contact">聯絡</a>
         </div>
@@ -632,6 +698,7 @@
           <a id="m-route-rebalance" class="btn secondary" href="rebalance_copilot.html" data-route-link>金融配置</a>
           <a id="m-route-futures" class="btn secondary" href="futures_risk_copilot.html" data-route-link>期貨風控</a>
           <a id="m-route-crypto" class="btn secondary" href="crypto_risk_copilot.html" data-route-link>Crypto Risk Copilot</a>
+          <a id="m-route-gem" class="btn secondary" href="https://pse.is/8stq7t?utm_source=rebalancelab&utm_medium=homepage&utm_campaign=gem_trial" target="_blank" rel="noopener noreferrer">Gem 試用</a>
         </div>
       </aside>
 
@@ -643,7 +710,7 @@
             <p id="hero-lead" class="lead">你的 AI 投資組合助理，協助你從資產配置到風險控管做出更清楚、更有紀律的投資決策。</p>
             <div class="hero-ctas">
               <a id="hero-primary-cta" class="btn primary" href="/report" data-route-link>查看投資報告</a>
-              <a id="hero-secondary-cta" class="btn secondary" href="#products" data-scroll-link="products">查看三大工具</a>
+              <a id="hero-secondary-cta" class="btn secondary" href="#products" data-scroll-link="products">查看工具</a>
             </div>
           </div>
         </section>
@@ -669,7 +736,66 @@
               <p id="product-crypto-desc">不做價格預測，聚焦週期狀態、風險分數與倉位建議。</p>
               <a id="product-crypto-cta" class="btn secondary" href="crypto_risk_copilot.html" data-route-link>開啟 Crypto Risk</a>
             </article>
+            <article class="product">
+              <h3 id="product-gem-title">Gem 試用</h3>
+              <p id="product-gem-desc">直接體驗 Google Gem 對話版投資助理，快速測試你的使用情境與價值。</p>
+              <a
+                id="product-gem-cta"
+                class="btn secondary"
+                href="https://pse.is/8stq7t?utm_source=rebalancelab&utm_medium=homepage&utm_campaign=gem_trial"
+                target="_blank"
+                rel="noopener noreferrer"
+              >立即試用 Gem</a>
+            </article>
           </div>
+        </section>
+
+        <section id="plans" class="section-card" data-section="plans">
+          <div class="section-head">
+            <h2 id="plans-title">方案與升級</h2>
+            <p id="plans-subtitle">先用 Free 方案快速上手；若你需要更進階功能，可先加入 Pro 候補名單。</p>
+          </div>
+          <div class="plans-grid">
+            <article class="plan">
+              <div class="plan-head">
+                <h3 id="plan-free-title">Free</h3>
+                <span id="plan-free-tag" class="plan-tag">立即可用</span>
+              </div>
+              <ul>
+                <li id="plan-free-feature-1">可直接使用三大工具與投資問卷流程</li>
+                <li id="plan-free-feature-2">可試用 Gem 對話入口（第三方服務）</li>
+                <li id="plan-free-feature-3">適合先驗證需求與流程習慣</li>
+              </ul>
+            </article>
+            <article class="plan">
+              <div class="plan-head">
+                <h3 id="plan-pro-title">Pro</h3>
+                <span id="plan-pro-tag" class="plan-tag">Coming Soon</span>
+              </div>
+              <ul>
+                <li id="plan-pro-feature-1">預計提供進階分析與工作流整合</li>
+                <li id="plan-pro-feature-2">預計提供優先支援與新功能搶先體驗</li>
+                <li id="plan-pro-feature-3">目前開放候補，名額與時程將另行通知</li>
+              </ul>
+            </article>
+          </div>
+          <div class="plans-ctas">
+            <a
+              id="plans-trial-cta"
+              class="btn primary"
+              href="https://pse.is/8stq7t?utm_source=rebalancelab&utm_medium=homepage&utm_campaign=gem_trial"
+              target="_blank"
+              rel="noopener noreferrer"
+            >立即試用 Gem</a>
+            <a
+              id="plans-waitlist-cta"
+              class="btn secondary"
+              href="https://forms.gle/HaaP2bpyXvxQWPns8"
+              target="_blank"
+              rel="noopener noreferrer"
+            >加入 Pro 候補</a>
+          </div>
+          <p id="plans-note" class="plans-note">Gem 試用連結為第三方服務，將在新分頁開啟。</p>
         </section>
 
         <section id="how-it-works" class="section-card" data-section="how-it-works">
@@ -740,6 +866,7 @@
         metaDescription: "你的 AI 投資組合助理，協助你完成資產配置、風險評估與再平衡決策。",
         brandTitle: "Rebalance Lab",
         navSolutions: "解決方案",
+        navPlans: "方案",
         navHow: "方法",
         navContact: "聯絡",
         topCtaStart: "查看投資報告",
@@ -747,7 +874,7 @@
         heroTitle: "Rebalance Lab",
         heroLead: "你的 AI 投資組合助理，協助你從資產配置到風險控管做出更清楚、更有紀律的投資決策。",
         heroPrimaryCta: "查看投資報告",
-        heroSecondaryCta: "查看三大工具",
+        heroSecondaryCta: "查看工具",
         heroCardRebalanceTitle: "Rebalance Copilot",
         heroCardRebalanceDesc: "投資組合試算、配置與再平衡建議，適合長期資產規劃。",
         heroCardRebalanceCta: "前往金融配置",
@@ -768,6 +895,24 @@
         productCryptoTitle: "Crypto 風險管理",
         productCryptoDesc: "不做價格預測，聚焦週期狀態、風險分數與倉位建議。",
         productCryptoCta: "開啟 Crypto Risk",
+        productGemTitle: "Gem 試用",
+        productGemDesc: "直接體驗 Google Gem 對話版投資助理，快速測試你的使用情境與價值。",
+        productGemCta: "立即試用 Gem",
+        plansTitle: "方案與升級",
+        plansSubtitle: "先用 Free 方案快速上手；若你需要更進階功能，可先加入 Pro 候補名單。",
+        planFreeTitle: "Free",
+        planFreeTag: "立即可用",
+        planFreeFeature1: "可直接使用三大工具與投資問卷流程",
+        planFreeFeature2: "可試用 Gem 對話入口（第三方服務）",
+        planFreeFeature3: "適合先驗證需求與流程習慣",
+        planProTitle: "Pro",
+        planProTag: "Coming Soon",
+        planProFeature1: "預計提供進階分析與工作流整合",
+        planProFeature2: "預計提供優先支援與新功能搶先體驗",
+        planProFeature3: "目前開放候補，名額與時程將另行通知",
+        plansTrialCta: "立即試用 Gem",
+        plansWaitlistCta: "加入 Pro 候補",
+        plansNote: "Gem 試用連結為第三方服務，將在新分頁開啟。",
         howTitle: "使用方式",
         howSubtitle: "用簡單三步驟建立你的投資節奏，降低情緒波動對決策的影響。",
         howStep1: "先定義目標與限制條件：投資期限、風險承受度、最大回撤邊界。",
@@ -784,7 +929,8 @@
         footerCopy: "© 2026 Rebalance Lab. All rights reserved.",
         mobileRouteRebalance: "金融配置",
         mobileRouteFutures: "期貨風控",
-        mobileRouteCrypto: "Crypto Risk Copilot"
+        mobileRouteCrypto: "Crypto Risk Copilot",
+        mobileRouteGem: "Gem 試用"
       },
       en: {
         htmlLang: "en",
@@ -792,6 +938,7 @@
         metaDescription: "Your AI Portfolio Assistant, powered by AgentPortfolio. Designed for focused, real-world portfolio workflows.",
         brandTitle: "Rebalance Lab",
         navSolutions: "Solutions",
+        navPlans: "Plans",
         navHow: "How",
         navContact: "Contact",
         topCtaStart: "View Report",
@@ -799,7 +946,7 @@
         heroTitle: "Rebalance Lab",
         heroLead: "Your AI portfolio assistant powered by AgentPortfolio. Move from idea to executable allocation and risk controls with a clear workflow.",
         heroPrimaryCta: "View Report",
-        heroSecondaryCta: "See 3 Tools",
+        heroSecondaryCta: "See Tools",
         heroCardRebalanceTitle: "Rebalance Copilot",
         heroCardRebalanceDesc: "Portfolio simulation, allocation guidance, and rebalance actions for long-term planning.",
         heroCardRebalanceCta: "Open Rebalance",
@@ -820,6 +967,24 @@
         productCryptoTitle: "Crypto Risk Management",
         productCryptoDesc: "Focus on cycle state, risk scoring, and allocation range guidance.",
         productCryptoCta: "Open Crypto Risk",
+        productGemTitle: "Gem Trial",
+        productGemDesc: "Try the Google Gem conversational assistant and quickly validate your investment workflow use cases.",
+        productGemCta: "Try Gem Now",
+        plansTitle: "Plans & Upgrade",
+        plansSubtitle: "Start with Free today and join the Pro waitlist for upcoming advanced capabilities.",
+        planFreeTitle: "Free",
+        planFreeTag: "Available Now",
+        planFreeFeature1: "Use all three tools and the onboarding report workflow",
+        planFreeFeature2: "Access the Gem trial entry point (third-party service)",
+        planFreeFeature3: "Best for validating demand and user workflows first",
+        planProTitle: "Pro",
+        planProTag: "Coming Soon",
+        planProFeature1: "Planned advanced analytics and workflow integrations",
+        planProFeature2: "Planned priority support and early feature access",
+        planProFeature3: "Waitlist is open now; timeline and slots to be announced",
+        plansTrialCta: "Try Gem Now",
+        plansWaitlistCta: "Join Pro Waitlist",
+        plansNote: "Gem trial opens a third-party service in a new tab.",
         howTitle: "How It Works",
         howSubtitle: "Build a steady investment rhythm in three simple steps.",
         howStep1: "Define target and limits first: horizon, risk tolerance, and max drawdown boundary.",
@@ -836,7 +1001,8 @@
         footerCopy: "© 2026 Rebalance Lab. All rights reserved.",
         mobileRouteRebalance: "Portfolio Tool",
         mobileRouteFutures: "Futures Risk",
-        mobileRouteCrypto: "Crypto Risk Copilot"
+        mobileRouteCrypto: "Crypto Risk Copilot",
+        mobileRouteGem: "Gem Trial"
       }
     };
 
@@ -857,6 +1023,7 @@
     const mapElements = () => ({
       brandTitle: document.getElementById("brand-title"),
       navSolutions: document.getElementById("nav-solutions"),
+      navPlans: document.getElementById("nav-plans"),
       navHow: document.getElementById("nav-how"),
       navContact: document.getElementById("nav-contact"),
       topCtaStart: document.getElementById("top-cta-start"),
@@ -885,6 +1052,24 @@
       productCryptoTitle: document.getElementById("product-crypto-title"),
       productCryptoDesc: document.getElementById("product-crypto-desc"),
       productCryptoCta: document.getElementById("product-crypto-cta"),
+      productGemTitle: document.getElementById("product-gem-title"),
+      productGemDesc: document.getElementById("product-gem-desc"),
+      productGemCta: document.getElementById("product-gem-cta"),
+      plansTitle: document.getElementById("plans-title"),
+      plansSubtitle: document.getElementById("plans-subtitle"),
+      planFreeTitle: document.getElementById("plan-free-title"),
+      planFreeTag: document.getElementById("plan-free-tag"),
+      planFreeFeature1: document.getElementById("plan-free-feature-1"),
+      planFreeFeature2: document.getElementById("plan-free-feature-2"),
+      planFreeFeature3: document.getElementById("plan-free-feature-3"),
+      planProTitle: document.getElementById("plan-pro-title"),
+      planProTag: document.getElementById("plan-pro-tag"),
+      planProFeature1: document.getElementById("plan-pro-feature-1"),
+      planProFeature2: document.getElementById("plan-pro-feature-2"),
+      planProFeature3: document.getElementById("plan-pro-feature-3"),
+      plansTrialCta: document.getElementById("plans-trial-cta"),
+      plansWaitlistCta: document.getElementById("plans-waitlist-cta"),
+      plansNote: document.getElementById("plans-note"),
       howTitle: document.getElementById("how-title"),
       howSubtitle: document.getElementById("how-subtitle"),
       howStep1: document.getElementById("how-step-1"),
@@ -900,11 +1085,13 @@
       contactCta: document.getElementById("contact-cta"),
       footerCopy: document.getElementById("footer-copy"),
       mNavSolutions: document.getElementById("m-nav-solutions"),
+      mNavPlans: document.getElementById("m-nav-plans"),
       mNavHow: document.getElementById("m-nav-how"),
       mNavContact: document.getElementById("m-nav-contact"),
       mRouteRebalance: document.getElementById("m-route-rebalance"),
       mRouteFutures: document.getElementById("m-route-futures"),
-      mRouteCrypto: document.getElementById("m-route-crypto")
+      mRouteCrypto: document.getElementById("m-route-crypto"),
+      mRouteGem: document.getElementById("m-route-gem")
     });
 
     function t(key, lang) {
@@ -924,6 +1111,7 @@
       const textMap = {
         brandTitle: "brandTitle",
         navSolutions: "navSolutions",
+        navPlans: "navPlans",
         navHow: "navHow",
         navContact: "navContact",
         topCtaStart: "topCtaStart",
@@ -952,6 +1140,24 @@
         productCryptoTitle: "productCryptoTitle",
         productCryptoDesc: "productCryptoDesc",
         productCryptoCta: "productCryptoCta",
+        productGemTitle: "productGemTitle",
+        productGemDesc: "productGemDesc",
+        productGemCta: "productGemCta",
+        plansTitle: "plansTitle",
+        plansSubtitle: "plansSubtitle",
+        planFreeTitle: "planFreeTitle",
+        planFreeTag: "planFreeTag",
+        planFreeFeature1: "planFreeFeature1",
+        planFreeFeature2: "planFreeFeature2",
+        planFreeFeature3: "planFreeFeature3",
+        planProTitle: "planProTitle",
+        planProTag: "planProTag",
+        planProFeature1: "planProFeature1",
+        planProFeature2: "planProFeature2",
+        planProFeature3: "planProFeature3",
+        plansTrialCta: "plansTrialCta",
+        plansWaitlistCta: "plansWaitlistCta",
+        plansNote: "plansNote",
         howTitle: "howTitle",
         howSubtitle: "howSubtitle",
         howStep1: "howStep1",
@@ -967,11 +1173,13 @@
         contactCta: "contactCta",
         footerCopy: "footerCopy",
         mNavSolutions: "navSolutions",
+        mNavPlans: "navPlans",
         mNavHow: "navHow",
         mNavContact: "navContact",
         mRouteRebalance: "mobileRouteRebalance",
         mRouteFutures: "mobileRouteFutures",
-        mRouteCrypto: "mobileRouteCrypto"
+        mRouteCrypto: "mobileRouteCrypto",
+        mRouteGem: "mobileRouteGem"
       };
 
       Object.keys(textMap).forEach((key) => {
