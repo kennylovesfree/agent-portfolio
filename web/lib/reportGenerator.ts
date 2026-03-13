@@ -24,6 +24,11 @@ export interface InvestmentReportResult {
   };
 }
 
+type ValidationReason =
+  | "LENGTH_OUT_OF_RANGE"
+  | "INVALID_SECTION_TITLES"
+  | "SECTION_CONTENT_TOO_SHORT";
+
 export type PortfolioReport = {
   summary: string;
   riskWarnings: string[];
@@ -41,12 +46,6 @@ const MIN_VALIDATION_LENGTH = 220;
 const MAX_VALIDATION_LENGTH = 1200;
 const MIN_SECTION_LENGTH = 20;
 const SECTION_TITLES = ["推薦理由", "10年情境", "壓力測試", "風險提醒"] as const;
-
-const FORBIDDEN_PHRASES = ["保證獲利", "絕對報酬", "穩賺不賠", "零風險", "必定上漲", "一定賺"];
-
-function containsForbiddenPhrase(text: string): boolean {
-  return FORBIDDEN_PHRASES.some((phrase) => text.includes(phrase));
-}
 
 function countCjkChars(text: string): number {
   return Array.from(text).filter((char) => /[\u4E00-\u9FFF]/.test(char)).length;
@@ -112,8 +111,9 @@ function buildPrompt(input: InvestmentReportInput): string {
     "   10年情境",
     "   壓力測試",
     "   風險提醒",
-    "3) 不可出現以下語句或同義保證式承諾：保證獲利、絕對報酬、穩賺不賠、零風險、必定上漲、一定賺。",
-    "4) 內容需具體、可讀，但不得提供保證式承諾。",
+    "3) 請明確描述波動、回撤、情境風險與不確定性，不要淡化風險。",
+    "4) 可以寫出潛在損失、壓力情境與風險來源，但不要使用保證收益或確定上漲的語氣。",
+    "5) 每段都要具體、可讀，避免空泛結論。",
     "",
     "使用者資訊：",
     `- 投資人概況：${input.investorProfile}`,
@@ -131,34 +131,44 @@ function buildRewritePrompt(draft: string): string {
     "請重寫以下內容，保留核心觀點，但必須符合所有規則：",
     `- 繁體中文 ${MIN_LENGTH}-${MAX_LENGTH} 字。`,
     "- 僅四段，標題依序固定為：推薦理由、10年情境、壓力測試、風險提醒。",
-    "- 禁止詞：保證獲利、絕對報酬、穩賺不賠、零風險、必定上漲、一定賺。",
+    "- 必須保留風險分析、壓力測試與不確定性描述，不要淡化風險。",
+    "- 可以描述回撤、波動與虧損情境，但不要使用保證收益或確定上漲的語氣。",
     "",
     "原始內容：",
     draft,
   ].join("\n");
 }
 
-function validateDraft(text: string): { ok: boolean; reason?: string } {
+function validateDraft(text: string): { ok: boolean; reason?: ValidationReason; retryable: boolean } {
   const cjkChars = countCjkChars(text);
   if (cjkChars < MIN_VALIDATION_LENGTH || cjkChars > MAX_VALIDATION_LENGTH) {
-    return { ok: false, reason: "LENGTH_OUT_OF_RANGE" };
+    return { ok: false, reason: "LENGTH_OUT_OF_RANGE", retryable: false };
   }
 
   const sections = parseSections(text);
   const orderedSections = pickOrderedSections(sections);
   if (!orderedSections) {
-    return { ok: false, reason: "INVALID_SECTION_TITLES" };
+    return { ok: false, reason: "INVALID_SECTION_TITLES", retryable: true };
   }
 
   if (orderedSections.some((section) => countCjkChars(section.body) < MIN_SECTION_LENGTH)) {
-    return { ok: false, reason: "SECTION_CONTENT_TOO_SHORT" };
+    return { ok: false, reason: "SECTION_CONTENT_TOO_SHORT", retryable: false };
   }
 
-  if (containsForbiddenPhrase(text)) {
-    return { ok: false, reason: "FORBIDDEN_PHRASE_FOUND" };
-  }
+  return { ok: true, retryable: false };
+}
 
-  return { ok: true };
+function getValidationFailureMessage(reason?: ValidationReason): string {
+  switch (reason) {
+    case "INVALID_SECTION_TITLES":
+      return "模型輸出段落標題格式不符。";
+    case "LENGTH_OUT_OF_RANGE":
+      return "模型輸出篇幅不在預期範圍，但內容已可回退顯示。";
+    case "SECTION_CONTENT_TOO_SHORT":
+      return "模型輸出部分段落過短，但內容已可回退顯示。";
+    default:
+      return "模型輸出未通過安全規則。";
+  }
 }
 
 async function callGemini(prompt: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<InvestmentReportResult> {
@@ -297,6 +307,10 @@ export async function generateInvestmentReport(input: InvestmentReportInput): Pr
     return firstPass;
   }
 
+  if (!firstValidation.retryable) {
+    return firstPass;
+  }
+
   let draft = firstPass.report;
   for (let attempt = 0; attempt < DEFAULT_REWRITE_ATTEMPTS; attempt += 1) {
     const rewriteResult = await callGemini(buildRewritePrompt(draft));
@@ -309,6 +323,10 @@ export async function generateInvestmentReport(input: InvestmentReportInput): Pr
       return rewriteResult;
     }
 
+    if (!rewriteValidation.retryable) {
+      return rewriteResult;
+    }
+
     draft = rewriteResult.report;
   }
 
@@ -316,7 +334,7 @@ export async function generateInvestmentReport(input: InvestmentReportInput): Pr
     ok: false,
     error: {
       code: "SAFETY_REWRITE_FAILED",
-      message: "模型輸出未通過安全規則，請稍後再試。",
+      message: `${getValidationFailureMessage(validateDraft(draft).reason)} 請稍後再試。`,
     },
   };
 }
