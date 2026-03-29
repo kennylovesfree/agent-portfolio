@@ -15,9 +15,9 @@
 
 ## AI Report Flow
 
-- `POST /api/report`：接收問卷答案，嘗試呼叫 Gemini 生成個人化報告。
-- 若 AI 服務逾時、未設定金鑰或回應格式異常，會自動回退本地模板報告（不中斷使用者流程）。
-- `/report` 頁面會顯示報告來源（AI 或標準版）。
+- `/report` 直接讀取問卷答案並在前端生成本地模板報告，不依賴頁內 AI 自動生成。
+- 報告頁首屏提供 Gem 主視覺入口，將使用者導向第三方 Gem 對話服務做延伸分析。
+- Gem 試用連結統一由 `public/gem-config.js` 提供，首頁與 `/report` 共用同一來源。
 
 ## Asset Recommendation Strategy
 

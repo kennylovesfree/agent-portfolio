@@ -698,7 +698,7 @@
           <a id="m-route-rebalance" class="btn secondary" href="rebalance_copilot.html" data-route-link>金融配置</a>
           <a id="m-route-futures" class="btn secondary" href="futures_risk_copilot.html" data-route-link>期貨風控</a>
           <a id="m-route-crypto" class="btn secondary" href="crypto_risk_copilot.html" data-route-link>Crypto Risk Copilot</a>
-          <a id="m-route-gem" class="btn secondary" href="https://pse.is/8stq7t?utm_source=rebalancelab&utm_medium=homepage&utm_campaign=gem_trial" target="_blank" rel="noopener noreferrer">Gem 試用</a>
+          <a id="m-route-gem" class="btn secondary" href="#" data-gem-link target="_blank" rel="noopener noreferrer">Gem 試用</a>
         </div>
       </aside>
 
@@ -742,7 +742,8 @@
               <a
                 id="product-gem-cta"
                 class="btn secondary"
-                href="https://pse.is/8stq7t?utm_source=rebalancelab&utm_medium=homepage&utm_campaign=gem_trial"
+                href="#"
+                data-gem-link
                 target="_blank"
                 rel="noopener noreferrer"
               >立即試用 Gem</a>
@@ -783,7 +784,8 @@
             <a
               id="plans-trial-cta"
               class="btn primary"
-              href="https://pse.is/8stq7t?utm_source=rebalancelab&utm_medium=homepage&utm_campaign=gem_trial"
+              href="#"
+              data-gem-link
               target="_blank"
               rel="noopener noreferrer"
             >立即試用 Gem</a>
@@ -858,6 +860,7 @@
     </div>
   </div>
 
+  <script src="/gem-config.js"></script>
   <script>
     const i18n = {
       zh: {
@@ -1202,6 +1205,18 @@
       document.getElementById("lang-en").addEventListener("click", () => applyLanguage("en"));
       const saved = localStorage.getItem("rb-language");
       applyLanguage(saved === "en" ? "en" : "zh");
+    }
+
+    function applyGemLinks() {
+      const gemTrialUrl = window.RebalanceLabConfig && typeof window.RebalanceLabConfig.gemTrialUrl === "string"
+        ? window.RebalanceLabConfig.gemTrialUrl
+        : "";
+
+      if (!gemTrialUrl) return;
+
+      document.querySelectorAll("[data-gem-link]").forEach((element) => {
+        element.setAttribute("href", gemTrialUrl);
+      });
     }
 
     function destroyParticleField() {
@@ -1552,6 +1567,7 @@
     function boot() {
       initReducedMotionHandling();
       initParticleField();
+      applyGemLinks();
       initI18n();
       initSmoothScroll();
       initActiveNavObserver();
