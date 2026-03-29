@@ -7,23 +7,12 @@ import { AssetCard } from "@/components/AssetCard";
 import { EmptyStateActions } from "@/components/ui/EmptyStateActions";
 import { PageShell } from "@/components/ui/PageShell";
 import { SurfaceCard } from "@/components/ui/SurfaceCard";
+import { buildRiskAnswerFromOnboarding } from "@/lib/mappers";
 import { buildRecommendedAssets, recommendationCount } from "@/lib/recommendation";
+import { calculateRiskScore } from "@/lib/riskScoring";
 import { OnboardingAnswers } from "@/lib/types";
 
 const SESSION_STORAGE_KEY = "onboarding-answers";
-
-function buildRiskScore(answers: OnboardingAnswers): number {
-  const horizon = Number(answers.investmentHorizonYears) || 0;
-  const tolerance = Number(answers.riskToleranceLevel) || 0;
-  const maxLoss = Number(answers.maxLossPercent) || 0;
-  const experience = Number(answers.investmentExperienceYears) || 0;
-
-  const horizonScore = Math.min(horizon * 2, 30);
-  const toleranceScore = Math.min(tolerance * 10, 50);
-  const lossScore = Math.min(maxLoss * 0.2, 10);
-  const expScore = Math.min(experience, 10);
-  return Math.round(horizonScore + toleranceScore + lossScore + expScore);
-}
 
 function buildAllocationByScore(score: number) {
   if (score >= 70) {
@@ -66,7 +55,10 @@ export default function ResultPage() {
     }
   }, []);
 
-  const riskScore = useMemo(() => (answers ? buildRiskScore(answers) : null), [answers]);
+  const riskScore = useMemo(() => {
+    if (!answers) return null;
+    return calculateRiskScore(buildRiskAnswerFromOnboarding(answers));
+  }, [answers]);
 
   const allocation = useMemo(() => {
     if (riskScore === null) return [];

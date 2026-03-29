@@ -356,30 +356,49 @@
       margin-bottom: 14px;
     }
 
-    .tool-grid {
+    .path-grid {
       display: grid;
-      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
     }
 
-    .tool-card {
-      padding: 14px;
+    .path-card {
+      padding: 18px;
       border-radius: 16px;
       border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.05);
-      box-shadow: var(--shadow);
       display: grid;
       gap: 10px;
     }
 
-    .tool-card strong {
-      font-size: 16px;
+    .path-card .path-kicker {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(106, 231, 208, 0.12);
+      color: var(--accent-2);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
     }
 
-    .tool-card p {
+    .path-card h3 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .path-card p {
       margin: 0;
       color: var(--muted);
-      line-height: 1.55;
-      font-size: 13px;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .path-card .btn {
+      margin-top: 6px;
+      width: fit-content;
     }
 
     .section-card {
@@ -436,6 +455,32 @@
       min-height: 58px;
     }
 
+    .product.gem-lite {
+      background: rgba(255, 255, 255, 0.025);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .product.gem-lite h3 {
+      color: rgba(232, 237, 245, 0.92);
+    }
+
+    .more-tools {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .more-tools p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      flex: 1 1 280px;
+    }
+
     .plans-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -447,9 +492,9 @@
       border-radius: 16px;
       border: 1px solid rgba(255, 255, 255, 0.12);
       background: rgba(255, 255, 255, 0.04);
-      padding: 16px;
+      padding: 18px;
       display: grid;
-      gap: 12px;
+      gap: 14px;
     }
 
     .plan-head {
@@ -473,6 +518,13 @@
       font-size: 12px;
       color: var(--muted);
       white-space: nowrap;
+    }
+
+    .plan p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 14px;
     }
 
     .plan ul {
@@ -612,6 +664,7 @@
       .top-actions .btn.primary { display: none; }
       .menu-btn { display: inline-flex; align-items: center; justify-content: center; }
       .hero,
+      .path-grid,
       .products-grid,
       .plans-grid,
       .steps,
@@ -671,10 +724,10 @@
         </div>
 
         <nav class="top-nav">
-          <a id="nav-solutions" href="#products" data-scroll-link="products">解決方案</a>
-          <a id="nav-plans" href="#plans" data-scroll-link="plans">方案</a>
+          <a id="nav-solutions" href="#start-paths" data-scroll-link="start-paths">解決方案</a>
+          <a id="nav-plans" href="#products" data-scroll-link="products">方案</a>
           <a id="nav-how" href="#how-it-works" data-scroll-link="how-it-works">方法</a>
-          <a id="nav-contact" href="#contact" data-scroll-link="contact">聯絡</a>
+          <a id="nav-contact" href="#plans" data-scroll-link="plans">聯絡</a>
         </nav>
 
         <div class="top-actions">
@@ -682,22 +735,22 @@
             <button id="lang-zh" class="lang-btn active" type="button" data-lang="zh" aria-pressed="true">中文</button>
             <button id="lang-en" class="lang-btn" type="button" data-lang="en" aria-pressed="false">EN</button>
           </div>
-          <a id="top-cta-start" class="btn primary" href="/report" data-route-link>開始使用</a>
+          <a id="top-cta-start" class="btn primary" href="/onboarding" data-route-link>開始使用</a>
           <button id="menu-btn" class="menu-btn" type="button" aria-expanded="false" aria-controls="mobile-drawer" aria-label="Open navigation">☰</button>
         </div>
       </header>
 
       <aside id="mobile-drawer" class="mobile-drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Mobile navigation">
         <div class="stack">
-          <a id="m-nav-solutions" class="btn secondary" href="#products" data-scroll-link="products">解決方案</a>
-          <a id="m-nav-plans" class="btn secondary" href="#plans" data-scroll-link="plans">方案</a>
+          <a id="m-nav-solutions" class="btn secondary" href="#start-paths" data-scroll-link="start-paths">解決方案</a>
+          <a id="m-nav-plans" class="btn secondary" href="#products" data-scroll-link="products">方案</a>
           <a id="m-nav-how" class="btn secondary" href="#how-it-works" data-scroll-link="how-it-works">方法</a>
-          <a id="m-nav-contact" class="btn secondary" href="#contact" data-scroll-link="contact">聯絡</a>
+          <a id="m-nav-contact" class="btn secondary" href="#plans" data-scroll-link="plans">聯絡</a>
         </div>
         <div class="stack">
-          <a id="m-route-rebalance" class="btn secondary" href="rebalance_copilot.html" data-route-link>金融配置</a>
+          <a id="m-route-rebalance" class="btn secondary" href="/onboarding" data-route-link>投資問卷 / 報告</a>
           <a id="m-route-futures" class="btn secondary" href="futures_risk_copilot.html" data-route-link>期貨風控</a>
-          <a id="m-route-crypto" class="btn secondary" href="crypto_risk_copilot.html" data-route-link>Crypto Risk Copilot</a>
+          <a id="m-route-crypto" class="btn secondary" href="rebalance_copilot.html" data-route-link>金融配置</a>
           <a id="m-route-gem" class="btn secondary" href="#" data-gem-link target="_blank" rel="noopener noreferrer">Gem 試用</a>
         </div>
       </aside>
@@ -705,40 +758,61 @@
       <main>
         <section id="hero" class="hero" data-section="hero">
           <div>
-            <div id="hero-eyebrow" class="eyebrow">AI 投資組合助理</div>
-            <h1 id="hero-title">Rebalance Lab</h1>
-            <p id="hero-lead" class="lead">你的 AI 投資組合助理，協助你從資產配置到風險控管做出更清楚、更有紀律的投資決策。</p>
+            <div id="hero-eyebrow" class="eyebrow">AI 投資決策工作台</div>
+            <h1 id="hero-title">先看懂自己的風險，再選對工具開始。</h1>
+            <p id="hero-lead" class="lead">Rebalance Lab 把問卷、投資報告、配置工具與風控輔助整理成一條更清楚的流程，幫你從模糊想法走到可執行的投資節奏。</p>
             <div class="hero-ctas">
-              <a id="hero-primary-cta" class="btn primary" href="/report" data-route-link>查看投資報告</a>
+              <a id="hero-primary-cta" class="btn primary" href="/onboarding" data-route-link>先做投資問卷</a>
               <a id="hero-secondary-cta" class="btn secondary" href="#products" data-scroll-link="products">查看工具</a>
             </div>
           </div>
         </section>
 
+        <section id="start-paths" class="section-card" data-section="start-paths">
+          <div class="section-head">
+            <h2 id="start-title">你可以怎麼開始</h2>
+            <p id="start-subtitle">新使用者先建立風險輪廓；已經知道自己要做什麼的人，則可以直接進到對應工具。</p>
+          </div>
+          <div class="path-grid">
+            <article class="path-card">
+              <div id="start-path-a-kicker" class="path-kicker">第一次使用</div>
+              <h3 id="start-path-a-title">先做問卷，取得你的投資報告</h3>
+              <p id="start-path-a-desc">用問卷快速整理投資期限、可承受回撤與風險輪廓，先得到一份穩定的起點，再決定下一步。</p>
+              <a id="start-path-a-cta" class="btn primary" href="/onboarding" data-route-link>開始問卷</a>
+            </article>
+            <article class="path-card">
+              <div id="start-path-b-kicker" class="path-kicker">已知道任務</div>
+              <h3 id="start-path-b-title">直接選工具，處理眼前的配置問題</h3>
+              <p id="start-path-b-desc">如果你已經知道自己要做配置試算、期貨風控或想找對話輔助，可以直接進入最對應的入口。</p>
+              <a id="start-path-b-cta" class="btn secondary" href="#products" data-scroll-link="products">前往工具區</a>
+            </article>
+          </div>
+        </section>
+
         <section id="products" class="section-card" data-section="products">
           <div class="section-head">
-            <h2 id="products-title">依你的目標選擇工具</h2>
-            <p id="products-subtitle">無論你在做長期配置、期貨風控或加密資產管理，都能快速找到對應工具並立即開始。</p>
+            <h2 id="products-title">依現在的任務選擇入口</h2>
+            <p id="products-subtitle">首頁只保留最常見的四個起點，幫你先進到對的工作流，不把所有功能一次丟到眼前。</p>
           </div>
           <div class="products-grid">
             <article class="product">
-              <h3 id="product-rebalance-title">金融配置</h3>
-              <p id="product-rebalance-desc">台股/美股組合試算、報酬風險預估、配置建議與分享。</p>
-              <a id="product-rebalance-cta" class="btn secondary" href="rebalance_copilot.html" data-route-link>開啟 Rebalance Copilot</a>
+              <h3 id="product-rebalance-title">投資問卷 / 投資報告</h3>
+              <p id="product-rebalance-desc">適合第一次進來時使用。先整理你的風險輪廓、投資目標與起始方向，再延伸到後續工具。</p>
+              <a id="product-rebalance-cta" class="btn secondary" href="/onboarding" data-route-link>先建立風險輪廓</a>
             </article>
             <article class="product">
-              <h3 id="product-futures-title">期貨風險管理</h3>
-              <p id="product-futures-desc">用保證金與部位參數推算風險區間與可能的壓力情境。</p>
-              <a id="product-futures-cta" class="btn secondary" href="futures_risk_copilot.html" data-route-link>開啟 Futures Risk</a>
+              <h3 id="product-futures-title">金融配置</h3>
+              <p id="product-futures-desc">適合在長期配置、再平衡與資產比例取捨時使用，快速對照不同組合的風險與分散效果。</p>
+              <a id="product-futures-cta" class="btn secondary" href="rebalance_copilot.html" data-route-link>前往金融配置</a>
             </article>
             <article class="product">
-              <h3 id="product-crypto-title">Crypto 風險管理</h3>
-              <p id="product-crypto-desc">不做價格預測，聚焦週期狀態、風險分數與倉位建議。</p>
-              <a id="product-crypto-cta" class="btn secondary" href="crypto_risk_copilot.html" data-route-link>開啟 Crypto Risk</a>
+              <h3 id="product-crypto-title">期貨風險管理</h3>
+              <p id="product-crypto-desc">適合已經有保證金、槓桿與部位假設時，快速估算壓力情境與風險邊界。</p>
+              <a id="product-crypto-cta" class="btn secondary" href="futures_risk_copilot.html" data-route-link>前往期貨風控</a>
             </article>
-            <article class="product">
+            <article class="product gem-lite">
               <h3 id="product-gem-title">Gem 試用</h3>
-              <p id="product-gem-desc">直接體驗 Google Gem 對話版投資助理，快速測試你的使用情境與價值。</p>
+              <p id="product-gem-desc">當你已經有明確問題、需要互動式討論時，再用 Gem 做延伸對話。它是輔助入口，不是首頁的第一步。</p>
               <a
                 id="product-gem-cta"
                 class="btn secondary"
@@ -746,108 +820,114 @@
                 data-gem-link
                 target="_blank"
                 rel="noopener noreferrer"
-              >立即試用 Gem</a>
+              >用 Gem 延伸討論</a>
+            </article>
+          </div>
+          <div class="more-tools">
+            <p id="more-tools-copy">還有其他任務？你仍可使用 Crypto Risk Copilot 觀察週期狀態與倉位風險。</p>
+            <a id="more-tools-cta" class="btn secondary" href="crypto_risk_copilot.html" data-route-link>查看 Crypto 工具</a>
+          </div>
+        </section>
+
+        <section id="how-it-works" class="section-card" data-section="how-it-works">
+          <div class="section-head">
+            <h2 id="how-title">使用方式</h2>
+            <p id="how-subtitle">從風險輪廓開始，再進入合適工具，最後建立自己的配置與風控節奏。</p>
+          </div>
+          <div class="steps">
+            <article class="step">
+              <div class="idx">1</div>
+              <p id="how-step-1">先做問卷，取得你的風險輪廓與起始投資報告，知道自己該從哪裡開始。</p>
+            </article>
+            <article class="step">
+              <div class="idx">2</div>
+              <p id="how-step-2">依照眼前任務選擇金融配置、期貨風控或 Gem 對話，聚焦處理當下最重要的問題。</p>
+            </article>
+            <article class="step">
+              <div class="idx">3</div>
+              <p id="how-step-3">把配置原則、風控邊界與再平衡節奏固定下來，讓後續決策更穩定。</p>
             </article>
           </div>
         </section>
 
         <section id="plans" class="section-card" data-section="plans">
           <div class="section-head">
-            <h2 id="plans-title">方案與升級</h2>
-            <p id="plans-subtitle">先用 Free 方案快速上手；若你需要更進階功能，可先加入 Pro 候補名單。</p>
+            <h2 id="plans-title">什麼時候需要升級</h2>
+            <p id="plans-subtitle">先把基礎流程跑順；當你開始需要更深的分析、整合與支援時，再考慮升級或加入候補。</p>
           </div>
           <div class="plans-grid">
             <article class="plan">
               <div class="plan-head">
-                <h3 id="plan-free-title">Free</h3>
-                <span id="plan-free-tag" class="plan-tag">立即可用</span>
+                <h3 id="plan-free-title">現在可直接開始</h3>
+                <span id="plan-free-tag" class="plan-tag">Start here</span>
               </div>
+              <p id="plan-free-summary">適合正在摸清自己的風險輪廓、驗證工作流，或想先把工具用起來的人。</p>
               <ul>
-                <li id="plan-free-feature-1">可直接使用三大工具與投資問卷流程</li>
-                <li id="plan-free-feature-2">可試用 Gem 對話入口（第三方服務）</li>
-                <li id="plan-free-feature-3">適合先驗證需求與流程習慣</li>
+                <li id="plan-free-feature-1">投資問卷與投資報告，先建立你的風險起點。</li>
+                <li id="plan-free-feature-2">金融配置、期貨風控與 Gem 試用等基礎入口。</li>
+                <li id="plan-free-feature-3">適合先釐清需求，再決定是否需要更進階能力。</li>
               </ul>
             </article>
             <article class="plan">
               <div class="plan-head">
-                <h3 id="plan-pro-title">Pro</h3>
-                <span id="plan-pro-tag" class="plan-tag">Coming Soon</span>
+                <h3 id="plan-pro-title">之後如果你需要更多</h3>
+                <span id="plan-pro-tag" class="plan-tag">Coming soon</span>
               </div>
+              <p id="plan-pro-summary">適合已經把流程跑熟，開始需要更進階分析、團隊協作與優先支援的人。</p>
               <ul>
-                <li id="plan-pro-feature-1">預計提供進階分析與工作流整合</li>
-                <li id="plan-pro-feature-2">預計提供優先支援與新功能搶先體驗</li>
-                <li id="plan-pro-feature-3">目前開放候補，名額與時程將另行通知</li>
+                <li id="plan-pro-feature-1">預計提供更深的分析模組與工作流整合。</li>
+                <li id="plan-pro-feature-2">預計提供優先支援與新功能搶先體驗。</li>
+                <li id="plan-pro-feature-3">目前先開放候補，後續再通知可用時程。</li>
               </ul>
             </article>
           </div>
           <div class="plans-ctas">
             <a
-              id="plans-trial-cta"
-              class="btn primary"
-              href="#"
-              data-gem-link
-              target="_blank"
-              rel="noopener noreferrer"
-            >立即試用 Gem</a>
-            <a
               id="plans-waitlist-cta"
-              class="btn secondary"
+              class="btn primary"
               href="https://forms.gle/HaaP2bpyXvxQWPns8"
               target="_blank"
               rel="noopener noreferrer"
             >加入 Pro 候補</a>
+            <a
+              id="plans-trial-cta"
+              class="btn secondary"
+              href="#"
+              data-gem-link
+              target="_blank"
+              rel="noopener noreferrer"
+            >先試用 Gem</a>
           </div>
           <p id="plans-note" class="plans-note">Gem 試用連結為第三方服務，將在新分頁開啟。</p>
-        </section>
-
-        <section id="how-it-works" class="section-card" data-section="how-it-works">
-          <div class="section-head">
-            <h2 id="how-title">使用方式</h2>
-            <p id="how-subtitle">用簡單三步驟建立你的投資節奏，降低情緒波動對決策的影響。</p>
-          </div>
-          <div class="steps">
-            <article class="step">
-              <div class="idx">1</div>
-              <p id="how-step-1">先定義目標與限制條件：投資期限、風險承受度、最大回撤邊界。</p>
-            </article>
-            <article class="step">
-              <div class="idx">2</div>
-              <p id="how-step-2">選擇對應工具快速評估，確認配置或槓桿是否在你可承受的風險區間。</p>
-            </article>
-            <article class="step">
-              <div class="idx">3</div>
-              <p id="how-step-3">設定再平衡與風控紀律，定期檢查偏離幅度並做出調整。</p>
-            </article>
-          </div>
         </section>
 
         <section id="trust" class="section-card" data-section="trust">
           <div class="section-head">
             <h2 id="trust-title">為什麼選擇 Rebalance Lab</h2>
-            <p id="trust-subtitle">用清楚、可理解的方式呈現評估結果，幫助你在關鍵時刻做出穩定判斷。</p>
+            <p id="trust-subtitle">首頁不是把所有功能都推給你，而是先把決策流程整理清楚，讓你在正確的階段用正確的工具。</p>
           </div>
           <div class="trust-grid">
             <article class="trust-item">
-              <div class="value">3</div>
-              <div id="trust-item-1" class="label">跨市場工具：金融配置、期貨風控、Crypto 風險。</div>
+              <div id="trust-value-1" class="value">Clarity</div>
+              <div id="trust-item-1" class="label">先用問卷與報告整理風險輪廓，降低一開始就被太多工具分心的成本。</div>
             </article>
             <article class="trust-item">
-              <div class="value">100%</div>
-              <div id="trust-item-2" class="label">重點結果可快速檢視與分享，方便你和夥伴一起討論決策。</div>
+              <div id="trust-value-2" class="value">Workflow</div>
+              <div id="trust-item-2" class="label">從問卷、工具到升級入口有清楚層級，讓使用者知道下一步該去哪裡。</div>
             </article>
             <article class="trust-item">
-              <div class="value">Local</div>
-              <div id="trust-item-3" class="label">介面回饋即時、操作流程直覺，讓你專注在決策而不是操作成本。</div>
+              <div id="trust-value-3" class="value">Focus</div>
+              <div id="trust-item-3" class="label">Gem 與進階能力保留在後段，不會在首頁一開始就和核心任務互相搶焦點。</div>
             </article>
           </div>
         </section>
 
         <section id="contact" class="section-card" data-section="contact">
           <div class="contact">
-            <h2 id="contact-title" style="margin:0; font-family:'Fraunces',serif;">準備開始？</h2>
-            <p id="contact-lead">先從最貼近你目前任務的工具開始。若有企業導入需求，也可直接聯繫我們。</p>
+            <h2 id="contact-title" style="margin:0; font-family:'Fraunces',serif;">需要企業導入或合作討論？</h2>
+            <p id="contact-lead">如果你想把這套流程帶進團隊、產品或顧問服務裡，可以直接聯繫我們。</p>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <a id="contact-cta" class="btn primary" href="/report" data-route-link>開始使用平台</a>
+              <a id="contact-cta" class="btn secondary" href="/onboarding" data-route-link>先看看問卷流程</a>
               <a id="contact-email" class="btn secondary" href="mailto:info@rebalancelab.example">info@rebalancelab.example</a>
             </div>
           </div>
@@ -868,71 +948,79 @@
         title: "Rebalance Lab | AI 投資組合助理",
         metaDescription: "你的 AI 投資組合助理，協助你完成資產配置、風險評估與再平衡決策。",
         brandTitle: "Rebalance Lab",
-        navSolutions: "解決方案",
-        navPlans: "方案",
+        navSolutions: "開始方式",
+        navPlans: "工具",
         navHow: "方法",
-        navContact: "聯絡",
-        topCtaStart: "查看投資報告",
-        heroEyebrow: "AI 投資組合助理",
-        heroTitle: "Rebalance Lab",
-        heroLead: "你的 AI 投資組合助理，協助你從資產配置到風險控管做出更清楚、更有紀律的投資決策。",
-        heroPrimaryCta: "查看投資報告",
+        navContact: "升級",
+        topCtaStart: "開始問卷",
+        heroEyebrow: "AI 投資決策工作台",
+        heroTitle: "先看懂自己的風險，再選對工具開始。",
+        heroLead: "Rebalance Lab 把問卷、投資報告、配置工具與風控輔助整理成一條更清楚的流程，幫你從模糊想法走到可執行的投資節奏。",
+        heroPrimaryCta: "先做投資問卷",
         heroSecondaryCta: "查看工具",
-        heroCardRebalanceTitle: "Rebalance Copilot",
-        heroCardRebalanceDesc: "投資組合試算、配置與再平衡建議，適合長期資產規劃。",
-        heroCardRebalanceCta: "前往金融配置",
-        heroCardFuturesTitle: "Futures Risk Copilot",
-        heroCardFuturesDesc: "針對保證金、槓桿與爆倉風險做快速壓力評估。",
-        heroCardFuturesCta: "前往期貨風控",
-        heroCardCryptoTitle: "Crypto Risk Copilot",
-        heroCardCryptoDesc: "用週期位置與風險溫度計，管理 BTC 倉位區間與回撤承受。",
-        heroCardCryptoCta: "前往 Crypto Risk",
-        productsTitle: "依你的目標選擇工具",
-        productsSubtitle: "無論你在做長期配置、期貨風控或加密資產管理，都能快速找到對應工具並立即開始。",
-        productRebalanceTitle: "金融配置",
-        productRebalanceDesc: "台股/美股組合試算、報酬風險預估、配置建議與分享。",
-        productRebalanceCta: "開啟 Rebalance Copilot",
-        productFuturesTitle: "期貨風險管理",
-        productFuturesDesc: "用保證金與部位參數推算風險區間與可能的壓力情境。",
-        productFuturesCta: "開啟 Futures Risk",
-        productCryptoTitle: "Crypto 風險管理",
-        productCryptoDesc: "不做價格預測，聚焦週期狀態、風險分數與倉位建議。",
-        productCryptoCta: "開啟 Crypto Risk",
+        startTitle: "你可以怎麼開始",
+        startSubtitle: "新使用者先建立風險輪廓；已經知道自己要做什麼的人，則可以直接進到對應工具。",
+        startPathAKicker: "第一次使用",
+        startPathATitle: "先做問卷，取得你的投資報告",
+        startPathADesc: "用問卷快速整理投資期限、可承受回撤與風險輪廓，先得到一份穩定的起點，再決定下一步。",
+        startPathACta: "開始問卷",
+        startPathBKicker: "已知道任務",
+        startPathBTitle: "直接選工具，處理眼前的配置問題",
+        startPathBDesc: "如果你已經知道自己要做配置試算、期貨風控或想找對話輔助，可以直接進入最對應的入口。",
+        startPathBCta: "前往工具區",
+        productsTitle: "依現在的任務選擇入口",
+        productsSubtitle: "首頁只保留最常見的四個起點，幫你先進到對的工作流，不把所有功能一次丟到眼前。",
+        productRebalanceTitle: "投資問卷 / 投資報告",
+        productRebalanceDesc: "適合第一次進來時使用。先整理你的風險輪廓、投資目標與起始方向，再延伸到後續工具。",
+        productRebalanceCta: "先建立風險輪廓",
+        productFuturesTitle: "金融配置",
+        productFuturesDesc: "適合在長期配置、再平衡與資產比例取捨時使用，快速對照不同組合的風險與分散效果。",
+        productFuturesCta: "前往金融配置",
+        productCryptoTitle: "期貨風險管理",
+        productCryptoDesc: "適合已經有保證金、槓桿與部位假設時，快速估算壓力情境與風險邊界。",
+        productCryptoCta: "前往期貨風控",
         productGemTitle: "Gem 試用",
-        productGemDesc: "直接體驗 Google Gem 對話版投資助理，快速測試你的使用情境與價值。",
-        productGemCta: "立即試用 Gem",
-        plansTitle: "方案與升級",
-        plansSubtitle: "先用 Free 方案快速上手；若你需要更進階功能，可先加入 Pro 候補名單。",
-        planFreeTitle: "Free",
-        planFreeTag: "立即可用",
-        planFreeFeature1: "可直接使用三大工具與投資問卷流程",
-        planFreeFeature2: "可試用 Gem 對話入口（第三方服務）",
-        planFreeFeature3: "適合先驗證需求與流程習慣",
-        planProTitle: "Pro",
-        planProTag: "Coming Soon",
-        planProFeature1: "預計提供進階分析與工作流整合",
-        planProFeature2: "預計提供優先支援與新功能搶先體驗",
-        planProFeature3: "目前開放候補，名額與時程將另行通知",
-        plansTrialCta: "立即試用 Gem",
+        productGemDesc: "當你已經有明確問題、需要互動式討論時，再用 Gem 做延伸對話。它是輔助入口，不是首頁的第一步。",
+        productGemCta: "用 Gem 延伸討論",
+        moreToolsCopy: "還有其他任務？你仍可使用 Crypto Risk Copilot 觀察週期狀態與倉位風險。",
+        moreToolsCta: "查看 Crypto 工具",
+        plansTitle: "什麼時候需要升級",
+        plansSubtitle: "先把基礎流程跑順；當你開始需要更深的分析、整合與支援時，再考慮升級或加入候補。",
+        planFreeTitle: "現在可直接開始",
+        planFreeTag: "Start here",
+        planFreeSummary: "適合正在摸清自己的風險輪廓、驗證工作流，或想先把工具用起來的人。",
+        planFreeFeature1: "投資問卷與投資報告，先建立你的風險起點。",
+        planFreeFeature2: "金融配置、期貨風控與 Gem 試用等基礎入口。",
+        planFreeFeature3: "適合先釐清需求，再決定是否需要更進階能力。",
+        planProTitle: "之後如果你需要更多",
+        planProTag: "Coming soon",
+        planProSummary: "適合已經把流程跑熟，開始需要更進階分析、團隊協作與優先支援的人。",
+        planProFeature1: "預計提供更深的分析模組與工作流整合。",
+        planProFeature2: "預計提供優先支援與新功能搶先體驗。",
+        planProFeature3: "目前先開放候補，後續再通知可用時程。",
+        plansTrialCta: "先試用 Gem",
         plansWaitlistCta: "加入 Pro 候補",
         plansNote: "Gem 試用連結為第三方服務，將在新分頁開啟。",
         howTitle: "使用方式",
-        howSubtitle: "用簡單三步驟建立你的投資節奏，降低情緒波動對決策的影響。",
-        howStep1: "先定義目標與限制條件：投資期限、風險承受度、最大回撤邊界。",
-        howStep2: "選擇對應工具快速評估，確認配置或槓桿是否在你可承受的風險區間。",
-        howStep3: "設定再平衡與風控紀律，定期檢查偏離幅度並做出調整。",
+        howSubtitle: "從風險輪廓開始，再進入合適工具，最後建立自己的配置與風控節奏。",
+        howStep1: "先做問卷，取得你的風險輪廓與起始投資報告，知道自己該從哪裡開始。",
+        howStep2: "依照眼前任務選擇金融配置、期貨風控或 Gem 對話，聚焦處理當下最重要的問題。",
+        howStep3: "把配置原則、風控邊界與再平衡節奏固定下來，讓後續決策更穩定。",
         trustTitle: "為什麼選擇 Rebalance Lab",
-        trustSubtitle: "用清楚、可理解的方式呈現評估結果，幫助你在關鍵時刻做出穩定判斷。",
-        trustItem1: "跨市場工具：金融配置、期貨風控、Crypto 風險。",
-        trustItem2: "重點結果可快速檢視與分享，方便你和夥伴一起討論決策。",
-        trustItem3: "介面回饋即時、操作流程直覺，讓你專注在決策而不是操作成本。",
-        contactTitle: "準備開始？",
-        contactLead: "先從最貼近你目前任務的工具開始。若有企業導入需求，也可直接聯繫我們。",
-        contactCta: "查看投資報告",
+        trustSubtitle: "首頁不是把所有功能都推給你，而是先把決策流程整理清楚，讓你在正確的階段用正確的工具。",
+        trustValue1: "Clarity",
+        trustItem1: "先用問卷與報告整理風險輪廓，降低一開始就被太多工具分心的成本。",
+        trustValue2: "Workflow",
+        trustItem2: "從問卷、工具到升級入口有清楚層級，讓使用者知道下一步該去哪裡。",
+        trustValue3: "Focus",
+        trustItem3: "Gem 與進階能力保留在後段，不會在首頁一開始就和核心任務互相搶焦點。",
+        contactTitle: "需要企業導入或合作討論？",
+        contactLead: "如果你想把這套流程帶進團隊、產品或顧問服務裡，可以直接聯繫我們。",
+        contactCta: "先看看問卷流程",
         footerCopy: "© 2026 Rebalance Lab. All rights reserved.",
-        mobileRouteRebalance: "金融配置",
+        mobileRouteRebalance: "投資問卷 / 報告",
         mobileRouteFutures: "期貨風控",
-        mobileRouteCrypto: "Crypto Risk Copilot",
+        mobileRouteCrypto: "金融配置",
         mobileRouteGem: "Gem 試用"
       },
       en: {
@@ -940,71 +1028,79 @@
         title: "Rebalance Lab | AI Portfolio Assistant",
         metaDescription: "Your AI Portfolio Assistant, powered by AgentPortfolio. Designed for focused, real-world portfolio workflows.",
         brandTitle: "Rebalance Lab",
-        navSolutions: "Solutions",
-        navPlans: "Plans",
-        navHow: "How",
-        navContact: "Contact",
-        topCtaStart: "View Report",
-        heroEyebrow: "AI Portfolio Assistant",
-        heroTitle: "Rebalance Lab",
-        heroLead: "Your AI portfolio assistant powered by AgentPortfolio. Move from idea to executable allocation and risk controls with a clear workflow.",
-        heroPrimaryCta: "View Report",
+        navSolutions: "Start",
+        navPlans: "Tools",
+        navHow: "Method",
+        navContact: "Upgrade",
+        topCtaStart: "Start Questionnaire",
+        heroEyebrow: "AI Investment Workflow",
+        heroTitle: "Understand your risk first, then start with the right tool.",
+        heroLead: "Rebalance Lab turns questionnaires, reports, allocation tools, and risk helpers into one clearer workflow, so users can move from vague ideas to disciplined investment actions.",
+        heroPrimaryCta: "Start with the Questionnaire",
         heroSecondaryCta: "See Tools",
-        heroCardRebalanceTitle: "Rebalance Copilot",
-        heroCardRebalanceDesc: "Portfolio simulation, allocation guidance, and rebalance actions for long-term planning.",
-        heroCardRebalanceCta: "Open Rebalance",
-        heroCardFuturesTitle: "Futures Risk Copilot",
-        heroCardFuturesDesc: "Quick pressure checks for margin, leverage, and liquidation sensitivity.",
-        heroCardFuturesCta: "Open Futures Risk",
-        heroCardCryptoTitle: "Crypto Risk Copilot",
-        heroCardCryptoDesc: "Manage BTC cycle state, risk thermometer, and position ranges without price prediction.",
-        heroCardCryptoCta: "Open Crypto Risk",
-        productsTitle: "Choose the Right Tool for Your Goal",
-        productsSubtitle: "Whether you are planning long-term allocation, managing futures risk, or monitoring crypto exposure, you can start quickly with the right tool.",
-        productRebalanceTitle: "Portfolio Allocation",
-        productRebalanceDesc: "Model Taiwan/US equity mix, expected return-risk profile, and rebalance suggestions.",
-        productRebalanceCta: "Open Rebalance Copilot",
-        productFuturesTitle: "Futures Risk Management",
-        productFuturesDesc: "Estimate risk bands and stress paths from margin and position parameters.",
-        productFuturesCta: "Open Futures Risk",
-        productCryptoTitle: "Crypto Risk Management",
-        productCryptoDesc: "Focus on cycle state, risk scoring, and allocation range guidance.",
-        productCryptoCta: "Open Crypto Risk",
+        startTitle: "How you can begin",
+        startSubtitle: "New users can start by defining their risk profile, while users with a clear task can jump straight into the right tool.",
+        startPathAKicker: "New here",
+        startPathATitle: "Start with the questionnaire and get your report",
+        startPathADesc: "Use the questionnaire to define time horizon, drawdown tolerance, and risk profile first, then move forward from a stable starting point.",
+        startPathACta: "Start Questionnaire",
+        startPathBKicker: "Already know the task",
+        startPathBTitle: "Jump straight into the tool you need",
+        startPathBDesc: "If you already know whether you need allocation work, futures risk checks, or a conversational helper, go directly to the matching entry point.",
+        startPathBCta: "Go to Tools",
+        productsTitle: "Choose the entry point for your current job",
+        productsSubtitle: "The homepage keeps only the four most common starting points, so users can enter the right workflow without facing every feature at once.",
+        productRebalanceTitle: "Questionnaire / Report",
+        productRebalanceDesc: "Best for first-time users. Define your risk profile, goals, and starting direction before moving into the next tool.",
+        productRebalanceCta: "Build My Risk Profile",
+        productFuturesTitle: "Portfolio Allocation",
+        productFuturesDesc: "Use this when comparing long-term allocation mixes, rebalance choices, and diversification tradeoffs.",
+        productFuturesCta: "Open Allocation Tool",
+        productCryptoTitle: "Futures Risk Management",
+        productCryptoDesc: "Use this when you already have margin, leverage, or position assumptions and need fast pressure checks.",
+        productCryptoCta: "Open Futures Risk",
         productGemTitle: "Gem Trial",
-        productGemDesc: "Try the Google Gem conversational assistant and quickly validate your investment workflow use cases.",
-        productGemCta: "Try Gem Now",
-        plansTitle: "Plans & Upgrade",
-        plansSubtitle: "Start with Free today and join the Pro waitlist for upcoming advanced capabilities.",
-        planFreeTitle: "Free",
+        productGemDesc: "Use Gem after your question is already clear and you want interactive follow-up discussion. It is a support layer, not the first homepage step.",
+        productGemCta: "Continue with Gem",
+        moreToolsCopy: "Need something else? You can still access Crypto Risk Copilot for cycle-state and position-risk monitoring.",
+        moreToolsCta: "See Crypto Tool",
+        plansTitle: "When upgrade starts to matter",
+        plansSubtitle: "First get the core workflow running. Upgrade later only when you need deeper analysis, integrations, or higher-touch support.",
+        planFreeTitle: "What you can start with now",
         planFreeTag: "Available Now",
-        planFreeFeature1: "Use all three tools and the onboarding report workflow",
-        planFreeFeature2: "Access the Gem trial entry point (third-party service)",
-        planFreeFeature3: "Best for validating demand and user workflows first",
-        planProTitle: "Pro",
+        planFreeSummary: "Best for users still defining their workflow, validating demand, or building a stable starting habit.",
+        planFreeFeature1: "Questionnaire and report flow to define a clear risk starting point.",
+        planFreeFeature2: "Core entries for allocation, futures risk, and Gem trial.",
+        planFreeFeature3: "Useful for clarifying what you actually need before going deeper.",
+        planProTitle: "What to use when you need more",
         planProTag: "Coming Soon",
-        planProFeature1: "Planned advanced analytics and workflow integrations",
-        planProFeature2: "Planned priority support and early feature access",
-        planProFeature3: "Waitlist is open now; timeline and slots to be announced",
-        plansTrialCta: "Try Gem Now",
+        planProSummary: "Best for users who already know their workflow and now want deeper analysis, collaboration, and better support.",
+        planProFeature1: "Planned deeper analytics modules and workflow integrations.",
+        planProFeature2: "Planned priority support and earlier access to new features.",
+        planProFeature3: "Waitlist is open now; rollout timing will be shared later.",
+        plansTrialCta: "Try Gem First",
         plansWaitlistCta: "Join Pro Waitlist",
         plansNote: "Gem trial opens a third-party service in a new tab.",
         howTitle: "How It Works",
-        howSubtitle: "Build a steady investment rhythm in three simple steps.",
-        howStep1: "Define target and limits first: horizon, risk tolerance, and max drawdown boundary.",
-        howStep2: "Use the matching tool to check whether your allocation or leverage stays within your risk comfort zone.",
-        howStep3: "Set clear rebalance and risk-control rules, then review and adjust regularly.",
+        howSubtitle: "Start from your risk profile, move into the right tool, and then build a repeatable investment rhythm.",
+        howStep1: "Start with the questionnaire so you know your risk profile and have an initial report to anchor your next step.",
+        howStep2: "Choose allocation, futures risk, or Gem discussion based on the job right in front of you.",
+        howStep3: "Turn your allocation rules, risk boundaries, and rebalance rhythm into a more stable decision process.",
         trustTitle: "Why Rebalance Lab",
-        trustSubtitle: "We present insights in a clear and understandable way, so you can make confident decisions when it matters.",
-        trustItem1: "Three integrated workflows: portfolio, futures risk, and crypto risk.",
-        trustItem2: "Key outputs are easy to review and share, making team discussion and alignment faster.",
-        trustItem3: "Fast feedback and intuitive flows keep you focused on decisions, not tool friction.",
-        contactTitle: "Ready to start?",
-        contactLead: "Begin with the tool that matches your immediate task. For enterprise rollout, contact us directly.",
-        contactCta: "View Report",
+        trustSubtitle: "The homepage does not throw every feature at the user at once. It organizes the decision journey so the right tool appears at the right moment.",
+        trustValue1: "Clarity",
+        trustItem1: "Use the questionnaire and report to define the risk baseline before exposing users to too many choices.",
+        trustValue2: "Workflow",
+        trustItem2: "The path from questionnaire to tools to upgrade is intentionally tiered, so the next step is obvious.",
+        trustValue3: "Focus",
+        trustItem3: "Gem and advanced options are kept later in the journey instead of competing with the core first task.",
+        contactTitle: "Need enterprise rollout or partnership support?",
+        contactLead: "If you want to bring this workflow into a team, product, or advisory service, reach out directly.",
+        contactCta: "See the Questionnaire Flow",
         footerCopy: "© 2026 Rebalance Lab. All rights reserved.",
-        mobileRouteRebalance: "Portfolio Tool",
+        mobileRouteRebalance: "Questionnaire / Report",
         mobileRouteFutures: "Futures Risk",
-        mobileRouteCrypto: "Crypto Risk Copilot",
+        mobileRouteCrypto: "Portfolio Allocation",
         mobileRouteGem: "Gem Trial"
       }
     };
@@ -1035,15 +1131,16 @@
       heroLead: document.getElementById("hero-lead"),
       heroPrimaryCta: document.getElementById("hero-primary-cta"),
       heroSecondaryCta: document.getElementById("hero-secondary-cta"),
-      heroCardRebalanceTitle: document.getElementById("hero-card-rebalance-title"),
-      heroCardRebalanceDesc: document.getElementById("hero-card-rebalance-desc"),
-      heroCardRebalanceCta: document.getElementById("hero-card-rebalance-cta"),
-      heroCardFuturesTitle: document.getElementById("hero-card-futures-title"),
-      heroCardFuturesDesc: document.getElementById("hero-card-futures-desc"),
-      heroCardFuturesCta: document.getElementById("hero-card-futures-cta"),
-      heroCardCryptoTitle: document.getElementById("hero-card-crypto-title"),
-      heroCardCryptoDesc: document.getElementById("hero-card-crypto-desc"),
-      heroCardCryptoCta: document.getElementById("hero-card-crypto-cta"),
+      startTitle: document.getElementById("start-title"),
+      startSubtitle: document.getElementById("start-subtitle"),
+      startPathAKicker: document.getElementById("start-path-a-kicker"),
+      startPathATitle: document.getElementById("start-path-a-title"),
+      startPathADesc: document.getElementById("start-path-a-desc"),
+      startPathACta: document.getElementById("start-path-a-cta"),
+      startPathBKicker: document.getElementById("start-path-b-kicker"),
+      startPathBTitle: document.getElementById("start-path-b-title"),
+      startPathBDesc: document.getElementById("start-path-b-desc"),
+      startPathBCta: document.getElementById("start-path-b-cta"),
       productsTitle: document.getElementById("products-title"),
       productsSubtitle: document.getElementById("products-subtitle"),
       productRebalanceTitle: document.getElementById("product-rebalance-title"),
@@ -1058,15 +1155,19 @@
       productGemTitle: document.getElementById("product-gem-title"),
       productGemDesc: document.getElementById("product-gem-desc"),
       productGemCta: document.getElementById("product-gem-cta"),
+      moreToolsCopy: document.getElementById("more-tools-copy"),
+      moreToolsCta: document.getElementById("more-tools-cta"),
       plansTitle: document.getElementById("plans-title"),
       plansSubtitle: document.getElementById("plans-subtitle"),
       planFreeTitle: document.getElementById("plan-free-title"),
       planFreeTag: document.getElementById("plan-free-tag"),
+      planFreeSummary: document.getElementById("plan-free-summary"),
       planFreeFeature1: document.getElementById("plan-free-feature-1"),
       planFreeFeature2: document.getElementById("plan-free-feature-2"),
       planFreeFeature3: document.getElementById("plan-free-feature-3"),
       planProTitle: document.getElementById("plan-pro-title"),
       planProTag: document.getElementById("plan-pro-tag"),
+      planProSummary: document.getElementById("plan-pro-summary"),
       planProFeature1: document.getElementById("plan-pro-feature-1"),
       planProFeature2: document.getElementById("plan-pro-feature-2"),
       planProFeature3: document.getElementById("plan-pro-feature-3"),
@@ -1080,8 +1181,11 @@
       howStep3: document.getElementById("how-step-3"),
       trustTitle: document.getElementById("trust-title"),
       trustSubtitle: document.getElementById("trust-subtitle"),
+      trustValue1: document.getElementById("trust-value-1"),
       trustItem1: document.getElementById("trust-item-1"),
+      trustValue2: document.getElementById("trust-value-2"),
       trustItem2: document.getElementById("trust-item-2"),
+      trustValue3: document.getElementById("trust-value-3"),
       trustItem3: document.getElementById("trust-item-3"),
       contactTitle: document.getElementById("contact-title"),
       contactLead: document.getElementById("contact-lead"),
@@ -1123,15 +1227,16 @@
         heroLead: "heroLead",
         heroPrimaryCta: "heroPrimaryCta",
         heroSecondaryCta: "heroSecondaryCta",
-        heroCardRebalanceTitle: "heroCardRebalanceTitle",
-        heroCardRebalanceDesc: "heroCardRebalanceDesc",
-        heroCardRebalanceCta: "heroCardRebalanceCta",
-        heroCardFuturesTitle: "heroCardFuturesTitle",
-        heroCardFuturesDesc: "heroCardFuturesDesc",
-        heroCardFuturesCta: "heroCardFuturesCta",
-        heroCardCryptoTitle: "heroCardCryptoTitle",
-        heroCardCryptoDesc: "heroCardCryptoDesc",
-        heroCardCryptoCta: "heroCardCryptoCta",
+        startTitle: "startTitle",
+        startSubtitle: "startSubtitle",
+        startPathAKicker: "startPathAKicker",
+        startPathATitle: "startPathATitle",
+        startPathADesc: "startPathADesc",
+        startPathACta: "startPathACta",
+        startPathBKicker: "startPathBKicker",
+        startPathBTitle: "startPathBTitle",
+        startPathBDesc: "startPathBDesc",
+        startPathBCta: "startPathBCta",
         productsTitle: "productsTitle",
         productsSubtitle: "productsSubtitle",
         productRebalanceTitle: "productRebalanceTitle",
@@ -1146,15 +1251,19 @@
         productGemTitle: "productGemTitle",
         productGemDesc: "productGemDesc",
         productGemCta: "productGemCta",
+        moreToolsCopy: "moreToolsCopy",
+        moreToolsCta: "moreToolsCta",
         plansTitle: "plansTitle",
         plansSubtitle: "plansSubtitle",
         planFreeTitle: "planFreeTitle",
         planFreeTag: "planFreeTag",
+        planFreeSummary: "planFreeSummary",
         planFreeFeature1: "planFreeFeature1",
         planFreeFeature2: "planFreeFeature2",
         planFreeFeature3: "planFreeFeature3",
         planProTitle: "planProTitle",
         planProTag: "planProTag",
+        planProSummary: "planProSummary",
         planProFeature1: "planProFeature1",
         planProFeature2: "planProFeature2",
         planProFeature3: "planProFeature3",
@@ -1168,8 +1277,11 @@
         howStep3: "howStep3",
         trustTitle: "trustTitle",
         trustSubtitle: "trustSubtitle",
+        trustValue1: "trustValue1",
         trustItem1: "trustItem1",
+        trustValue2: "trustValue2",
         trustItem2: "trustItem2",
+        trustValue3: "trustValue3",
         trustItem3: "trustItem3",
         contactTitle: "contactTitle",
         contactLead: "contactLead",
